@@ -1,0 +1,53 @@
+# Product Roadmap: TermChess
+
+_This roadmap outlines our strategic direction based on user needs and project goals. It focuses on the "what" and "why," not the technical "how."_
+
+---
+
+### Phase 1
+
+_The highest priority features that form the core foundation of the product._
+
+- [ ] **Chess Engine Foundation**
+  - [ ] **Board Representation:** Establish the internal chess board state that tracks piece positions and game status.
+  - [ ] **Move Validation & Rules:** Implement all standard chess rules including legal move detection, castling, en passant, and pawn promotion.
+  - [ ] **Game State Detection:** Detect check, checkmate, stalemate, and draw conditions to properly end games.
+
+- [ ] **FEN Support**
+  - [ ] **Export Current Position:** Allow users to copy/display the FEN string of the current game state at any time.
+  - [ ] **Import FEN to Start Game:** Enable users to start a new game from any valid FEN position.
+
+- [ ] **Terminal Interface**
+  - [ ] **ASCII/Unicode Board Display:** Render the chess board clearly in the terminal with piece symbols and coordinates.
+  - [ ] **Move Input System:** Accept moves in standard algebraic notation (e.g., `e4`, `Nf3`, `O-O`) with validation and error feedback.
+  - [ ] **Game Menu & Flow:** Provide a main menu to start new games, select game modes, and exit gracefully.
+
+- [ ] **Local Player vs Player**
+  - [ ] **Two-Player Mode:** Enable two humans to play against each other on the same machine, alternating turns.
+
+---
+
+### Phase 2
+
+_Once the foundational features are complete, we will move on to these high-value additions._
+
+- [ ] **Bot Opponents**
+  - [ ] **Easy Bot:** Create a basic AI opponent that makes legal moves with minimal strategy (random or simple heuristics).
+  - [ ] **Medium Bot:** Develop a moderately challenging AI using minimax or similar algorithms with position evaluation.
+  - [ ] **Hard Bot:** Build a stronger AI with deeper search and improved evaluation for experienced players.
+
+---
+
+### Phase 3
+
+_Features planned for future consideration. Their priority and scope may be refined based on feedback from earlier phases._
+
+- [ ] **Custom RL Agent**
+  - [ ] **RL Training Infrastructure:** Set up the framework for training a reinforcement learning chess agent.
+  - [ ] **RL Bot Integration:** Integrate the trained RL model as the top-tier "expert" difficulty opponent.
+  - [ ] **Iterative Improvement:** Establish a workflow for retraining and improving the RL agent over time.
+
+- [ ] **UCI Engine Integration**
+  - [ ] **UCI Protocol Support:** Implement the Universal Chess Interface protocol to communicate with external engines.
+  - [ ] **External Engine Mode:** Allow users to play against any UCI-compatible engine (e.g., Stockfish, Komodo).
+  - [ ] **Engine Configuration:** Let users specify engine path and basic settings (skill level, think time).
