@@ -3,15 +3,15 @@
 ## Slice 1: Project Setup & Empty Board
 *Goal: Runnable project with basic board structure that can be instantiated and queried.*
 
-- [ ] **Slice 1: Project scaffolding and empty board representation**
-  - [ ] Initialize Go module (`go mod init`) and create directory structure (`cmd/termchess/`, `internal/engine/`)
-  - [ ] Create `internal/engine/types.go`: Define `Color`, `PieceType`, `Piece`, `Square` types and constants
-  - [ ] Create `internal/engine/board.go`: Define `Board` struct with `Squares [64]Piece` and metadata fields
-  - [ ] Implement `NewBoard()` that returns an empty board (all squares empty)
-  - [ ] Implement `PieceAt(sq Square) Piece` query method
-  - [ ] Create `cmd/termchess/main.go` with minimal main that instantiates a board (smoke test)
-  - [ ] Add unit tests for board creation and `PieceAt` queries
-  - [ ] Set up Makefile with `build`, `test`, `run` targets
+- [x] **Slice 1: Project scaffolding and empty board representation**
+  - [x] Initialize Go module (`go mod init`) and create directory structure (`cmd/termchess/`, `internal/engine/`)
+  - [x] Create `internal/engine/types.go`: Define `Color`, `PieceType`, `Piece`, `Square` types and constants
+  - [x] Create `internal/engine/board.go`: Define `Board` struct with `Squares [64]Piece` and metadata fields
+  - [x] Implement `NewBoard()` that returns an empty board (all squares empty)
+  - [x] Implement `PieceAt(sq Square) Piece` query method
+  - [x] Create `cmd/termchess/main.go` with minimal main that instantiates a board (smoke test)
+  - [x] Add unit tests for board creation and `PieceAt` queries
+  - [x] Set up Makefile with `build`, `test`, `run` targets
 
 ---
 
