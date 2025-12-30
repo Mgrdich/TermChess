@@ -45,6 +45,18 @@ _Once the foundational features are complete, we will move on to these high-valu
 
 ### Phase 3
 
+_Make the application accessible to users via simple command-line installation._
+
+- [ ] **CLI Distribution**
+  - [ ] **Release Binary Builds:** Compile standalone binaries for macOS and Linux architectures.
+  - [ ] **Hosted Download Endpoint:** Host release binaries at a stable URL (e.g., GitHub Releases).
+  - [ ] **Curl Install Script:** Provide a one-liner curl/wget command that downloads and installs the binary to a standard location (e.g., `/usr/local/bin`).
+  - [ ] **Installation Instructions:** Document the install process in the README with copy-paste commands.
+
+---
+
+### Phase 4
+
 _Features planned for future consideration. Their priority and scope may be refined based on feedback from earlier phases._
 
 - [ ] **Custom RL Agent**
@@ -59,7 +71,7 @@ _Features planned for future consideration. Their priority and scope may be refi
 
 ---
 
-### Phase 4
+### Phase 5
 
 _Enhanced user interaction capabilities._
 
