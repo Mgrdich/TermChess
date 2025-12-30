@@ -25,6 +25,11 @@ _The highest priority features that form the core foundation of the product._
 - [ ] **Local Player vs Player**
   - [ ] **Two-Player Mode:** Enable two humans to play against each other on the same machine, alternating turns.
 
+- [ ] **Configuration & Persistence**
+  - [ ] **User Config Loading:** Read user preferences from config file on startup (board style, default difficulty, etc.)
+  - [ ] **Game Saves:** Allow users to save and load game positions using FEN strings stored on disk.
+  - [ ] **Settings Application:** Apply loaded configuration to customize the game experience accordingly.
+
 ---
 
 ### Phase 2
@@ -51,3 +56,14 @@ _Features planned for future consideration. Their priority and scope may be refi
   - [ ] **UCI Protocol Support:** Implement the Universal Chess Interface protocol to communicate with external engines.
   - [ ] **External Engine Mode:** Allow users to play against any UCI-compatible engine (e.g., Stockfish, Komodo).
   - [ ] **Engine Configuration:** Let users specify engine path and basic settings (skill level, think time).
+
+---
+
+### Phase 4
+
+_Enhanced user interaction capabilities._
+
+- [ ] **Mouse Interaction**
+  - [ ] **Click-to-Select Pieces:** Allow users to click on a piece to select it for moving.
+  - [ ] **Click-to-Move:** Allow users to click on a destination square to complete a move.
+  - [ ] **Visual Feedback:** Highlight selected pieces and valid move destinations on hover/click.
