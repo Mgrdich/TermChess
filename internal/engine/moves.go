@@ -330,3 +330,53 @@ func (b *Board) PseudoLegalMoves() []Move {
 
 	return moves
 }
+
+// LegalMoves generates all legal moves for the active color.
+// A legal move is a pseudo-legal move that does not leave the king in check.
+// This is done by filtering pseudo-legal moves: for each move, we make it on
+// a copy of the board and verify the king is not in check afterwards.
+func (b *Board) LegalMoves() []Move {
+	pseudoLegalMoves := b.PseudoLegalMoves()
+	var legalMoves []Move
+
+	// Remember which color is moving (before MakeMove switches it)
+	movingColor := b.ActiveColor
+
+	for _, move := range pseudoLegalMoves {
+		// Create a copy of the board to test the move
+		boardCopy := b.Copy()
+
+		// Apply the move on the copy (this also switches ActiveColor)
+		err := boardCopy.MakeMove(move)
+		if err != nil {
+			// Move was invalid (shouldn't happen with pseudo-legal moves, but skip)
+			continue
+		}
+
+		// After MakeMove, ActiveColor has switched to the opponent.
+		// We need to check if the king of the color that JUST moved is in check.
+		// The opponent (now active) would be attacking, so we check if the
+		// moving color's king is attacked by the new active color.
+		kingSquare := NoSquare
+		for sq := Square(0); sq < 64; sq++ {
+			piece := boardCopy.Squares[sq]
+			if piece.Type() == King && piece.Color() == movingColor {
+				kingSquare = sq
+				break
+			}
+		}
+
+		// If no king found (shouldn't happen), skip this move
+		if kingSquare == NoSquare {
+			continue
+		}
+
+		// Check if the king is attacked by the opponent (who is now the active color)
+		if !boardCopy.IsSquareAttacked(kingSquare, boardCopy.ActiveColor) {
+			// King is not in check after this move - it's legal
+			legalMoves = append(legalMoves, move)
+		}
+	}
+
+	return legalMoves
+}
