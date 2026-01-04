@@ -196,6 +196,20 @@ func (b *Board) applyMove(m Move) {
 		b.CastlingRights &^= CastleBlackKing
 	}
 
+	// Set en passant square if pawn moves two squares
+	if piece.Type() == Pawn {
+		rankDiff := m.To.Rank() - m.From.Rank()
+		if rankDiff == 2 || rankDiff == -2 {
+			// En passant square is the square the pawn "passed through"
+			epRank := (m.From.Rank() + m.To.Rank()) / 2
+			b.EnPassantSq = int8(NewSquare(m.From.File(), epRank))
+		} else {
+			b.EnPassantSq = -1
+		}
+	} else {
+		b.EnPassantSq = -1
+	}
+
 	// Toggle active color
 	if b.ActiveColor == White {
 		b.ActiveColor = Black

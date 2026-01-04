@@ -986,6 +986,193 @@ func TestApplyMoveCastling(t *testing.T) {
 	})
 }
 
+func TestEnPassantSquare(t *testing.T) {
+	// Test white pawn e2->e4 sets en passant square to e3
+	t.Run("white pawn e2-e4 sets en passant to e3", func(t *testing.T) {
+		board := NewBoard()
+		e2 := NewSquare(4, 1) // e2
+		e4 := NewSquare(4, 3) // e4
+		e3 := NewSquare(4, 2) // e3 - expected en passant square
+
+		move := Move{From: e2, To: e4}
+		board.applyMove(move)
+
+		if board.EnPassantSq != int8(e3) {
+			t.Errorf("expected EnPassantSq to be %d (e3), got %d", e3, board.EnPassantSq)
+		}
+
+		// Verify the en passant square has correct file and rank
+		epSquare := Square(board.EnPassantSq)
+		if epSquare.File() != 4 {
+			t.Errorf("expected en passant file to be 4 (e-file), got %d", epSquare.File())
+		}
+		if epSquare.Rank() != 2 {
+			t.Errorf("expected en passant rank to be 2 (rank 3), got %d", epSquare.Rank())
+		}
+	})
+
+	// Test black pawn d7->d5 sets en passant square to d6
+	t.Run("black pawn d7-d5 sets en passant to d6", func(t *testing.T) {
+		board := NewBoard()
+		board.ActiveColor = Black
+		d7 := NewSquare(3, 6) // d7
+		d5 := NewSquare(3, 4) // d5
+		d6 := NewSquare(3, 5) // d6 - expected en passant square
+
+		move := Move{From: d7, To: d5}
+		board.applyMove(move)
+
+		if board.EnPassantSq != int8(d6) {
+			t.Errorf("expected EnPassantSq to be %d (d6), got %d", d6, board.EnPassantSq)
+		}
+
+		// Verify the en passant square has correct file and rank
+		epSquare := Square(board.EnPassantSq)
+		if epSquare.File() != 3 {
+			t.Errorf("expected en passant file to be 3 (d-file), got %d", epSquare.File())
+		}
+		if epSquare.Rank() != 5 {
+			t.Errorf("expected en passant rank to be 5 (rank 6), got %d", epSquare.Rank())
+		}
+	})
+
+	// Test single square pawn move clears en passant square
+	t.Run("single square pawn move clears en passant", func(t *testing.T) {
+		board := NewBoard()
+		// First set up an en passant square
+		board.EnPassantSq = int8(NewSquare(4, 2)) // e3
+
+		e2 := NewSquare(4, 1) // e2
+		e3 := NewSquare(4, 2) // e3
+
+		move := Move{From: e2, To: e3}
+		board.applyMove(move)
+
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after single square pawn move, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test non-pawn moves clear en passant square
+	t.Run("non-pawn move clears en passant", func(t *testing.T) {
+		board := NewBoard()
+		// First set up an en passant square
+		board.EnPassantSq = int8(NewSquare(4, 2)) // e3
+
+		// Move the knight
+		g1 := NewSquare(6, 0) // g1
+		f3 := NewSquare(5, 2) // f3
+
+		move := Move{From: g1, To: f3}
+		board.applyMove(move)
+
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after knight move, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test all files for white pawn double push
+	t.Run("white pawn double push sets correct en passant for all files", func(t *testing.T) {
+		for file := 0; file < 8; file++ {
+			board := NewBoard()
+			from := NewSquare(file, 1) // rank 2
+			to := NewSquare(file, 3)   // rank 4
+			expectedEP := NewSquare(file, 2) // rank 3
+
+			move := Move{From: from, To: to}
+			board.applyMove(move)
+
+			if board.EnPassantSq != int8(expectedEP) {
+				t.Errorf("file %d: expected EnPassantSq to be %d, got %d", file, expectedEP, board.EnPassantSq)
+			}
+		}
+	})
+
+	// Test all files for black pawn double push
+	t.Run("black pawn double push sets correct en passant for all files", func(t *testing.T) {
+		for file := 0; file < 8; file++ {
+			board := NewBoard()
+			board.ActiveColor = Black
+			from := NewSquare(file, 6) // rank 7
+			to := NewSquare(file, 4)   // rank 5
+			expectedEP := NewSquare(file, 5) // rank 6
+
+			move := Move{From: from, To: to}
+			board.applyMove(move)
+
+			if board.EnPassantSq != int8(expectedEP) {
+				t.Errorf("file %d: expected EnPassantSq to be %d, got %d", file, expectedEP, board.EnPassantSq)
+			}
+		}
+	})
+
+	// Test king move clears en passant
+	t.Run("king move clears en passant", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		board.EnPassantSq = int8(NewSquare(4, 2)) // e3
+		e1 := NewSquare(4, 0)
+		e2 := NewSquare(4, 1)
+		board.Squares[e1] = NewPiece(White, King)
+
+		move := Move{From: e1, To: e2}
+		board.applyMove(move)
+
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after king move, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test rook move clears en passant
+	t.Run("rook move clears en passant", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		board.EnPassantSq = int8(NewSquare(4, 2)) // e3
+		a1 := NewSquare(0, 0)
+		a3 := NewSquare(0, 2)
+		board.Squares[a1] = NewPiece(White, Rook)
+
+		move := Move{From: a1, To: a3}
+		board.applyMove(move)
+
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after rook move, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test capture clears en passant (non-pawn)
+	t.Run("capture by non-pawn clears en passant", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		board.EnPassantSq = int8(NewSquare(4, 2)) // e3
+		c3 := NewSquare(2, 2)
+		d5 := NewSquare(3, 4)
+		board.Squares[c3] = NewPiece(White, Bishop)
+		board.Squares[d5] = NewPiece(Black, Pawn)
+
+		move := Move{From: c3, To: d5}
+		board.applyMove(move)
+
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after bishop capture, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test pawn capture clears en passant (diagonal move, not double push)
+	t.Run("pawn capture clears en passant", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		board.EnPassantSq = int8(NewSquare(4, 2)) // e3
+		d4 := NewSquare(3, 3)
+		e5 := NewSquare(4, 4)
+		board.Squares[d4] = NewPiece(White, Pawn)
+		board.Squares[e5] = NewPiece(Black, Pawn)
+
+		move := Move{From: d4, To: e5}
+		board.applyMove(move)
+
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after pawn capture, got %d", board.EnPassantSq)
+		}
+	})
+}
+
 func TestCastlingRightsUpdate(t *testing.T) {
 	// Test that white king move removes both white castling rights
 	t.Run("white king move removes both white castling rights", func(t *testing.T) {
