@@ -60,8 +60,8 @@
 *Goal: Filter out moves that leave own king in check; detect check state.*
 
 - [ ] **Slice 5: Check detection and legal move generation**
-  - [ ] Implement `Board.IsSquareAttacked(sq Square, byColor Color) bool`
-  - [ ] Implement `Board.InCheck() bool` (is active color's king attacked?)
+  - [x] Implement `Board.IsSquareAttacked(sq Square, byColor Color) bool`
+  - [x] Implement `Board.InCheck() bool` (is active color's king attacked?)
   - [ ] Implement `Board.LegalMoves()` that filters pseudo-legal moves by checking if king is left in check
   - [ ] Implement `Board.IsLegalMove(m Move) bool` convenience method
   - [ ] Update `Board.MakeMove()` to reject illegal moves with error

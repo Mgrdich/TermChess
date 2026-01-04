@@ -143,6 +143,33 @@ func (b *Board) MakeMove(m Move) error {
 	return nil
 }
 
+// InCheck returns true if the active color's king is under attack by the opponent.
+func (b *Board) InCheck() bool {
+	// Find the active color's king
+	kingSquare := NoSquare
+	for sq := Square(0); sq < 64; sq++ {
+		piece := b.Squares[sq]
+		if piece.Type() == King && piece.Color() == b.ActiveColor {
+			kingSquare = sq
+			break
+		}
+	}
+
+	// If no king found (shouldn't happen in a valid game), return false
+	if kingSquare == NoSquare {
+		return false
+	}
+
+	// Determine opponent color
+	opponentColor := Black
+	if b.ActiveColor == Black {
+		opponentColor = White
+	}
+
+	// Check if the king's square is attacked by the opponent
+	return b.IsSquareAttacked(kingSquare, opponentColor)
+}
+
 // String returns a simple text representation of the board for debug printing.
 // The board is shown from White's perspective (rank 8 at top).
 // Uppercase letters for White pieces (PNBRQK), lowercase for Black (pnbrqk).
