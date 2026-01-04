@@ -684,7 +684,6 @@ func countMovesFrom(moves []Move, sq Square) int {
 	return count
 }
 
-
 func TestGenerateKnightMoves(t *testing.T) {
 	t.Run("knight on e4 can reach 8 squares", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
@@ -1982,6 +1981,737 @@ func TestIllegalMovesFiltered(t *testing.T) {
 		}
 		if containsMove(legalMoves, NewSquare(4, 2), NewSquare(5, 2)) {
 			t.Error("e3f3 should be illegal (queen pinned, moving perpendicular)")
+		}
+	})
+}
+
+// ============================================================================
+// Castling Tests
+// ============================================================================
+
+func TestCastlingMoveGeneration(t *testing.T) {
+	t.Run("white kingside castling when conditions met", func(t *testing.T) {
+		// Set up a board with white king on e1 and rook on h1, empty between them
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8 (black king needed)
+
+		moves := board.generateKingMoves()
+
+		// Should include castling move e1g1
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		if !containsMove(moves, e1, g1) {
+			t.Error("white kingside castling (e1g1) should be generated")
+		}
+	})
+
+	t.Run("white queenside castling when conditions met", func(t *testing.T) {
+		// Set up a board with white king on e1 and rook on a1, empty between them
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		// Should include castling move e1c1
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if !containsMove(moves, e1, c1) {
+			t.Error("white queenside castling (e1c1) should be generated")
+		}
+	})
+
+	t.Run("black kingside castling when conditions met", func(t *testing.T) {
+		// Set up a board with black king on e8 and rook on h8, empty between them
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackKing,
+		}
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, Rook) // h8
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1 (white king needed)
+
+		moves := board.generateKingMoves()
+
+		// Should include castling move e8g8
+		e8 := NewSquare(4, 7)
+		g8 := NewSquare(6, 7)
+		if !containsMove(moves, e8, g8) {
+			t.Error("black kingside castling (e8g8) should be generated")
+		}
+	})
+
+	t.Run("black queenside castling when conditions met", func(t *testing.T) {
+		// Set up a board with black king on e8 and rook on a8, empty between them
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackQueen,
+		}
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+		board.Squares[NewSquare(0, 7)] = NewPiece(Black, Rook) // a8
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+
+		moves := board.generateKingMoves()
+
+		// Should include castling move e8c8
+		e8 := NewSquare(4, 7)
+		c8 := NewSquare(2, 7)
+		if !containsMove(moves, e8, c8) {
+			t.Error("black queenside castling (e8c8) should be generated")
+		}
+	})
+
+	t.Run("both castling options available", func(t *testing.T) {
+		// Set up a board with white king on e1 and rooks on a1 and h1
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing | CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		c1 := NewSquare(2, 0)
+
+		if !containsMove(moves, e1, g1) {
+			t.Error("white kingside castling (e1g1) should be generated")
+		}
+		if !containsMove(moves, e1, c1) {
+			t.Error("white queenside castling (e1c1) should be generated")
+		}
+	})
+}
+
+func TestCastlingNotGeneratedWhenRightsNotSet(t *testing.T) {
+	t.Run("no castling without kingside rights", func(t *testing.T) {
+		// Set up board with king and rook but no kingside rights
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen, // only queenside rights
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		if containsMove(moves, e1, g1) {
+			t.Error("kingside castling should NOT be generated without rights")
+		}
+	})
+
+	t.Run("no castling without queenside rights", func(t *testing.T) {
+		// Set up board with king and rook but no queenside rights
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing, // only kingside rights
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if containsMove(moves, e1, c1) {
+			t.Error("queenside castling should NOT be generated without rights")
+		}
+	})
+
+	t.Run("no castling with zero rights", func(t *testing.T) {
+		// Set up board with all pieces but no castling rights
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: 0, // no rights
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		c1 := NewSquare(2, 0)
+
+		if containsMove(moves, e1, g1) {
+			t.Error("kingside castling should NOT be generated without rights")
+		}
+		if containsMove(moves, e1, c1) {
+			t.Error("queenside castling should NOT be generated without rights")
+		}
+	})
+}
+
+func TestCastlingNotGeneratedWhenPiecesInWay(t *testing.T) {
+	t.Run("white kingside blocked by piece on f1", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(5, 0)] = NewPiece(White, Bishop) // f1 - blocking
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook)   // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		if containsMove(moves, e1, g1) {
+			t.Error("kingside castling should NOT be generated when f1 is occupied")
+		}
+	})
+
+	t.Run("white kingside blocked by piece on g1", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(6, 0)] = NewPiece(White, Knight) // g1 - blocking
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook)   // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		if containsMove(moves, e1, g1) {
+			t.Error("kingside castling should NOT be generated when g1 is occupied")
+		}
+	})
+
+	t.Run("white queenside blocked by piece on b1", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook)   // a1
+		board.Squares[NewSquare(1, 0)] = NewPiece(White, Knight) // b1 - blocking
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if containsMove(moves, e1, c1) {
+			t.Error("queenside castling should NOT be generated when b1 is occupied")
+		}
+	})
+
+	t.Run("white queenside blocked by piece on c1", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook)   // a1
+		board.Squares[NewSquare(2, 0)] = NewPiece(White, Bishop) // c1 - blocking
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if containsMove(moves, e1, c1) {
+			t.Error("queenside castling should NOT be generated when c1 is occupied")
+		}
+	})
+
+	t.Run("white queenside blocked by piece on d1", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook)  // a1
+		board.Squares[NewSquare(3, 0)] = NewPiece(White, Queen) // d1 - blocking
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)  // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if containsMove(moves, e1, c1) {
+			t.Error("queenside castling should NOT be generated when d1 is occupied")
+		}
+	})
+
+	t.Run("black kingside blocked by piece on f8", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackKing,
+		}
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+		board.Squares[NewSquare(5, 7)] = NewPiece(Black, Bishop) // f8 - blocking
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, Rook)   // h8
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+
+		moves := board.generateKingMoves()
+
+		e8 := NewSquare(4, 7)
+		g8 := NewSquare(6, 7)
+		if containsMove(moves, e8, g8) {
+			t.Error("black kingside castling should NOT be generated when f8 is occupied")
+		}
+	})
+
+	t.Run("black queenside blocked by piece on d8", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackQueen,
+		}
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)  // e8
+		board.Squares[NewSquare(0, 7)] = NewPiece(Black, Rook)  // a8
+		board.Squares[NewSquare(3, 7)] = NewPiece(Black, Queen) // d8 - blocking
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
+
+		moves := board.generateKingMoves()
+
+		e8 := NewSquare(4, 7)
+		c8 := NewSquare(2, 7)
+		if containsMove(moves, e8, c8) {
+			t.Error("black queenside castling should NOT be generated when d8 is occupied")
+		}
+	})
+}
+
+func TestCastlingNotGeneratedWhenKingInCheck(t *testing.T) {
+	t.Run("white cannot castle when in check", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing | CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook) // e8 - giving check on e-file
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King) // h8
+
+		// Verify king is in check
+		if !board.InCheck() {
+			t.Fatal("king should be in check from rook on e8")
+		}
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		c1 := NewSquare(2, 0)
+
+		if containsMove(moves, e1, g1) {
+			t.Error("white kingside castling should NOT be generated when in check")
+		}
+		if containsMove(moves, e1, c1) {
+			t.Error("white queenside castling should NOT be generated when in check")
+		}
+	})
+
+	t.Run("black cannot castle when in check", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackKing | CastleBlackQueen,
+		}
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+		board.Squares[NewSquare(0, 7)] = NewPiece(Black, Rook) // a8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, Rook) // h8
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, Rook) // e1 - giving check on e-file
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, King) // a1
+
+		// Verify king is in check
+		if !board.InCheck() {
+			t.Fatal("king should be in check from rook on e1")
+		}
+
+		moves := board.generateKingMoves()
+
+		e8 := NewSquare(4, 7)
+		g8 := NewSquare(6, 7)
+		c8 := NewSquare(2, 7)
+
+		if containsMove(moves, e8, g8) {
+			t.Error("black kingside castling should NOT be generated when in check")
+		}
+		if containsMove(moves, e8, c8) {
+			t.Error("black queenside castling should NOT be generated when in check")
+		}
+	})
+}
+
+func TestCastlingNotGeneratedWhenKingPassesThroughCheck(t *testing.T) {
+	t.Run("white kingside - f1 attacked", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(5, 7)] = NewPiece(Black, Rook) // f8 - attacks f1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		if containsMove(moves, e1, g1) {
+			t.Error("white kingside castling should NOT be generated when f1 is attacked")
+		}
+	})
+
+	t.Run("white kingside - g1 attacked", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(6, 7)] = NewPiece(Black, Rook) // g8 - attacks g1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		if containsMove(moves, e1, g1) {
+			t.Error("white kingside castling should NOT be generated when g1 is attacked")
+		}
+	})
+
+	t.Run("white queenside - d1 attacked", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(3, 7)] = NewPiece(Black, Rook) // d8 - attacks d1
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King) // h8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if containsMove(moves, e1, c1) {
+			t.Error("white queenside castling should NOT be generated when d1 is attacked")
+		}
+	})
+
+	t.Run("white queenside - c1 attacked", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(2, 7)] = NewPiece(Black, Rook) // c8 - attacks c1
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King) // h8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if containsMove(moves, e1, c1) {
+			t.Error("white queenside castling should NOT be generated when c1 is attacked")
+		}
+	})
+
+	t.Run("white queenside - b1 attacked but castling still allowed", func(t *testing.T) {
+		// b1 being attacked should NOT prevent queenside castling
+		// because the king doesn't pass through b1
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(1, 7)] = NewPiece(Black, Rook) // b8 - attacks b1
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King) // h8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+		if !containsMove(moves, e1, c1) {
+			t.Error("white queenside castling SHOULD be generated even when b1 is attacked (king doesn't pass through b1)")
+		}
+	})
+
+	t.Run("black kingside - f8 attacked", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackKing,
+		}
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, Rook) // h8
+		board.Squares[NewSquare(5, 0)] = NewPiece(White, Rook) // f1 - attacks f8
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, King) // a1
+
+		moves := board.generateKingMoves()
+
+		e8 := NewSquare(4, 7)
+		g8 := NewSquare(6, 7)
+		if containsMove(moves, e8, g8) {
+			t.Error("black kingside castling should NOT be generated when f8 is attacked")
+		}
+	})
+
+	t.Run("black queenside - d8 attacked", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackQueen,
+		}
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+		board.Squares[NewSquare(0, 7)] = NewPiece(Black, Rook) // a8
+		board.Squares[NewSquare(3, 0)] = NewPiece(White, Rook) // d1 - attacks d8
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, King) // a1
+
+		moves := board.generateKingMoves()
+
+		e8 := NewSquare(4, 7)
+		c8 := NewSquare(2, 7)
+		if containsMove(moves, e8, c8) {
+			t.Error("black queenside castling should NOT be generated when d8 is attacked")
+		}
+	})
+}
+
+func TestCastlingInLegalMoves(t *testing.T) {
+	t.Run("castling is included in LegalMoves when valid", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing | CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		legalMoves := board.LegalMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		c1 := NewSquare(2, 0)
+
+		if !containsMove(legalMoves, e1, g1) {
+			t.Error("kingside castling should be in LegalMoves")
+		}
+		if !containsMove(legalMoves, e1, c1) {
+			t.Error("queenside castling should be in LegalMoves")
+		}
+	})
+
+	t.Run("castling is NOT included in LegalMoves when passing through check", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(5, 7)] = NewPiece(Black, Rook) // f8 - attacks f1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		legalMoves := board.LegalMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+
+		if containsMove(legalMoves, e1, g1) {
+			t.Error("kingside castling should NOT be in LegalMoves when f1 is attacked")
+		}
+	})
+}
+
+func TestCastlingWithDifferentAttackingPieces(t *testing.T) {
+	t.Run("cannot castle when knight attacks passage square", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook)   // h1
+		board.Squares[NewSquare(4, 2)] = NewPiece(Black, Knight) // e3 - attacks f1 and g1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+
+		// Knight on e3 attacks f1 (via d2-f1 L-shape? No - e3 attacks d1, f1, d5, f5, c2, g2, c4, g4)
+		// Actually knight on e3 attacks: d1, f1, c2, g2, c4, g4, d5, f5
+		// So f1 is attacked by the knight on e3
+		if containsMove(moves, e1, g1) {
+			t.Error("cannot castle kingside when knight attacks f1")
+		}
+	})
+
+	t.Run("cannot castle when bishop attacks passage square", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook)   // h1
+		board.Squares[NewSquare(1, 5)] = NewPiece(Black, Bishop) // b6 - attacks g1 diagonally
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+
+		// Bishop on b6 attacks along b6-g1 diagonal
+		if containsMove(moves, e1, g1) {
+			t.Error("cannot castle kingside when bishop attacks g1")
+		}
+	})
+
+	t.Run("cannot castle when queen attacks passage square", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook)  // a1
+		board.Squares[NewSquare(2, 5)] = NewPiece(Black, Queen) // c6 - attacks c1 diagonally
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)  // h8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		c1 := NewSquare(2, 0)
+
+		// Queen on c6 attacks c1 (same file)
+		if containsMove(moves, e1, c1) {
+			t.Error("cannot castle queenside when queen attacks c1")
+		}
+	})
+
+	t.Run("cannot castle when pawn attacks passage square", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing,
+		}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(6, 1)] = NewPiece(Black, Pawn) // g2 - attacks f1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+
+		// Pawn on g2 attacks f1 diagonally
+		if containsMove(moves, e1, g1) {
+			t.Error("cannot castle kingside when pawn attacks f1")
+		}
+	})
+}
+
+func TestCastlingKingNotOnStartSquare(t *testing.T) {
+	t.Run("white king not on e1 cannot castle to g1", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing | CastleWhiteQueen,
+		}
+		// King on f1 instead of e1 - can't castle kingside (g1 is only 1 square away)
+		// but also check that no castling move to g1 is generated from e1
+		// when king is elsewhere
+		board.Squares[NewSquare(5, 0)] = NewPiece(White, King) // f1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		moves := board.generateKingMoves()
+
+		// f1 king moving to g1 is a normal king move (1 square), not castling
+		// The key is that e1-g1 castling should not be generated
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+
+		// Castling move would be from e1 to g1, but king is on f1, so this specific
+		// castling move should not exist
+		if containsMove(moves, e1, g1) {
+			t.Error("castling move e1g1 should not be generated when king is on f1")
+		}
+	})
+
+	t.Run("white king on f1 - verify generateCastlingMoves returns empty", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    White,
+			CastlingRights: CastleWhiteKing | CastleWhiteQueen,
+		}
+		board.Squares[NewSquare(5, 0)] = NewPiece(White, King) // f1
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, Rook) // h1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		// Directly test generateCastlingMoves with king on f1
+		f1 := NewSquare(5, 0)
+		castlingMoves := board.generateCastlingMoves(f1)
+
+		if len(castlingMoves) != 0 {
+			t.Errorf("generateCastlingMoves should return empty for king not on e1, got %d moves", len(castlingMoves))
+		}
+	})
+
+	t.Run("black king not on e8 cannot castle", func(t *testing.T) {
+		board := &Board{
+			ActiveColor:    Black,
+			CastlingRights: CastleBlackKing | CastleBlackQueen,
+		}
+		// King on d8 instead of e8
+		board.Squares[NewSquare(3, 7)] = NewPiece(Black, King) // d8
+		board.Squares[NewSquare(0, 7)] = NewPiece(Black, Rook) // a8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, Rook) // h8
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+
+		// Directly test generateCastlingMoves with king on d8
+		d8 := NewSquare(3, 7)
+		castlingMoves := board.generateCastlingMoves(d8)
+
+		if len(castlingMoves) != 0 {
+			t.Errorf("generateCastlingMoves should return empty for king not on e8, got %d moves", len(castlingMoves))
+		}
+	})
+}
+
+func TestStartingPositionNoCastling(t *testing.T) {
+	t.Run("starting position has no castling moves due to pieces in way", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := board.LegalMoves()
+
+		e1 := NewSquare(4, 0)
+		g1 := NewSquare(6, 0)
+		c1 := NewSquare(2, 0)
+
+		if containsMove(moves, e1, g1) {
+			t.Error("starting position should NOT allow kingside castling (pieces in the way)")
+		}
+		if containsMove(moves, e1, c1) {
+			t.Error("starting position should NOT allow queenside castling (pieces in the way)")
 		}
 	})
 }

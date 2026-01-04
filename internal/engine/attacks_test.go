@@ -220,14 +220,14 @@ func TestIsSquareAttackedByBishop(t *testing.T) {
 			sq   Square
 			name string
 		}{
-			{NewSquare(5, 4), "f5"},  // NE
-			{NewSquare(7, 6), "h7"},  // NE far
-			{NewSquare(5, 2), "f3"},  // SE
-			{NewSquare(7, 0), "h1"},  // SE far
-			{NewSquare(3, 2), "d3"},  // SW
-			{NewSquare(1, 0), "b1"},  // SW far
-			{NewSquare(3, 4), "d5"},  // NW
-			{NewSquare(0, 7), "a8"},  // NW far
+			{NewSquare(5, 4), "f5"}, // NE
+			{NewSquare(7, 6), "h7"}, // NE far
+			{NewSquare(5, 2), "f3"}, // SE
+			{NewSquare(7, 0), "h1"}, // SE far
+			{NewSquare(3, 2), "d3"}, // SW
+			{NewSquare(1, 0), "b1"}, // SW far
+			{NewSquare(3, 4), "d5"}, // NW
+			{NewSquare(0, 7), "a8"}, // NW far
 		}
 
 		for _, test := range attacks {
@@ -306,14 +306,14 @@ func TestIsSquareAttackedByRook(t *testing.T) {
 			sq   Square
 			name string
 		}{
-			{NewSquare(4, 4), "e5"},  // up
-			{NewSquare(4, 7), "e8"},  // up far
-			{NewSquare(4, 2), "e3"},  // down
-			{NewSquare(4, 0), "e1"},  // down far
-			{NewSquare(5, 3), "f4"},  // right
-			{NewSquare(7, 3), "h4"},  // right far
-			{NewSquare(3, 3), "d4"},  // left
-			{NewSquare(0, 3), "a4"},  // left far
+			{NewSquare(4, 4), "e5"}, // up
+			{NewSquare(4, 7), "e8"}, // up far
+			{NewSquare(4, 2), "e3"}, // down
+			{NewSquare(4, 0), "e1"}, // down far
+			{NewSquare(5, 3), "f4"}, // right
+			{NewSquare(7, 3), "h4"}, // right far
+			{NewSquare(3, 3), "d4"}, // left
+			{NewSquare(0, 3), "a4"}, // left far
 		}
 
 		for _, test := range attacks {
@@ -573,8 +573,8 @@ func TestIsSquareAttackedEdgeCases(t *testing.T) {
 	t.Run("pieces blocked by other pieces correctly", func(t *testing.T) {
 		board := &Board{}
 		// White rook on a1, black pawn on a4, target is a8
-		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook)  // a1
-		board.Squares[NewSquare(0, 3)] = NewPiece(Black, Pawn)  // a4
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook) // a1
+		board.Squares[NewSquare(0, 3)] = NewPiece(Black, Pawn) // a4
 
 		// a4 should be attacked by white rook
 		if !board.IsSquareAttacked(NewSquare(0, 3), White) { // a4

@@ -92,8 +92,8 @@ func (b *Board) generatePawnMoves() []Move {
 	var startRank int
 
 	if b.ActiveColor == White {
-		direction = 1  // White pawns move up (increasing rank)
-		startRank = 1  // White pawns start on rank 2 (index 1)
+		direction = 1 // White pawns move up (increasing rank)
+		startRank = 1 // White pawns start on rank 2 (index 1)
 	} else {
 		direction = -1 // Black pawns move down (decreasing rank)
 		startRank = 6  // Black pawns start on rank 7 (index 6)
@@ -271,7 +271,8 @@ func (b *Board) generateQueenMoves() []Move {
 }
 
 // generateKingMoves generates all pseudo-legal king moves for the active color.
-// Kings move one square in any direction. Castling is not implemented here.
+// Kings move one square in any direction. This also includes castling moves
+// when the conditions are met (rights, empty squares, not in/through/into check).
 func (b *Board) generateKingMoves() []Move {
 	var moves []Move
 
@@ -307,6 +308,105 @@ func (b *Board) generateKingMoves() []Move {
 			// Can move to empty square or capture enemy piece
 			if targetPiece.IsEmpty() || targetPiece.Color() != b.ActiveColor {
 				moves = append(moves, Move{From: sq, To: targetSq})
+			}
+		}
+
+		// Generate castling moves
+		moves = append(moves, b.generateCastlingMoves(sq)...)
+	}
+
+	return moves
+}
+
+// generateCastlingMoves generates castling moves for the king at the given square.
+// Castling requires:
+// 1. King has castling rights (king and relevant rook haven't moved)
+// 2. No pieces between king and rook
+// 3. King is NOT currently in check
+// 4. King does not pass through a square that is attacked
+// 5. King does not land on a square that is attacked
+func (b *Board) generateCastlingMoves(kingSq Square) []Move {
+	var moves []Move
+
+	// Determine opponent color for attack checks
+	opponentColor := Black
+	if b.ActiveColor == Black {
+		opponentColor = White
+	}
+
+	// King must not be in check to castle
+	if b.IsSquareAttacked(kingSq, opponentColor) {
+		return moves
+	}
+
+	if b.ActiveColor == White {
+		// White king should be on e1 (square 4) for castling
+		if kingSq != NewSquare(4, 0) {
+			return moves
+		}
+
+		// White kingside castling (O-O): King e1 -> g1, Rook h1 -> f1
+		if b.CastlingRights&CastleWhiteKing != 0 {
+			// Check squares f1 and g1 are empty
+			f1 := NewSquare(5, 0)
+			g1 := NewSquare(6, 0)
+
+			if b.Squares[f1].IsEmpty() && b.Squares[g1].IsEmpty() {
+				// Check that king doesn't pass through or land on attacked square
+				if !b.IsSquareAttacked(f1, opponentColor) && !b.IsSquareAttacked(g1, opponentColor) {
+					moves = append(moves, Move{From: kingSq, To: g1})
+				}
+			}
+		}
+
+		// White queenside castling (O-O-O): King e1 -> c1, Rook a1 -> d1
+		if b.CastlingRights&CastleWhiteQueen != 0 {
+			// Check squares b1, c1, and d1 are empty
+			b1 := NewSquare(1, 0)
+			c1 := NewSquare(2, 0)
+			d1 := NewSquare(3, 0)
+
+			if b.Squares[b1].IsEmpty() && b.Squares[c1].IsEmpty() && b.Squares[d1].IsEmpty() {
+				// Check that king doesn't pass through or land on attacked square
+				// (only c1 and d1 matter for the king's path, b1 just needs to be empty for the rook)
+				if !b.IsSquareAttacked(c1, opponentColor) && !b.IsSquareAttacked(d1, opponentColor) {
+					moves = append(moves, Move{From: kingSq, To: c1})
+				}
+			}
+		}
+	} else {
+		// Black king should be on e8 (square 60) for castling
+		if kingSq != NewSquare(4, 7) {
+			return moves
+		}
+
+		// Black kingside castling (O-O): King e8 -> g8, Rook h8 -> f8
+		if b.CastlingRights&CastleBlackKing != 0 {
+			// Check squares f8 and g8 are empty
+			f8 := NewSquare(5, 7)
+			g8 := NewSquare(6, 7)
+
+			if b.Squares[f8].IsEmpty() && b.Squares[g8].IsEmpty() {
+				// Check that king doesn't pass through or land on attacked square
+				if !b.IsSquareAttacked(f8, opponentColor) && !b.IsSquareAttacked(g8, opponentColor) {
+					moves = append(moves, Move{From: kingSq, To: g8})
+				}
+			}
+		}
+
+		// Black queenside castling (O-O-O): King e8 -> c8, Rook a8 -> d8
+		if b.CastlingRights&CastleBlackQueen != 0 {
+			// Check squares b8, c8, and d8 are empty
+			b8 := NewSquare(1, 7)
+			c8 := NewSquare(2, 7)
+			d8 := NewSquare(3, 7)
+
+			if b.Squares[b8].IsEmpty() && b.Squares[c8].IsEmpty() && b.Squares[d8].IsEmpty() {
+				// Check that king doesn't pass through or land on attacked square
+				// (only c8 and d8 matter for the king's path, b8 just needs to be empty for the rook)
+				if !b.IsSquareAttacked(c8, opponentColor) && !b.IsSquareAttacked(d8, opponentColor) {
+					moves = append(moves, Move{From: kingSq, To: c8})
+				}
 			}
 		}
 	}

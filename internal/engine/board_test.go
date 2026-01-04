@@ -354,8 +354,8 @@ func TestInCheck(t *testing.T) {
 	// Basic check scenarios - Rook
 	t.Run("white king in check from rook horizontal", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
-		board.Squares[NewSquare(0, 3)] = NewPiece(Black, Rook)  // a4 - attacking horizontally
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King) // e4
+		board.Squares[NewSquare(0, 3)] = NewPiece(Black, Rook) // a4 - attacking horizontally
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black rook on a4 (horizontal)")
@@ -364,8 +364,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("white king in check from rook vertical", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
-		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)  // e8 - attacking vertically
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook) // e8 - attacking vertically
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black rook on e8 (vertical)")
@@ -374,8 +374,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from rook horizontal", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(3, 4)] = NewPiece(Black, King)  // d5
-		board.Squares[NewSquare(7, 4)] = NewPiece(White, Rook)  // h5 - attacking horizontally
+		board.Squares[NewSquare(3, 4)] = NewPiece(Black, King) // d5
+		board.Squares[NewSquare(7, 4)] = NewPiece(White, Rook) // h5 - attacking horizontally
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white rook on h5 (horizontal)")
@@ -384,8 +384,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from rook vertical", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(2, 6)] = NewPiece(Black, King)  // c7
-		board.Squares[NewSquare(2, 0)] = NewPiece(White, Rook)  // c1 - attacking vertically
+		board.Squares[NewSquare(2, 6)] = NewPiece(Black, King) // c7
+		board.Squares[NewSquare(2, 0)] = NewPiece(White, Rook) // c1 - attacking vertically
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white rook on c1 (vertical)")
@@ -395,8 +395,8 @@ func TestInCheck(t *testing.T) {
 	// Basic check scenarios - Bishop
 	t.Run("white king in check from bishop diagonal up-right", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)    // e4
-		board.Squares[NewSquare(7, 6)] = NewPiece(Black, Bishop)  // h7 - attacking diagonally
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
+		board.Squares[NewSquare(7, 6)] = NewPiece(Black, Bishop) // h7 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black bishop on h7")
@@ -405,8 +405,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("white king in check from bishop diagonal down-left", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 4)] = NewPiece(White, King)    // e5
-		board.Squares[NewSquare(0, 0)] = NewPiece(Black, Bishop)  // a1 - attacking diagonally
+		board.Squares[NewSquare(4, 4)] = NewPiece(White, King)   // e5
+		board.Squares[NewSquare(0, 0)] = NewPiece(Black, Bishop) // a1 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black bishop on a1")
@@ -415,8 +415,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from bishop diagonal up-left", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(5, 2)] = NewPiece(Black, King)    // f3
-		board.Squares[NewSquare(2, 5)] = NewPiece(White, Bishop)  // c6 - attacking diagonally
+		board.Squares[NewSquare(5, 2)] = NewPiece(Black, King)   // f3
+		board.Squares[NewSquare(2, 5)] = NewPiece(White, Bishop) // c6 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white bishop on c6")
@@ -425,8 +425,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from bishop diagonal down-right", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(3, 5)] = NewPiece(Black, King)    // d6
-		board.Squares[NewSquare(6, 2)] = NewPiece(White, Bishop)  // g3 - attacking diagonally
+		board.Squares[NewSquare(3, 5)] = NewPiece(Black, King)   // d6
+		board.Squares[NewSquare(6, 2)] = NewPiece(White, Bishop) // g3 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white bishop on g3")
@@ -436,8 +436,8 @@ func TestInCheck(t *testing.T) {
 	// Basic check scenarios - Queen
 	t.Run("white king in check from queen horizontal", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
-		board.Squares[NewSquare(1, 3)] = NewPiece(Black, Queen)  // b4 - attacking horizontally
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
+		board.Squares[NewSquare(1, 3)] = NewPiece(Black, Queen) // b4 - attacking horizontally
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black queen on b4 (horizontal)")
@@ -446,8 +446,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("white king in check from queen vertical", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
-		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Queen)  // e8 - attacking vertically
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Queen) // e8 - attacking vertically
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black queen on e8 (vertical)")
@@ -456,8 +456,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("white king in check from queen diagonal", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(3, 3)] = NewPiece(White, King)   // d4
-		board.Squares[NewSquare(6, 6)] = NewPiece(Black, Queen)  // g7 - attacking diagonally
+		board.Squares[NewSquare(3, 3)] = NewPiece(White, King)  // d4
+		board.Squares[NewSquare(6, 6)] = NewPiece(Black, Queen) // g7 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black queen on g7 (diagonal)")
@@ -466,8 +466,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from queen horizontal", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(4, 5)] = NewPiece(Black, King)   // e6
-		board.Squares[NewSquare(7, 5)] = NewPiece(White, Queen)  // h6 - attacking horizontally
+		board.Squares[NewSquare(4, 5)] = NewPiece(Black, King)  // e6
+		board.Squares[NewSquare(7, 5)] = NewPiece(White, Queen) // h6 - attacking horizontally
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white queen on h6 (horizontal)")
@@ -476,8 +476,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from queen vertical", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(3, 7)] = NewPiece(Black, King)   // d8
-		board.Squares[NewSquare(3, 2)] = NewPiece(White, Queen)  // d3 - attacking vertically
+		board.Squares[NewSquare(3, 7)] = NewPiece(Black, King)  // d8
+		board.Squares[NewSquare(3, 2)] = NewPiece(White, Queen) // d3 - attacking vertically
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white queen on d3 (vertical)")
@@ -486,8 +486,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from queen diagonal", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(5, 5)] = NewPiece(Black, King)   // f6
-		board.Squares[NewSquare(2, 2)] = NewPiece(White, Queen)  // c3 - attacking diagonally
+		board.Squares[NewSquare(5, 5)] = NewPiece(Black, King)  // f6
+		board.Squares[NewSquare(2, 2)] = NewPiece(White, Queen) // c3 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white queen on c3 (diagonal)")
@@ -497,8 +497,8 @@ func TestInCheck(t *testing.T) {
 	// Basic check scenarios - Knight
 	t.Run("white king in check from knight", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)    // e4
-		board.Squares[NewSquare(5, 5)] = NewPiece(Black, Knight)  // f6 - L-shape attack
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
+		board.Squares[NewSquare(5, 5)] = NewPiece(Black, Knight) // f6 - L-shape attack
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black knight on f6")
@@ -507,8 +507,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("white king in check from knight different L-shape", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 4)] = NewPiece(White, King)    // e5
-		board.Squares[NewSquare(2, 3)] = NewPiece(Black, Knight)  // c4 - L-shape attack
+		board.Squares[NewSquare(4, 4)] = NewPiece(White, King)   // e5
+		board.Squares[NewSquare(2, 3)] = NewPiece(Black, Knight) // c4 - L-shape attack
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black knight on c4")
@@ -517,8 +517,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from knight", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(3, 6)] = NewPiece(Black, King)    // d7
-		board.Squares[NewSquare(4, 4)] = NewPiece(White, Knight)  // e5 - L-shape attack
+		board.Squares[NewSquare(3, 6)] = NewPiece(Black, King)   // d7
+		board.Squares[NewSquare(4, 4)] = NewPiece(White, Knight) // e5 - L-shape attack
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white knight on e5")
@@ -527,8 +527,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from knight different L-shape", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(5, 5)] = NewPiece(Black, King)    // f6
-		board.Squares[NewSquare(6, 3)] = NewPiece(White, Knight)  // g4 - L-shape attack
+		board.Squares[NewSquare(5, 5)] = NewPiece(Black, King)   // f6
+		board.Squares[NewSquare(6, 3)] = NewPiece(White, Knight) // g4 - L-shape attack
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white knight on g4")
@@ -538,8 +538,8 @@ func TestInCheck(t *testing.T) {
 	// Basic check scenarios - Pawn
 	t.Run("white king in check from pawn diagonal left", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
-		board.Squares[NewSquare(3, 4)] = NewPiece(Black, Pawn)  // d5 - attacking diagonally
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King) // e4
+		board.Squares[NewSquare(3, 4)] = NewPiece(Black, Pawn) // d5 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black pawn on d5")
@@ -548,8 +548,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("white king in check from pawn diagonal right", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
-		board.Squares[NewSquare(5, 4)] = NewPiece(Black, Pawn)  // f5 - attacking diagonally
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King) // e4
+		board.Squares[NewSquare(5, 4)] = NewPiece(Black, Pawn) // f5 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("white king should be in check by black pawn on f5")
@@ -558,8 +558,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from pawn diagonal left", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(4, 3)] = NewPiece(Black, King)  // e4
-		board.Squares[NewSquare(3, 2)] = NewPiece(White, Pawn)  // d3 - attacking diagonally
+		board.Squares[NewSquare(4, 3)] = NewPiece(Black, King) // e4
+		board.Squares[NewSquare(3, 2)] = NewPiece(White, Pawn) // d3 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white pawn on d3")
@@ -568,8 +568,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("black king in check from pawn diagonal right", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(4, 3)] = NewPiece(Black, King)  // e4
-		board.Squares[NewSquare(5, 2)] = NewPiece(White, Pawn)  // f3 - attacking diagonally
+		board.Squares[NewSquare(4, 3)] = NewPiece(Black, King) // e4
+		board.Squares[NewSquare(5, 2)] = NewPiece(White, Pawn) // f3 - attacking diagonally
 
 		if !board.InCheck() {
 			t.Error("black king should be in check by white pawn on f3")
@@ -591,9 +591,9 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king not in check - rook attack blocked by own piece", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
-		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)  // e8
-		board.Squares[NewSquare(4, 1)] = NewPiece(White, Pawn)  // e2 - blocking
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook) // e8
+		board.Squares[NewSquare(4, 1)] = NewPiece(White, Pawn) // e2 - blocking
 
 		if board.InCheck() {
 			t.Error("white king should not be in check - rook blocked by pawn")
@@ -613,9 +613,9 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king not in check - bishop attack blocked", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)    // e4
-		board.Squares[NewSquare(7, 6)] = NewPiece(Black, Bishop)  // h7
-		board.Squares[NewSquare(5, 4)] = NewPiece(White, Pawn)    // f5 - blocking diagonal
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
+		board.Squares[NewSquare(7, 6)] = NewPiece(Black, Bishop) // h7
+		board.Squares[NewSquare(5, 4)] = NewPiece(White, Pawn)   // f5 - blocking diagonal
 
 		if board.InCheck() {
 			t.Error("white king should not be in check - bishop blocked by pawn")
@@ -624,9 +624,9 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king not in check - queen attack blocked", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)    // e8
-		board.Squares[NewSquare(4, 0)] = NewPiece(White, Queen)   // e1
-		board.Squares[NewSquare(4, 4)] = NewPiece(Black, Bishop)  // e5 - blocking
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King)   // e8
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, Queen)  // e1
+		board.Squares[NewSquare(4, 4)] = NewPiece(Black, Bishop) // e5 - blocking
 
 		if board.InCheck() {
 			t.Error("black king should not be in check - queen blocked by bishop")
@@ -635,8 +635,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king not in check - pawn directly in front does not attack", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
-		board.Squares[NewSquare(4, 4)] = NewPiece(Black, Pawn)  // e5 - directly in front, not diagonal
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King) // e4
+		board.Squares[NewSquare(4, 4)] = NewPiece(Black, Pawn) // e5 - directly in front, not diagonal
 
 		if board.InCheck() {
 			t.Error("white king should not be in check - pawn doesn't attack forward")
@@ -645,8 +645,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king not in check - knight not in L-shape position", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)    // e4
-		board.Squares[NewSquare(4, 5)] = NewPiece(Black, Knight)  // e6 - not in L-shape
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
+		board.Squares[NewSquare(4, 5)] = NewPiece(Black, Knight) // e6 - not in L-shape
 
 		if board.InCheck() {
 			t.Error("white king should not be in check - knight not in attacking position")
@@ -655,9 +655,9 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("own pieces do not put king in check", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
-		board.Squares[NewSquare(4, 7)] = NewPiece(White, Queen)  // e8 - same color
-		board.Squares[NewSquare(0, 3)] = NewPiece(White, Rook)   // a4 - same color
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
+		board.Squares[NewSquare(4, 7)] = NewPiece(White, Queen) // e8 - same color
+		board.Squares[NewSquare(0, 3)] = NewPiece(White, Rook)  // a4 - same color
 
 		if board.InCheck() {
 			t.Error("white king should not be in check by own pieces")
@@ -667,9 +667,9 @@ func TestInCheck(t *testing.T) {
 	// Double check scenarios
 	t.Run("double check - queen and knight", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)    // e4
-		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Queen)   // e8 - vertical attack
-		board.Squares[NewSquare(5, 5)] = NewPiece(Black, Knight)  // f6 - L-shape attack
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Queen)  // e8 - vertical attack
+		board.Squares[NewSquare(5, 5)] = NewPiece(Black, Knight) // f6 - L-shape attack
 
 		if !board.InCheck() {
 			t.Error("white king should be in check (double check by queen and knight)")
@@ -678,9 +678,9 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("double check - two rooks", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
-		board.Squares[NewSquare(0, 3)] = NewPiece(Black, Rook)  // a4 - horizontal attack
-		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)  // e8 - vertical attack
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King) // e4
+		board.Squares[NewSquare(0, 3)] = NewPiece(Black, Rook) // a4 - horizontal attack
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook) // e8 - vertical attack
 
 		if !board.InCheck() {
 			t.Error("white king should be in check (double check by two rooks)")
@@ -689,9 +689,9 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("double check - bishop and rook", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(3, 3)] = NewPiece(Black, King)    // d4
-		board.Squares[NewSquare(0, 0)] = NewPiece(White, Bishop)  // a1 - diagonal attack
-		board.Squares[NewSquare(7, 3)] = NewPiece(White, Rook)    // h4 - horizontal attack
+		board.Squares[NewSquare(3, 3)] = NewPiece(Black, King)   // d4
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Bishop) // a1 - diagonal attack
+		board.Squares[NewSquare(7, 3)] = NewPiece(White, Rook)   // h4 - horizontal attack
 
 		if !board.InCheck() {
 			t.Error("black king should be in check (double check by bishop and rook)")
@@ -701,8 +701,8 @@ func TestInCheck(t *testing.T) {
 	// Edge cases - King in corner positions
 	t.Run("king in corner a1 - in check from rook", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(0, 0)] = NewPiece(White, King)  // a1 - corner
-		board.Squares[NewSquare(7, 0)] = NewPiece(Black, Rook)  // h1 - horizontal attack
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, King) // a1 - corner
+		board.Squares[NewSquare(7, 0)] = NewPiece(Black, Rook) // h1 - horizontal attack
 
 		if !board.InCheck() {
 			t.Error("white king in corner a1 should be in check by rook on h1")
@@ -711,8 +711,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king in corner h8 - in check from bishop", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)    // h8 - corner
-		board.Squares[NewSquare(4, 4)] = NewPiece(White, Bishop)  // e5 - diagonal attack
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8 - corner
+		board.Squares[NewSquare(4, 4)] = NewPiece(White, Bishop) // e5 - diagonal attack
 
 		if !board.InCheck() {
 			t.Error("black king in corner h8 should be in check by bishop on e5")
@@ -721,8 +721,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king in corner a8 - in check from knight", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(0, 7)] = NewPiece(Black, King)    // a8 - corner
-		board.Squares[NewSquare(1, 5)] = NewPiece(White, Knight)  // b6 - L-shape attack
+		board.Squares[NewSquare(0, 7)] = NewPiece(Black, King)   // a8 - corner
+		board.Squares[NewSquare(1, 5)] = NewPiece(White, Knight) // b6 - L-shape attack
 
 		if !board.InCheck() {
 			t.Error("black king in corner a8 should be in check by knight on b6")
@@ -731,8 +731,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king in corner h1 - not in check", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(7, 0)] = NewPiece(White, King)    // h1 - corner
-		board.Squares[NewSquare(4, 4)] = NewPiece(Black, Queen)   // e5 - not attacking corner
+		board.Squares[NewSquare(7, 0)] = NewPiece(White, King)  // h1 - corner
+		board.Squares[NewSquare(4, 4)] = NewPiece(Black, Queen) // e5 - not attacking corner
 
 		if board.InCheck() {
 			t.Error("white king in corner h1 should not be in check")
@@ -742,8 +742,8 @@ func TestInCheck(t *testing.T) {
 	// Edge cases - King on edge of board
 	t.Run("king on edge a4 - in check from rook", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(0, 3)] = NewPiece(White, King)  // a4 - edge
-		board.Squares[NewSquare(0, 7)] = NewPiece(Black, Rook)  // a8 - vertical attack
+		board.Squares[NewSquare(0, 3)] = NewPiece(White, King) // a4 - edge
+		board.Squares[NewSquare(0, 7)] = NewPiece(Black, Rook) // a8 - vertical attack
 
 		if !board.InCheck() {
 			t.Error("white king on edge a4 should be in check by rook on a8")
@@ -752,8 +752,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king on edge e1 - in check from queen", func(t *testing.T) {
 		board := &Board{ActiveColor: White}
-		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1 - edge
-		board.Squares[NewSquare(7, 3)] = NewPiece(Black, Queen)  // h4 - diagonal attack
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1 - edge
+		board.Squares[NewSquare(7, 3)] = NewPiece(Black, Queen) // h4 - diagonal attack
 
 		if !board.InCheck() {
 			t.Error("white king on edge e1 should be in check by queen on h4")
@@ -762,8 +762,8 @@ func TestInCheck(t *testing.T) {
 
 	t.Run("king on edge h5 - not in check", func(t *testing.T) {
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(7, 4)] = NewPiece(Black, King)    // h5 - edge
-		board.Squares[NewSquare(4, 6)] = NewPiece(White, Bishop)  // e7 - not on diagonal with h5
+		board.Squares[NewSquare(7, 4)] = NewPiece(Black, King)   // h5 - edge
+		board.Squares[NewSquare(4, 6)] = NewPiece(White, Bishop) // e7 - not on diagonal with h5
 
 		if board.InCheck() {
 			t.Error("black king on edge h5 should not be in check")
@@ -786,8 +786,8 @@ func TestInCheck(t *testing.T) {
 		board := &Board{ActiveColor: White}
 		// Setup: White king on e1, Black rook on e8, but nothing blocking
 		// (as if a piece was just moved away from e-file)
-		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
-		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)  // e8 - now has clear line
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook) // e8 - now has clear line
 
 		if !board.InCheck() {
 			t.Error("white king should be in check after blocking piece moved (discovered check)")
@@ -797,8 +797,8 @@ func TestInCheck(t *testing.T) {
 	t.Run("discovered check simulation - diagonal", func(t *testing.T) {
 		// Simulate position after a piece moved off the diagonal
 		board := &Board{ActiveColor: Black}
-		board.Squares[NewSquare(5, 5)] = NewPiece(Black, King)    // f6
-		board.Squares[NewSquare(2, 2)] = NewPiece(White, Bishop)  // c3 - now has clear diagonal
+		board.Squares[NewSquare(5, 5)] = NewPiece(Black, King)   // f6
+		board.Squares[NewSquare(2, 2)] = NewPiece(White, Bishop) // c3 - now has clear diagonal
 
 		if !board.InCheck() {
 			t.Error("black king should be in check after blocking piece moved (discovered check)")
