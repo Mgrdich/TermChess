@@ -380,3 +380,17 @@ func (b *Board) LegalMoves() []Move {
 
 	return legalMoves
 }
+
+// IsLegalMove checks if a specific move is legal for the current position.
+// Returns true if the move is in the list of legal moves, false otherwise.
+// This is a convenience method for validating a single move without generating
+// all legal moves manually.
+func (b *Board) IsLegalMove(m Move) bool {
+	legalMoves := b.LegalMoves()
+	for _, legalMove := range legalMoves {
+		if legalMove.From == m.From && legalMove.To == m.To && legalMove.Promotion == m.Promotion {
+			return true
+		}
+	}
+	return false
+}

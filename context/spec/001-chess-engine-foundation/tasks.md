@@ -63,7 +63,7 @@
   - [x] Implement `Board.IsSquareAttacked(sq Square, byColor Color) bool`
   - [x] Implement `Board.InCheck() bool` (is active color's king attacked?)
   - [x] Implement `Board.LegalMoves()` that filters pseudo-legal moves by checking if king is left in check
-  - [ ] Implement `Board.IsLegalMove(m Move) bool` convenience method
+  - [x] Implement `Board.IsLegalMove(m Move) bool` convenience method
   - [ ] Update `Board.MakeMove()` to reject illegal moves with error
   - [ ] Add unit tests for check detection in various positions
   - [ ] Add unit tests verifying illegal moves are filtered (moving pinned pieces, etc.)
