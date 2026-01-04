@@ -18,27 +18,27 @@
 ## Slice 2: Standard Starting Position
 *Goal: Board can initialize to standard chess starting position.*
 
-- [ ] **Slice 2: Initialize board with standard starting position**
-  - [ ] Update `NewBoard()` to place all 32 pieces in standard starting positions
-  - [ ] Set initial metadata: White to move, all castling rights, no en passant, clocks at 0/1
-  - [ ] Implement `Board.String()` for debug printing (simple text representation)
-  - [ ] Add unit tests verifying all pieces are in correct positions
-  - [ ] Add unit tests verifying initial metadata values
+- [x] **Slice 2: Initialize board with standard starting position**
+  - [x] Update `NewBoard()` to place all 32 pieces in standard starting positions
+  - [x] Set initial metadata: White to move, all castling rights, no en passant, clocks at 0/1
+  - [x] Implement `Board.String()` for debug printing (simple text representation)
+  - [x] Add unit tests verifying all pieces are in correct positions
+  - [x] Add unit tests verifying initial metadata values
 
 ---
 
 ## Slice 3: Basic Pawn Moves (No Special Rules)
 *Goal: Generate and apply simple pawn moves (1 forward, 2 from start, diagonal capture).*
 
-- [ ] **Slice 3: Pawn move generation and application (basic)**
-  - [ ] Create `internal/engine/moves.go`: Define `Move` struct with `From`, `To`, `Promotion` fields
-  - [ ] Implement `ParseMove(s string) (Move, error)` for coordinate notation ("e2e4")
-  - [ ] Implement `Move.String()` to convert back to coordinate notation
-  - [ ] Implement `Board.Copy()` to clone board state
-  - [ ] Implement pawn pseudo-legal move generation (1 forward, 2 from start rank, diagonal captures)
-  - [ ] Implement `Board.MakeMove(m Move) error` that applies a move and updates state
-  - [ ] Add unit tests for pawn move generation from various positions
-  - [ ] Add unit tests for `ParseMove` and `Move.String()` round-trip
+- [x] **Slice 3: Pawn move generation and application (basic)**
+  - [x] Create `internal/engine/moves.go`: Define `Move` struct with `From`, `To`, `Promotion` fields
+  - [x] Implement `ParseMove(s string) (Move, error)` for coordinate notation ("e2e4")
+  - [x] Implement `Move.String()` to convert back to coordinate notation
+  - [x] Implement `Board.Copy()` to clone board state
+  - [x] Implement pawn pseudo-legal move generation (1 forward, 2 from start rank, diagonal captures)
+  - [x] Implement `Board.MakeMove(m Move) error` that applies a move and updates state
+  - [x] Add unit tests for pawn move generation from various positions
+  - [x] Add unit tests for `ParseMove` and `Move.String()` round-trip
 
 ---
 

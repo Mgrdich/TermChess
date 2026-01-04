@@ -1,5 +1,7 @@
 package engine
 
+import "errors"
+
 // Board represents the complete state of a chess game.
 type Board struct {
 	// Squares holds all 64 squares of the board.
@@ -43,12 +45,13 @@ const (
 	CastleAll        uint8 = CastleWhiteKing | CastleWhiteQueen | CastleBlackKing | CastleBlackQueen
 )
 
-// NewBoard creates a new empty chess board with default game state.
-// All squares are empty, White is to move, all castling rights are available,
+// NewBoard creates a new chess board with the standard starting position.
+// White pieces on ranks 1-2, Black pieces on ranks 7-8.
+// White is to move, all castling rights are available,
 // no en passant square, half-move clock is 0, and full move number is 1.
 func NewBoard() *Board {
-	return &Board{
-		Squares:        [64]Piece{}, // All zeros = all Empty pieces
+	b := &Board{
+		Squares:        [64]Piece{}, // Will be populated below
 		ActiveColor:    White,
 		CastlingRights: CastleAll,
 		EnPassantSq:    -1,
@@ -57,6 +60,31 @@ func NewBoard() *Board {
 		Hash:           0,
 		History:        []uint64{},
 	}
+
+	// Back rank piece order: Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook
+	backRank := []PieceType{Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook}
+
+	// Place White pieces on rank 1 (index 0-7)
+	for file := 0; file < 8; file++ {
+		b.Squares[file] = NewPiece(White, backRank[file])
+	}
+
+	// Place White pawns on rank 2 (index 8-15)
+	for file := 0; file < 8; file++ {
+		b.Squares[8+file] = NewPiece(White, Pawn)
+	}
+
+	// Place Black pawns on rank 7 (index 48-55)
+	for file := 0; file < 8; file++ {
+		b.Squares[48+file] = NewPiece(Black, Pawn)
+	}
+
+	// Place Black pieces on rank 8 (index 56-63)
+	for file := 0; file < 8; file++ {
+		b.Squares[56+file] = NewPiece(Black, backRank[file])
+	}
+
+	return b
 }
 
 // PieceAt returns the piece at the given square.
@@ -65,4 +93,97 @@ func (b *Board) PieceAt(sq Square) Piece {
 		return Piece(Empty)
 	}
 	return b.Squares[sq]
+}
+
+// Copy returns a deep copy of the board.
+func (b *Board) Copy() *Board {
+	newBoard := &Board{
+		Squares:        b.Squares, // Array is copied by value
+		ActiveColor:    b.ActiveColor,
+		CastlingRights: b.CastlingRights,
+		EnPassantSq:    b.EnPassantSq,
+		HalfMoveClock:  b.HalfMoveClock,
+		FullMoveNum:    b.FullMoveNum,
+		Hash:           b.Hash,
+		History:        make([]uint64, len(b.History)),
+	}
+	copy(newBoard.History, b.History)
+	return newBoard
+}
+
+// MakeMove applies a move to the board.
+// It validates that there is a piece of the correct color at the source square.
+// Returns an error if the move is invalid (no piece or wrong color).
+func (b *Board) MakeMove(m Move) error {
+	piece := b.Squares[m.From]
+
+	// Validate source square has a piece
+	if piece.IsEmpty() {
+		return errors.New("no piece at source square")
+	}
+
+	// Validate piece belongs to active player
+	if piece.Color() != b.ActiveColor {
+		return errors.New("piece belongs to opponent")
+	}
+
+	// Move the piece
+	b.Squares[m.To] = piece
+	b.Squares[m.From] = Piece(Empty)
+
+	// Toggle active color
+	if b.ActiveColor == White {
+		b.ActiveColor = Black
+	} else {
+		b.ActiveColor = White
+		// Increment full move number after Black's move
+		b.FullMoveNum++
+	}
+
+	return nil
+}
+
+// String returns a simple text representation of the board for debug printing.
+// The board is shown from White's perspective (rank 8 at top).
+// Uppercase letters for White pieces (PNBRQK), lowercase for Black (pnbrqk).
+// Empty squares are shown as '.'.
+func (b *Board) String() string {
+	// Piece type to character mapping
+	pieceChars := [7]byte{'.', 'P', 'N', 'B', 'R', 'Q', 'K'}
+
+	var result string
+
+	// Print ranks from 8 to 1 (top to bottom from White's perspective)
+	for rank := 7; rank >= 0; rank-- {
+		// Print rank number (rank 0 = '1', rank 7 = '8')
+		result += string(rune('1'+rank)) + " "
+
+		// Print pieces for this rank
+		for file := 0; file < 8; file++ {
+			sq := Square(rank*8 + file)
+			piece := b.Squares[sq]
+
+			var ch byte
+			if piece.IsEmpty() {
+				ch = '.'
+			} else {
+				ch = pieceChars[piece.Type()]
+				// Lowercase for Black pieces
+				if piece.Color() == Black {
+					ch = ch - 'A' + 'a'
+				}
+			}
+
+			result += string(ch)
+			if file < 7 {
+				result += " "
+			}
+		}
+		result += "\n"
+	}
+
+	// Print file letters
+	result += "  a b c d e f g h"
+
+	return result
 }

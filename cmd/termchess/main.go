@@ -12,7 +12,9 @@ func main() {
 
 	fmt.Println("TermChess - Terminal Chess Game")
 	fmt.Println("================================")
-	fmt.Printf("Board initialized: %d squares\n", len(board.Squares))
+	fmt.Println()
+	fmt.Println(board.String())
+	fmt.Println()
 	fmt.Printf("Active color: %s\n", colorName(board.ActiveColor))
 	fmt.Printf("Full move number: %d\n", board.FullMoveNum)
 	fmt.Println("Ready to play!")

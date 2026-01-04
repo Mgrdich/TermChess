@@ -49,15 +49,115 @@ func TestNewBoard(t *testing.T) {
 	})
 }
 
-func TestNewBoardAllSquaresEmpty(t *testing.T) {
+func TestNewBoardStartingPosition(t *testing.T) {
 	board := NewBoard()
 
-	for sq := Square(0); sq < 64; sq++ {
-		piece := board.PieceAt(sq)
-		if !piece.IsEmpty() {
-			t.Errorf("expected square %s to be empty, got piece type %d", sq.String(), piece.Type())
+	// Test White back rank (rank 1, index 0-7)
+	t.Run("White back rank pieces", func(t *testing.T) {
+		expectedPieces := []struct {
+			square    string
+			pieceType PieceType
+		}{
+			{"a1", Rook},
+			{"b1", Knight},
+			{"c1", Bishop},
+			{"d1", Queen},
+			{"e1", King},
+			{"f1", Bishop},
+			{"g1", Knight},
+			{"h1", Rook},
 		}
-	}
+
+		for i, expected := range expectedPieces {
+			sq := Square(i)
+			piece := board.PieceAt(sq)
+			if piece.Type() != expected.pieceType {
+				t.Errorf("expected %s to have piece type %d, got %d", expected.square, expected.pieceType, piece.Type())
+			}
+			if piece.Color() != White {
+				t.Errorf("expected %s to have White piece, got color %d", expected.square, piece.Color())
+			}
+		}
+	})
+
+	// Test White pawns (rank 2, index 8-15)
+	t.Run("White pawns on rank 2", func(t *testing.T) {
+		for file := 0; file < 8; file++ {
+			sq := Square(8 + file)
+			piece := board.PieceAt(sq)
+			if piece.Type() != Pawn {
+				t.Errorf("expected square %s to have Pawn, got piece type %d", sq.String(), piece.Type())
+			}
+			if piece.Color() != White {
+				t.Errorf("expected square %s to have White piece, got color %d", sq.String(), piece.Color())
+			}
+		}
+	})
+
+	// Test empty squares (ranks 3-6, index 16-47)
+	t.Run("Empty squares on ranks 3-6", func(t *testing.T) {
+		for sq := Square(16); sq < 48; sq++ {
+			piece := board.PieceAt(sq)
+			if !piece.IsEmpty() {
+				t.Errorf("expected square %s to be empty, got piece type %d", sq.String(), piece.Type())
+			}
+		}
+	})
+
+	// Test Black pawns (rank 7, index 48-55)
+	t.Run("Black pawns on rank 7", func(t *testing.T) {
+		for file := 0; file < 8; file++ {
+			sq := Square(48 + file)
+			piece := board.PieceAt(sq)
+			if piece.Type() != Pawn {
+				t.Errorf("expected square %s to have Pawn, got piece type %d", sq.String(), piece.Type())
+			}
+			if piece.Color() != Black {
+				t.Errorf("expected square %s to have Black piece, got color %d", sq.String(), piece.Color())
+			}
+		}
+	})
+
+	// Test Black back rank (rank 8, index 56-63)
+	t.Run("Black back rank pieces", func(t *testing.T) {
+		expectedPieces := []struct {
+			square    string
+			pieceType PieceType
+		}{
+			{"a8", Rook},
+			{"b8", Knight},
+			{"c8", Bishop},
+			{"d8", Queen},
+			{"e8", King},
+			{"f8", Bishop},
+			{"g8", Knight},
+			{"h8", Rook},
+		}
+
+		for i, expected := range expectedPieces {
+			sq := Square(56 + i)
+			piece := board.PieceAt(sq)
+			if piece.Type() != expected.pieceType {
+				t.Errorf("expected %s to have piece type %d, got %d", expected.square, expected.pieceType, piece.Type())
+			}
+			if piece.Color() != Black {
+				t.Errorf("expected %s to have Black piece, got color %d", expected.square, piece.Color())
+			}
+		}
+	})
+
+	// Test total piece count
+	t.Run("Total piece count is 32", func(t *testing.T) {
+		count := 0
+		for sq := Square(0); sq < 64; sq++ {
+			if !board.PieceAt(sq).IsEmpty() {
+				count++
+			}
+		}
+		if count != 32 {
+			t.Errorf("expected 32 pieces, got %d", count)
+		}
+	})
 }
 
 func TestPieceAtInvalidSquare(t *testing.T) {
@@ -215,5 +315,24 @@ func TestCastlingRightsBits(t *testing.T) {
 	}
 	if CastleAll != 15 {
 		t.Errorf("CastleAll = %d, expected 15", CastleAll)
+	}
+}
+
+func TestBoardString(t *testing.T) {
+	board := NewBoard()
+	boardStr := board.String()
+
+	expected := `8 r n b q k b n r
+7 p p p p p p p p
+6 . . . . . . . .
+5 . . . . . . . .
+4 . . . . . . . .
+3 . . . . . . . .
+2 P P P P P P P P
+1 R N B Q K B N R
+  a b c d e f g h`
+
+	if boardStr != expected {
+		t.Errorf("Board.String() output does not match expected.\nGot:\n%s\n\nExpected:\n%s", boardStr, expected)
 	}
 }
