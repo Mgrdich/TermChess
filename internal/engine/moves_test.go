@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -467,7 +468,9 @@ func TestMakeMove(t *testing.T) {
 		}
 
 		move, _ := ParseMove("e2e4")
-		board.MakeMove(move)
+		if err := board.MakeMove(move); err != nil {
+			t.Fatalf("MakeMove returned error: %v", err)
+		}
 
 		if board.ActiveColor != Black {
 			t.Error("active color should be Black after White's move")
@@ -475,7 +478,9 @@ func TestMakeMove(t *testing.T) {
 
 		// Black moves
 		move2, _ := ParseMove("e7e5")
-		board.MakeMove(move2)
+		if err := board.MakeMove(move2); err != nil {
+			t.Fatalf("MakeMove returned error: %v", err)
+		}
 
 		if board.ActiveColor != White {
 			t.Error("active color should be White after Black's move")
@@ -490,7 +495,9 @@ func TestMakeMove(t *testing.T) {
 
 		// White moves
 		move, _ := ParseMove("e2e4")
-		board.MakeMove(move)
+		if err := board.MakeMove(move); err != nil {
+			t.Fatalf("MakeMove returned error: %v", err)
+		}
 
 		if board.FullMoveNum != 1 {
 			t.Error("full move number should still be 1 after White's move")
@@ -498,7 +505,9 @@ func TestMakeMove(t *testing.T) {
 
 		// Black moves
 		move2, _ := ParseMove("e7e5")
-		board.MakeMove(move2)
+		if err := board.MakeMove(move2); err != nil {
+			t.Fatalf("MakeMove returned error: %v", err)
+		}
 
 		if board.FullMoveNum != 2 {
 			t.Error("full move number should be 2 after Black's move")
@@ -555,6 +564,103 @@ func TestMakeMove(t *testing.T) {
 			t.Error("e4 should be empty after capture")
 		}
 	})
+
+	t.Run("board state unchanged after illegal move", func(t *testing.T) {
+		board := NewBoard()
+		// Save the original board state
+		originalSquares := board.Squares
+		originalActiveColor := board.ActiveColor
+		originalCastlingRights := board.CastlingRights
+		originalEnPassantSq := board.EnPassantSq
+		originalHalfMoveClock := board.HalfMoveClock
+		originalFullMoveNum := board.FullMoveNum
+
+		// Try to make an illegal move (moving from empty square)
+		move, _ := ParseMove("e4e5")
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Fatal("expected error for illegal move")
+		}
+
+		// Verify board state is unchanged
+		if board.Squares != originalSquares {
+			t.Error("board squares should be unchanged after illegal move")
+		}
+		if board.ActiveColor != originalActiveColor {
+			t.Error("active color should be unchanged after illegal move")
+		}
+		if board.CastlingRights != originalCastlingRights {
+			t.Error("castling rights should be unchanged after illegal move")
+		}
+		if board.EnPassantSq != originalEnPassantSq {
+			t.Error("en passant square should be unchanged after illegal move")
+		}
+		if board.HalfMoveClock != originalHalfMoveClock {
+			t.Error("half move clock should be unchanged after illegal move")
+		}
+		if board.FullMoveNum != originalFullMoveNum {
+			t.Error("full move number should be unchanged after illegal move")
+		}
+	})
+
+	t.Run("pinned piece move returns error", func(t *testing.T) {
+		// Set up a position where a piece is pinned to the king
+		// White king on e1, white bishop on e2 (pinned), black rook on e8
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(4, 1)] = NewPiece(White, Bishop) // e2 (pinned)
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)   // e8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8 (black king needed)
+
+		// Try to move the pinned bishop
+		move, _ := ParseMove("e2d3")
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Error("MakeMove should return error when moving pinned piece")
+		}
+
+		// Bishop should still be on e2
+		e2 := NewSquare(4, 1)
+		if board.Squares[e2].Type() != Bishop || board.Squares[e2].Color() != White {
+			t.Error("pinned bishop should remain on e2 after failed move")
+		}
+	})
+
+	t.Run("moving into check returns error", func(t *testing.T) {
+		// White king on e4, black rook on a5
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King) // e4
+		board.Squares[NewSquare(0, 4)] = NewPiece(Black, Rook) // a5
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King) // h8 (black king needed)
+
+		// King moving to e5 would put it in check from the rook
+		move, _ := ParseMove("e4e5")
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Error("MakeMove should return error when king moves into check")
+		}
+
+		// King should still be on e4
+		e4 := NewSquare(4, 3)
+		if board.Squares[e4].Type() != King || board.Squares[e4].Color() != White {
+			t.Error("king should remain on e4 after failed move into check")
+		}
+	})
+
+	t.Run("error message contains move string", func(t *testing.T) {
+		board := NewBoard()
+		// Try an illegal move
+		move, _ := ParseMove("e4e5")
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Fatal("expected error for illegal move")
+		}
+
+		// Error message should contain the move
+		if !strings.Contains(err.Error(), "e4e5") {
+			t.Errorf("error message should contain move string, got: %s", err.Error())
+		}
+	})
 }
 
 // Helper function to check if a move exists in a list of moves
@@ -577,6 +683,7 @@ func countMovesFrom(moves []Move, sq Square) int {
 	}
 	return count
 }
+
 
 func TestGenerateKnightMoves(t *testing.T) {
 	t.Run("knight on e4 can reach 8 squares", func(t *testing.T) {
@@ -1396,7 +1503,9 @@ func TestIsLegalMove(t *testing.T) {
 		}
 
 		// Make the move
-		board.MakeMove(whiteMove)
+		if err := board.MakeMove(whiteMove); err != nil {
+			t.Fatalf("MakeMove returned error: %v", err)
+		}
 
 		// Now it's black's turn - same white move should be illegal
 		if board.IsLegalMove(whiteMove) {

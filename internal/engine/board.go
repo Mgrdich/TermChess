@@ -1,6 +1,6 @@
 package engine
 
-import "errors"
+import "fmt"
 
 // Board represents the complete state of a chess game.
 type Board struct {
@@ -112,20 +112,24 @@ func (b *Board) Copy() *Board {
 }
 
 // MakeMove applies a move to the board.
-// It validates that there is a piece of the correct color at the source square.
-// Returns an error if the move is invalid (no piece or wrong color).
+// It validates that the move is legal before applying it.
+// Returns an error if the move is illegal (invalid piece, wrong color, or leaves king in check).
 func (b *Board) MakeMove(m Move) error {
+	// Check if the move is legal using the full legality check
+	if !b.IsLegalMove(m) {
+		return fmt.Errorf("illegal move: %s", m.String())
+	}
+
+	// Apply the move using the internal method (skips legality check)
+	b.applyMove(m)
+	return nil
+}
+
+// applyMove applies a move to the board without checking legality.
+// This is used internally by LegalMoves() to test moves on a copy of the board.
+// External code should use MakeMove() which validates legality first.
+func (b *Board) applyMove(m Move) {
 	piece := b.Squares[m.From]
-
-	// Validate source square has a piece
-	if piece.IsEmpty() {
-		return errors.New("no piece at source square")
-	}
-
-	// Validate piece belongs to active player
-	if piece.Color() != b.ActiveColor {
-		return errors.New("piece belongs to opponent")
-	}
 
 	// Move the piece
 	b.Squares[m.To] = piece
@@ -139,8 +143,6 @@ func (b *Board) MakeMove(m Move) error {
 		// Increment full move number after Black's move
 		b.FullMoveNum++
 	}
-
-	return nil
 }
 
 // InCheck returns true if the active color's king is under attack by the opponent.

@@ -339,21 +339,18 @@ func (b *Board) LegalMoves() []Move {
 	pseudoLegalMoves := b.PseudoLegalMoves()
 	var legalMoves []Move
 
-	// Remember which color is moving (before MakeMove switches it)
+	// Remember which color is moving (before applyMove switches it)
 	movingColor := b.ActiveColor
 
 	for _, move := range pseudoLegalMoves {
 		// Create a copy of the board to test the move
 		boardCopy := b.Copy()
 
-		// Apply the move on the copy (this also switches ActiveColor)
-		err := boardCopy.MakeMove(move)
-		if err != nil {
-			// Move was invalid (shouldn't happen with pseudo-legal moves, but skip)
-			continue
-		}
+		// Apply the move on the copy using the internal method (skips legality check)
+		// This avoids infinite recursion since MakeMove calls IsLegalMove which calls LegalMoves
+		boardCopy.applyMove(move)
 
-		// After MakeMove, ActiveColor has switched to the opponent.
+		// After applyMove, ActiveColor has switched to the opponent.
 		// We need to check if the king of the color that JUST moved is in check.
 		// The opponent (now active) would be attacking, so we check if the
 		// moving color's king is attacked by the new active color.
