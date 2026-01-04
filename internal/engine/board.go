@@ -131,6 +131,22 @@ func (b *Board) MakeMove(m Move) error {
 func (b *Board) applyMove(m Move) {
 	piece := b.Squares[m.From]
 
+	// Handle en passant capture: remove the captured pawn
+	// En passant is detected when a pawn moves to the en passant square
+	// The captured pawn is on the same file as destination, but different rank
+	if piece.Type() == Pawn && b.EnPassantSq >= 0 && m.To == Square(b.EnPassantSq) {
+		// White captures: captured pawn is one rank below (rank - 1)
+		// Black captures: captured pawn is one rank above (rank + 1)
+		capturedPawnRank := m.To.Rank()
+		if piece.Color() == White {
+			capturedPawnRank-- // White captures pawn below
+		} else {
+			capturedPawnRank++ // Black captures pawn above
+		}
+		capturedPawnSq := NewSquare(m.To.File(), capturedPawnRank)
+		b.Squares[capturedPawnSq] = Piece(Empty)
+	}
+
 	// Move the piece
 	b.Squares[m.To] = piece
 	b.Squares[m.From] = Piece(Empty)
