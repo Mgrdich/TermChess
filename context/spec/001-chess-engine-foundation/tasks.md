@@ -66,7 +66,7 @@
   - [x] Implement `Board.IsLegalMove(m Move) bool` convenience method
   - [x] Update `Board.MakeMove()` to reject illegal moves with error
   - [x] Add unit tests for check detection in various positions
-  - [ ] Add unit tests verifying illegal moves are filtered (moving pinned pieces, etc.)
+  - [x] Add unit tests verifying illegal moves are filtered (moving pinned pieces, etc.)
 
 ---
 

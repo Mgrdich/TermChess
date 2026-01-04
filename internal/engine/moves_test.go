@@ -1566,3 +1566,422 @@ func TestIsLegalMove(t *testing.T) {
 		_ = result
 	})
 }
+
+func TestIllegalMovesFiltered(t *testing.T) {
+	t.Run("pinned rook cannot move perpendicular to pin", func(t *testing.T) {
+		// White king on e1, White rook on e4, Black rook on e8
+		// Rook is pinned along e-file
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, Rook) // e4
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook) // e8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King) // h8
+
+		// Verify rook cannot move perpendicular to pin (to d4, f4, etc.)
+		illegalMoves := []string{"e4d4", "e4f4", "e4a4", "e4h4"}
+		for _, moveStr := range illegalMoves {
+			move, _ := ParseMove(moveStr)
+
+			// Should not be in LegalMoves
+			legalMoves := board.LegalMoves()
+			if containsMove(legalMoves, move.From, move.To) {
+				t.Errorf("%s should not be in LegalMoves (pinned rook)", moveStr)
+			}
+
+			// IsLegalMove should return false
+			if board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return false (pinned rook)", moveStr)
+			}
+
+			// MakeMove should return error
+			err := board.MakeMove(move)
+			if err == nil {
+				t.Errorf("MakeMove(%s) should return error (pinned rook)", moveStr)
+			}
+		}
+	})
+
+	t.Run("pinned bishop by queen on diagonal", func(t *testing.T) {
+		// White king on a1, White bishop on c3, Black queen on f6
+		// Bishop is pinned along the diagonal
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, King)   // a1
+		board.Squares[NewSquare(2, 2)] = NewPiece(White, Bishop) // c3
+		board.Squares[NewSquare(5, 5)] = NewPiece(Black, Queen)  // f6
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+
+		// Bishop can move along the diagonal toward the queen
+		legalMovesTowardAttacker := []string{"c3d4", "c3e5", "c3f6"} // captures queen
+		for _, moveStr := range legalMovesTowardAttacker {
+			move, _ := ParseMove(moveStr)
+			if !board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return true (move along pin toward attacker)", moveStr)
+			}
+		}
+
+		// Bishop can move along the diagonal away from the queen
+		legalMovesAwayFromAttacker := []string{"c3b2"}
+		for _, moveStr := range legalMovesAwayFromAttacker {
+			move, _ := ParseMove(moveStr)
+			if !board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return true (move along pin away from attacker)", moveStr)
+			}
+		}
+
+		// Bishop cannot move perpendicular to the pin
+		illegalMoves := []string{"c3b4", "c3d2", "c3a5"}
+		for _, moveStr := range illegalMoves {
+			move, _ := ParseMove(moveStr)
+
+			// Should not be in LegalMoves
+			legalMoves := board.LegalMoves()
+			if containsMove(legalMoves, move.From, move.To) {
+				t.Errorf("%s should not be in LegalMoves (pinned bishop)", moveStr)
+			}
+
+			// IsLegalMove should return false
+			if board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return false (pinned bishop)", moveStr)
+			}
+
+			// MakeMove should return error
+			err := board.MakeMove(move)
+			if err == nil {
+				t.Errorf("MakeMove(%s) should return error (pinned bishop)", moveStr)
+			}
+		}
+	})
+
+	t.Run("knight pinned to king cannot move at all", func(t *testing.T) {
+		// White king on e1, White knight on e3, Black rook on e8
+		// Knight is pinned along the e-file
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(4, 2)] = NewPiece(White, Knight) // e3
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)   // e8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+
+		// Knight cannot move at all when pinned (it can't move along the pin line)
+		legalMoves := board.LegalMoves()
+		knightMoves := countMovesFrom(legalMoves, NewSquare(4, 2))
+		if knightMoves != 0 {
+			t.Errorf("pinned knight should have 0 legal moves, got %d", knightMoves)
+		}
+
+		// Test a few specific knight moves
+		illegalMoves := []string{"e3d5", "e3f5", "e3g4", "e3c2"}
+		for _, moveStr := range illegalMoves {
+			move, _ := ParseMove(moveStr)
+
+			if board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return false (pinned knight)", moveStr)
+			}
+
+			err := board.MakeMove(move)
+			if err == nil {
+				t.Errorf("MakeMove(%s) should return error (pinned knight)", moveStr)
+			}
+		}
+	})
+
+	t.Run("pawn pinned on diagonal cannot move forward", func(t *testing.T) {
+		// White king on e1, White pawn on e2, Black bishop on e4 - NO, bishop can't pin forward
+		// Actually: White king on a1, White pawn on b2, Black bishop on d4
+		// Pawn is pinned on the diagonal
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, King)   // a1
+		board.Squares[NewSquare(1, 1)] = NewPiece(White, Pawn)   // b2
+		board.Squares[NewSquare(3, 3)] = NewPiece(Black, Bishop) // d4
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+
+		// Pawn cannot move forward (perpendicular to pin)
+		illegalMoves := []string{"b2b3", "b2b4"}
+		for _, moveStr := range illegalMoves {
+			move, _ := ParseMove(moveStr)
+
+			if board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return false (pawn pinned on diagonal)", moveStr)
+			}
+
+			err := board.MakeMove(move)
+			if err == nil {
+				t.Errorf("MakeMove(%s) should return error (pawn pinned on diagonal)", moveStr)
+			}
+		}
+
+		// Pawn could capture along the diagonal if bishop moves closer
+		// Let's test with bishop on c3
+		board.Squares[NewSquare(3, 3)] = Piece(Empty)            // remove from d4
+		board.Squares[NewSquare(2, 2)] = NewPiece(Black, Bishop) // c3
+
+		// Now pawn can capture the bishop (along the pin line)
+		captureMove, _ := ParseMove("b2c3")
+		if !board.IsLegalMove(captureMove) {
+			t.Error("IsLegalMove(b2c3) should return true (capture along pin line)")
+		}
+	})
+
+	t.Run("discovered check - piece cannot move away from blocking position", func(t *testing.T) {
+		// White king on e1, White knight on e3, Black rook on e8
+		// If knight moves, it would expose king to check
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(4, 2)] = NewPiece(White, Knight) // e3
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)   // e8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+
+		// Knight is blocking check - it cannot move
+		illegalMoves := []string{"e3d5", "e3f5", "e3g4", "e3d1"}
+		for _, moveStr := range illegalMoves {
+			move, _ := ParseMove(moveStr)
+
+			if board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return false (discovered check)", moveStr)
+			}
+
+			err := board.MakeMove(move)
+			if err == nil {
+				t.Errorf("MakeMove(%s) should return error (discovered check)", moveStr)
+			}
+		}
+	})
+
+	t.Run("king cannot capture defended piece", func(t *testing.T) {
+		// White king on e4, Black pawn on f5, Black queen on h5 (defends pawn)
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)  // e4
+		board.Squares[NewSquare(5, 4)] = NewPiece(Black, Pawn)  // f5
+		board.Squares[NewSquare(7, 4)] = NewPiece(Black, Queen) // h5 (defends f5)
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)  // h8
+
+		// King cannot capture the defended pawn
+		move, _ := ParseMove("e4f5")
+
+		legalMoves := board.LegalMoves()
+		if containsMove(legalMoves, move.From, move.To) {
+			t.Error("e4f5 should not be in LegalMoves (king capturing defended piece)")
+		}
+
+		if board.IsLegalMove(move) {
+			t.Error("IsLegalMove(e4f5) should return false (king capturing defended piece)")
+		}
+
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Error("MakeMove(e4f5) should return error (king capturing defended piece)")
+		}
+	})
+
+	t.Run("king cannot move next to enemy king", func(t *testing.T) {
+		// White king on e4, Black king on e6
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King) // e4
+		board.Squares[NewSquare(4, 5)] = NewPiece(Black, King) // e6
+
+		// White king cannot move to e5 (next to black king)
+		move, _ := ParseMove("e4e5")
+
+		if board.IsLegalMove(move) {
+			t.Error("IsLegalMove(e4e5) should return false (king next to king)")
+		}
+
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Error("MakeMove(e4e5) should return error (king next to king)")
+		}
+
+		// Also cannot move to d5, f5 (diagonal)
+		diagonalMoves := []string{"e4d5", "e4f5"}
+		for _, moveStr := range diagonalMoves {
+			move, _ := ParseMove(moveStr)
+			if board.IsLegalMove(move) {
+				t.Errorf("IsLegalMove(%s) should return false (king next to king)", moveStr)
+			}
+		}
+	})
+
+	t.Run("when in check from multiple pieces only king can escape", func(t *testing.T) {
+		// White king on e1, Black queen on e8, Black knight on d3
+		// King is in double check - only king moves are legal
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Queen)  // e8
+		board.Squares[NewSquare(3, 2)] = NewPiece(Black, Knight) // d3
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Rook)   // a1
+		board.Squares[NewSquare(2, 1)] = NewPiece(White, Bishop) // c2
+
+		// Verify king is in check
+		if !board.InCheck() {
+			t.Fatal("king should be in check")
+		}
+
+		// Non-king pieces should have 0 legal moves
+		legalMoves := board.LegalMoves()
+
+		rookMoves := countMovesFrom(legalMoves, NewSquare(0, 0))
+		if rookMoves != 0 {
+			t.Errorf("rook should have 0 legal moves in double check, got %d", rookMoves)
+		}
+
+		bishopMoves := countMovesFrom(legalMoves, NewSquare(2, 1))
+		if bishopMoves != 0 {
+			t.Errorf("bishop should have 0 legal moves in double check, got %d", bishopMoves)
+		}
+
+		// Only king should have legal moves
+		kingMoves := countMovesFrom(legalMoves, NewSquare(4, 0))
+		if kingMoves == 0 {
+			t.Error("king should have at least one escape square")
+		}
+
+		// All legal moves should be king moves
+		for _, move := range legalMoves {
+			if move.From != NewSquare(4, 0) {
+				t.Errorf("in double check, only king should be able to move, but found move %s", move.String())
+			}
+		}
+	})
+
+	t.Run("when in check must block or capture or move king", func(t *testing.T) {
+		// White king on e1, Black queen on e8
+		// White bishop on b5 can block at e2
+		// White knight on c3 can block at e2 or e4
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Queen)  // e8
+		board.Squares[NewSquare(1, 4)] = NewPiece(White, Bishop) // b5
+		board.Squares[NewSquare(2, 2)] = NewPiece(White, Knight) // c3
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+
+		// Verify king is in check
+		if !board.InCheck() {
+			t.Fatal("king should be in check")
+		}
+
+		legalMoves := board.LegalMoves()
+
+		// Bishop moving to e2 should be legal (blocks check)
+		if !containsMove(legalMoves, NewSquare(1, 4), NewSquare(4, 1)) {
+			t.Error("b5e2 should be legal (bishop blocks check)")
+		}
+
+		// Bishop moving to a4 should be illegal (doesn't block)
+		if containsMove(legalMoves, NewSquare(1, 4), NewSquare(0, 3)) {
+			t.Error("b5a4 should be illegal (doesn't block check)")
+		}
+
+		// Knight to e2 should be legal (blocks)
+		if !containsMove(legalMoves, NewSquare(2, 2), NewSquare(4, 1)) {
+			t.Error("c3e2 should be legal (knight blocks check)")
+		}
+
+		// Knight to e4 should be legal (blocks)
+		if !containsMove(legalMoves, NewSquare(2, 2), NewSquare(4, 3)) {
+			t.Error("c3e4 should be legal (knight blocks check)")
+		}
+
+		// Knight to a2 should be illegal (doesn't block)
+		if containsMove(legalMoves, NewSquare(2, 2), NewSquare(0, 1)) {
+			t.Error("c3a2 should be illegal (doesn't block check)")
+		}
+	})
+
+	t.Run("cannot block knight check must capture or move king", func(t *testing.T) {
+		// White king on e1, Black knight on d3 (gives check)
+		// White rook on d1 can capture the knight
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(3, 2)] = NewPiece(Black, Knight) // d3 (gives check)
+		board.Squares[NewSquare(3, 0)] = NewPiece(White, Rook)   // d1 (can capture)
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+
+		// Verify king is in check
+		if !board.InCheck() {
+			t.Fatal("king should be in check from knight")
+		}
+
+		legalMoves := board.LegalMoves()
+
+		// Rook can capture the knight
+		if !containsMove(legalMoves, NewSquare(3, 0), NewSquare(3, 2)) {
+			t.Error("d1d3 should be legal (rook captures checking knight)")
+		}
+
+		// But rook cannot just move somewhere else
+		if containsMove(legalMoves, NewSquare(3, 0), NewSquare(2, 0)) {
+			t.Error("d1c1 should be illegal (doesn't escape knight check)")
+		}
+	})
+
+	t.Run("multiple pins on same board", func(t *testing.T) {
+		// White king on e1
+		// White rook on e4 pinned by Black rook on e8
+		// White bishop on d2 pinned by Black queen on a5
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)   // e1
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, Rook)   // e4 (pinned vertically)
+		board.Squares[NewSquare(3, 1)] = NewPiece(White, Bishop) // d2 (pinned diagonally)
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)   // e8 (pins the rook)
+		board.Squares[NewSquare(0, 4)] = NewPiece(Black, Queen)  // a5 (pins the bishop)
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)   // h8
+
+		legalMoves := board.LegalMoves()
+
+		// Rook on e4 can only move along e-file
+		rookMoves := countMovesFrom(legalMoves, NewSquare(4, 3))
+		// Can move to: e2, e3, e5, e6, e7, e8 = 6 squares
+		if rookMoves != 6 {
+			t.Errorf("pinned rook should have 6 legal moves, got %d", rookMoves)
+		}
+
+		// Rook cannot move to d4 (perpendicular to pin)
+		if containsMove(legalMoves, NewSquare(4, 3), NewSquare(3, 3)) {
+			t.Error("e4d4 should be illegal (rook pinned)")
+		}
+
+		// Bishop on d2 can only move along a5-e1 diagonal
+		bishopMoves := countMovesFrom(legalMoves, NewSquare(3, 1))
+		// Can move to: c3, b4, a5 (capture) = 3 squares
+		// Note: e1 has the king, so bishop can't move there
+		if bishopMoves != 3 {
+			t.Errorf("pinned bishop should have 3 legal moves, got %d", bishopMoves)
+		}
+
+		// Bishop cannot move to c1 (perpendicular to pin)
+		if containsMove(legalMoves, NewSquare(3, 1), NewSquare(2, 0)) {
+			t.Error("d2c1 should be illegal (bishop pinned)")
+		}
+	})
+
+	t.Run("absolute pin vs partial pin", func(t *testing.T) {
+		// Absolute pin: piece cannot move at all (e.g., knight pinned by rook)
+		// Partial pin: piece can move along pin line (e.g., rook pinned by rook)
+
+		// Test absolute pin: White king e1, White queen e3, Black rook e8
+		// Queen is pinned but can still move along the pin line
+		board := &Board{ActiveColor: White}
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King)  // e1
+		board.Squares[NewSquare(4, 2)] = NewPiece(White, Queen) // e3
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, Rook)  // e8
+		board.Squares[NewSquare(7, 7)] = NewPiece(Black, King)  // h8
+
+		legalMoves := board.LegalMoves()
+
+		// Queen can move along the e-file (toward or away from attacker)
+		if !containsMove(legalMoves, NewSquare(4, 2), NewSquare(4, 1)) {
+			t.Error("e3e2 should be legal (queen moves along pin line)")
+		}
+		if !containsMove(legalMoves, NewSquare(4, 2), NewSquare(4, 4)) {
+			t.Error("e3e5 should be legal (queen moves along pin line)")
+		}
+
+		// But queen cannot move perpendicular to pin
+		if containsMove(legalMoves, NewSquare(4, 2), NewSquare(3, 3)) {
+			t.Error("e3d4 should be illegal (queen pinned, moving perpendicular)")
+		}
+		if containsMove(legalMoves, NewSquare(4, 2), NewSquare(5, 2)) {
+			t.Error("e3f3 should be illegal (queen pinned, moving perpendicular)")
+		}
+	})
+}
