@@ -91,7 +91,7 @@
   - [x] Update pawn move generation to include en passant captures when available
   - [x] Update `MakeMove()` to handle en passant capture (remove captured pawn)
   - [x] Clear en passant square after any move (only valid immediately)
-  - [ ] Add unit tests for en passant capture
+  - [x] Add unit tests for en passant capture
   - [ ] Add unit test for en passant expiring after one move
 
 ---

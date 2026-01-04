@@ -1555,3 +1555,545 @@ func TestCastlingRightsUpdate(t *testing.T) {
 		}
 	})
 }
+
+func TestEnPassantCaptureExecution(t *testing.T) {
+	// Test basic en passant capture by White
+	t.Run("white en passant capture removes black pawn", func(t *testing.T) {
+		// Setup: White pawn on e5, Black pawn moves d7->d5 (setting en passant square d6)
+		board := &Board{ActiveColor: White}
+		e5 := NewSquare(4, 4) // e5 (white pawn on 5th rank)
+		d5 := NewSquare(3, 4) // d5 (black pawn just moved here)
+		d6 := NewSquare(3, 5) // d6 (en passant target square)
+
+		// Place kings (required for legal move generation)
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		// Place white pawn on e5 and black pawn on d5
+		board.Squares[e5] = NewPiece(White, Pawn)
+		board.Squares[d5] = NewPiece(Black, Pawn)
+
+		// Set en passant square to d6 (as if black just played d7-d5)
+		board.EnPassantSq = int8(d6)
+
+		// Generate legal moves - should include en passant capture e5xd6
+		legalMoves := board.LegalMoves()
+
+		// Find the en passant capture move
+		var epMove Move
+		foundEP := false
+		for _, m := range legalMoves {
+			if m.From == e5 && m.To == d6 {
+				epMove = m
+				foundEP = true
+				break
+			}
+		}
+
+		if !foundEP {
+			t.Error("en passant capture e5xd6 should be in legal moves")
+		}
+
+		// Apply the en passant capture
+		err := board.MakeMove(epMove)
+		if err != nil {
+			t.Fatalf("MakeMove failed: %v", err)
+		}
+
+		// Verify the white pawn is now on d6
+		if board.Squares[d6].Type() != Pawn || board.Squares[d6].Color() != White {
+			t.Errorf("expected white pawn on d6, got %v", board.Squares[d6])
+		}
+
+		// Verify e5 is empty (pawn moved from there)
+		if !board.Squares[e5].IsEmpty() {
+			t.Errorf("expected e5 to be empty, got %v", board.Squares[e5])
+		}
+
+		// Verify d5 is empty (black pawn was captured)
+		if !board.Squares[d5].IsEmpty() {
+			t.Errorf("expected d5 to be empty (black pawn captured), got %v", board.Squares[d5])
+		}
+
+		// Verify en passant square is cleared
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after move, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test basic en passant capture by Black
+	t.Run("black en passant capture removes white pawn", func(t *testing.T) {
+		// Setup: Black pawn on d4, White pawn moves e2->e4 (setting en passant square e3)
+		board := &Board{ActiveColor: Black}
+		d4 := NewSquare(3, 3) // d4 (black pawn on 4th rank)
+		e4 := NewSquare(4, 3) // e4 (white pawn just moved here)
+		e3 := NewSquare(4, 2) // e3 (en passant target square)
+
+		// Place kings (required for legal move generation)
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		// Place black pawn on d4 and white pawn on e4
+		board.Squares[d4] = NewPiece(Black, Pawn)
+		board.Squares[e4] = NewPiece(White, Pawn)
+
+		// Set en passant square to e3 (as if white just played e2-e4)
+		board.EnPassantSq = int8(e3)
+
+		// Generate legal moves - should include en passant capture d4xe3
+		legalMoves := board.LegalMoves()
+
+		// Find the en passant capture move
+		var epMove Move
+		foundEP := false
+		for _, m := range legalMoves {
+			if m.From == d4 && m.To == e3 {
+				epMove = m
+				foundEP = true
+				break
+			}
+		}
+
+		if !foundEP {
+			t.Error("en passant capture d4xe3 should be in legal moves")
+		}
+
+		// Apply the en passant capture
+		err := board.MakeMove(epMove)
+		if err != nil {
+			t.Fatalf("MakeMove failed: %v", err)
+		}
+
+		// Verify the black pawn is now on e3
+		if board.Squares[e3].Type() != Pawn || board.Squares[e3].Color() != Black {
+			t.Errorf("expected black pawn on e3, got %v", board.Squares[e3])
+		}
+
+		// Verify d4 is empty (pawn moved from there)
+		if !board.Squares[d4].IsEmpty() {
+			t.Errorf("expected d4 to be empty, got %v", board.Squares[d4])
+		}
+
+		// Verify e4 is empty (white pawn was captured)
+		if !board.Squares[e4].IsEmpty() {
+			t.Errorf("expected e4 to be empty (white pawn captured), got %v", board.Squares[e4])
+		}
+
+		// Verify en passant square is cleared
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after move, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test en passant removes the correct pawn (verifies all three squares)
+	t.Run("en passant removes correct pawn from correct squares", func(t *testing.T) {
+		// White pawn on f5 captures en passant on g6, removing black pawn on g5
+		board := &Board{ActiveColor: White}
+		f5 := NewSquare(5, 4) // f5
+		g5 := NewSquare(6, 4) // g5 (black pawn location)
+		g6 := NewSquare(6, 5) // g6 (en passant target)
+
+		board.Squares[f5] = NewPiece(White, Pawn)
+		board.Squares[g5] = NewPiece(Black, Pawn)
+		board.EnPassantSq = int8(g6)
+
+		// Apply en passant capture directly
+		move := Move{From: f5, To: g6}
+		board.applyMove(move)
+
+		// Verify capturing pawn moved to en passant square (g6)
+		if board.Squares[g6].Type() != Pawn || board.Squares[g6].Color() != White {
+			t.Errorf("expected white pawn on g6, got %v", board.Squares[g6])
+		}
+
+		// Verify original square of capturing pawn is empty (f5)
+		if !board.Squares[f5].IsEmpty() {
+			t.Errorf("expected f5 to be empty, got %v", board.Squares[f5])
+		}
+
+		// Verify captured pawn's square is empty (g5, NOT g6)
+		if !board.Squares[g5].IsEmpty() {
+			t.Errorf("expected g5 to be empty (captured pawn removed), got %v", board.Squares[g5])
+		}
+	})
+
+	// Test en passant from both sides (left and right captures)
+	t.Run("white pawn can capture en passant from both left and right", func(t *testing.T) {
+		// Setup: White pawn on d5, black pawns could have moved to c5 or e5
+		// Test left capture (d5xc6)
+		board := &Board{ActiveColor: White}
+		d5 := NewSquare(3, 4) // d5
+		c5 := NewSquare(2, 4) // c5
+		c6 := NewSquare(2, 5) // c6
+
+		// Place kings (required for legal move generation)
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		board.Squares[d5] = NewPiece(White, Pawn)
+		board.Squares[c5] = NewPiece(Black, Pawn)
+		board.EnPassantSq = int8(c6)
+
+		// Verify en passant move is legal
+		legalMoves := board.LegalMoves()
+		foundLeft := false
+		for _, m := range legalMoves {
+			if m.From == d5 && m.To == c6 {
+				foundLeft = true
+				break
+			}
+		}
+		if !foundLeft {
+			t.Error("en passant capture d5xc6 (left) should be in legal moves")
+		}
+
+		// Test right capture (d5xe6)
+		board = &Board{ActiveColor: White}
+		e5 := NewSquare(4, 4) // e5
+		e6 := NewSquare(4, 5) // e6
+
+		// Place kings (required for legal move generation)
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		board.Squares[d5] = NewPiece(White, Pawn)
+		board.Squares[e5] = NewPiece(Black, Pawn)
+		board.EnPassantSq = int8(e6)
+
+		legalMoves = board.LegalMoves()
+		foundRight := false
+		for _, m := range legalMoves {
+			if m.From == d5 && m.To == e6 {
+				foundRight = true
+				break
+			}
+		}
+		if !foundRight {
+			t.Error("en passant capture d5xe6 (right) should be in legal moves")
+		}
+	})
+
+	// Test en passant only available on correct ranks
+	t.Run("en passant only available on correct ranks", func(t *testing.T) {
+		// White pawns can only en passant from rank 5
+		// Setup white pawn on wrong rank (e4 instead of e5)
+		board := &Board{ActiveColor: White}
+		e4 := NewSquare(4, 3) // e4 (rank 4, not rank 5)
+		d5 := NewSquare(3, 4) // d5
+		d6 := NewSquare(3, 5) // d6
+
+		board.Squares[e4] = NewPiece(White, Pawn)
+		board.Squares[d5] = NewPiece(Black, Pawn)
+		board.EnPassantSq = int8(d6)
+
+		// Generate pseudo-legal moves (before legality check)
+		pseudoMoves := board.PseudoLegalMoves()
+		foundEP := false
+		for _, m := range pseudoMoves {
+			if m.From == e4 && m.To == d6 {
+				foundEP = true
+				break
+			}
+		}
+
+		if foundEP {
+			t.Error("pawn on rank 4 should not be able to capture en passant")
+		}
+
+		// Black pawns can only en passant from rank 4
+		// Setup black pawn on wrong rank (d5 instead of d4)
+		board = &Board{ActiveColor: Black}
+		d5 = NewSquare(3, 4) // d5 (rank 5, not rank 4)
+		e4 = NewSquare(4, 3) // e4
+		e3 := NewSquare(4, 2) // e3
+
+		board.Squares[d5] = NewPiece(Black, Pawn)
+		board.Squares[e4] = NewPiece(White, Pawn)
+		board.EnPassantSq = int8(e3)
+
+		pseudoMoves = board.PseudoLegalMoves()
+		foundEP = false
+		for _, m := range pseudoMoves {
+			if m.From == d5 && m.To == e3 {
+				foundEP = true
+				break
+			}
+		}
+
+		if foundEP {
+			t.Error("black pawn on rank 5 should not be able to capture en passant")
+		}
+	})
+
+	// Test en passant when the capturing pawn is pinned (edge case)
+	t.Run("en passant not legal when pawn is pinned to king", func(t *testing.T) {
+		// Setup: White king on e5, white pawn on d5, black rook on a5
+		// Black pawn on c5 (en passant available on c6)
+		// If white pawn captures en passant, it exposes the king to check from rook
+		board := &Board{ActiveColor: White}
+
+		e5 := NewSquare(4, 4) // e5 (white king)
+		d5 := NewSquare(3, 4) // d5 (white pawn - pinned)
+		c5 := NewSquare(2, 4) // c5 (black pawn)
+		c6 := NewSquare(2, 5) // c6 (en passant target)
+		a5 := NewSquare(0, 4) // a5 (black rook - pinning)
+
+		board.Squares[e5] = NewPiece(White, King)
+		board.Squares[d5] = NewPiece(White, Pawn)
+		board.Squares[c5] = NewPiece(Black, Pawn)
+		board.Squares[a5] = NewPiece(Black, Rook)
+		board.EnPassantSq = int8(c6)
+
+		// Generate legal moves
+		legalMoves := board.LegalMoves()
+
+		// The en passant capture should NOT be in legal moves (would expose king)
+		foundEP := false
+		for _, m := range legalMoves {
+			if m.From == d5 && m.To == c6 {
+				foundEP = true
+				break
+			}
+		}
+
+		if foundEP {
+			t.Error("en passant capture should not be legal when pawn is pinned to king")
+		}
+	})
+
+	// Test en passant across all files
+	t.Run("en passant works on all files", func(t *testing.T) {
+		// Test white capturing on each file
+		for file := 0; file < 7; file++ { // 0-6 (a-g files can capture to the right)
+			board := &Board{ActiveColor: White}
+
+			// Place kings (required for legal move generation)
+			board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+			board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+			// White pawn on current file, rank 5
+			pawnSq := NewSquare(file, 4)
+			// Black pawn on next file, rank 5
+			enemySq := NewSquare(file+1, 4)
+			// En passant target on next file, rank 6
+			epSq := NewSquare(file+1, 5)
+
+			board.Squares[pawnSq] = NewPiece(White, Pawn)
+			board.Squares[enemySq] = NewPiece(Black, Pawn)
+			board.EnPassantSq = int8(epSq)
+
+			legalMoves := board.LegalMoves()
+			foundEP := false
+			for _, m := range legalMoves {
+				if m.From == pawnSq && m.To == epSq {
+					foundEP = true
+					break
+				}
+			}
+
+			if !foundEP {
+				t.Errorf("en passant should work on file %d (capturing to file %d)", file, file+1)
+			}
+		}
+
+		// Test capturing to the left as well (files b-h can capture to the left)
+		for file := 1; file < 8; file++ {
+			board := &Board{ActiveColor: White}
+
+			// Place kings (required for legal move generation)
+			board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+			board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+			pawnSq := NewSquare(file, 4)
+			enemySq := NewSquare(file-1, 4)
+			epSq := NewSquare(file-1, 5)
+
+			board.Squares[pawnSq] = NewPiece(White, Pawn)
+			board.Squares[enemySq] = NewPiece(Black, Pawn)
+			board.EnPassantSq = int8(epSq)
+
+			legalMoves := board.LegalMoves()
+			foundEP := false
+			for _, m := range legalMoves {
+				if m.From == pawnSq && m.To == epSq {
+					foundEP = true
+					break
+				}
+			}
+
+			if !foundEP {
+				t.Errorf("en passant should work on file %d (capturing to file %d)", file, file-1)
+			}
+		}
+	})
+
+	// Test no en passant when square is not set
+	t.Run("no en passant when en passant square is not set", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		e5 := NewSquare(4, 4)
+		d5 := NewSquare(3, 4)
+		d6 := NewSquare(3, 5)
+
+		board.Squares[e5] = NewPiece(White, Pawn)
+		board.Squares[d5] = NewPiece(Black, Pawn)
+		board.EnPassantSq = -1 // No en passant available
+
+		legalMoves := board.LegalMoves()
+		foundEP := false
+		for _, m := range legalMoves {
+			if m.From == e5 && m.To == d6 {
+				foundEP = true
+				break
+			}
+		}
+
+		if foundEP {
+			t.Error("en passant should not be available when EnPassantSq is -1")
+		}
+	})
+
+	// Test en passant in a realistic game sequence
+	t.Run("realistic en passant sequence", func(t *testing.T) {
+		board := NewBoard()
+
+		// 1. White plays e2-e4
+		e2 := NewSquare(4, 1)
+		e4 := NewSquare(4, 3)
+		move1 := Move{From: e2, To: e4}
+		err := board.MakeMove(move1)
+		if err != nil {
+			t.Fatalf("Move 1 failed: %v", err)
+		}
+
+		// Verify en passant square is set
+		e3 := NewSquare(4, 2)
+		if board.EnPassantSq != int8(e3) {
+			t.Errorf("expected en passant square e3, got %d", board.EnPassantSq)
+		}
+
+		// 2. Black plays a7-a6
+		a7 := NewSquare(0, 6)
+		a6 := NewSquare(0, 5)
+		move2 := Move{From: a7, To: a6}
+		err = board.MakeMove(move2)
+		if err != nil {
+			t.Fatalf("Move 2 failed: %v", err)
+		}
+
+		// Verify en passant square is cleared
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected en passant square to be cleared, got %d", board.EnPassantSq)
+		}
+
+		// 3. White plays e4-e5 (advancing the pawn to rank 5)
+		e5 := NewSquare(4, 4)
+		move3 := Move{From: e4, To: e5}
+		err = board.MakeMove(move3)
+		if err != nil {
+			t.Fatalf("Move 3 failed: %v", err)
+		}
+
+		// 4. Black plays d7-d5 (now adjacent to white e5 pawn, setting up en passant)
+		d7 := NewSquare(3, 6)
+		d5 := NewSquare(3, 4)
+		move4 := Move{From: d7, To: d5}
+		err = board.MakeMove(move4)
+		if err != nil {
+			t.Fatalf("Move 4 failed: %v", err)
+		}
+
+		// Verify en passant square is set to d6
+		d6 := NewSquare(3, 5)
+		if board.EnPassantSq != int8(d6) {
+			t.Errorf("expected en passant square d6, got %d", board.EnPassantSq)
+		}
+
+		// 5. White captures en passant e5xd6
+		// But first verify the move is legal
+		legalMoves := board.LegalMoves()
+		foundEP := false
+		var epMove Move
+		for _, m := range legalMoves {
+			if m.From == e5 && m.To == d6 {
+				foundEP = true
+				epMove = m
+				break
+			}
+		}
+
+		if !foundEP {
+			t.Fatal("en passant capture e5xd6 should be legal")
+		}
+
+		err = board.MakeMove(epMove)
+		if err != nil {
+			t.Fatalf("En passant capture failed: %v", err)
+		}
+
+		// Verify the position after en passant
+		// White pawn should be on d6
+		if board.Squares[d6].Type() != Pawn || board.Squares[d6].Color() != White {
+			t.Errorf("expected white pawn on d6, got %v", board.Squares[d6])
+		}
+
+		// d5 should be empty (black pawn captured)
+		if !board.Squares[d5].IsEmpty() {
+			t.Errorf("expected d5 to be empty, got %v", board.Squares[d5])
+		}
+
+		// e5 should be empty (white pawn moved from there)
+		if !board.Squares[e5].IsEmpty() {
+			t.Errorf("expected e5 to be empty, got %v", board.Squares[e5])
+		}
+	})
+
+	// Test en passant discovery check (capturing reveals check on opponent's king)
+	t.Run("en passant can give discovered check", func(t *testing.T) {
+		// Setup: White rook on a5, black king on e5, black pawn on d5
+		// White pawn on c5, en passant on d6
+		// When white captures d5 en passant, it discovers check on black king
+		board := &Board{ActiveColor: White}
+
+		a5 := NewSquare(0, 4) // a5 (white rook)
+		c5 := NewSquare(2, 4) // c5 (white pawn)
+		d5 := NewSquare(3, 4) // d5 (black pawn)
+		d6 := NewSquare(3, 5) // d6 (en passant target)
+		e5 := NewSquare(4, 4) // e5 (black king)
+
+		// Place white king (required for legal move generation)
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, King) // a1
+
+		board.Squares[a5] = NewPiece(White, Rook)
+		board.Squares[c5] = NewPiece(White, Pawn)
+		board.Squares[d5] = NewPiece(Black, Pawn)
+		board.Squares[e5] = NewPiece(Black, King)
+		board.EnPassantSq = int8(d6)
+
+		// The en passant capture should be legal
+		legalMoves := board.LegalMoves()
+		foundEP := false
+		var epMove Move
+		for _, m := range legalMoves {
+			if m.From == c5 && m.To == d6 {
+				foundEP = true
+				epMove = m
+				break
+			}
+		}
+
+		if !foundEP {
+			t.Error("en passant capture c5xd6 should be legal")
+		}
+
+		// Apply the move
+		err := board.MakeMove(epMove)
+		if err != nil {
+			t.Fatalf("En passant capture failed: %v", err)
+		}
+
+		// After the move, it's Black's turn and Black should be in check
+		if !board.InCheck() {
+			t.Error("black king should be in check after en passant (discovered check)")
+		}
+	})
+}
