@@ -805,3 +805,183 @@ func TestInCheck(t *testing.T) {
 		}
 	})
 }
+
+func TestApplyMoveCastling(t *testing.T) {
+	// Test white kingside castling (O-O): King e1 -> g1, Rook h1 -> f1
+	t.Run("white kingside castling moves king and rook", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		// Setup: King on e1, Rook on h1, squares f1 and g1 empty
+		e1 := NewSquare(4, 0) // 4
+		f1 := NewSquare(5, 0) // 5
+		g1 := NewSquare(6, 0) // 6
+		h1 := NewSquare(7, 0) // 7
+
+		board.Squares[e1] = NewPiece(White, King)
+		board.Squares[h1] = NewPiece(White, Rook)
+
+		// Apply castling move (king moves from e1 to g1)
+		move := Move{From: e1, To: g1}
+		board.applyMove(move)
+
+		// Verify king is on g1
+		if board.Squares[g1].Type() != King || board.Squares[g1].Color() != White {
+			t.Errorf("expected white king on g1 after kingside castling, got %v", board.Squares[g1])
+		}
+
+		// Verify rook is on f1
+		if board.Squares[f1].Type() != Rook || board.Squares[f1].Color() != White {
+			t.Errorf("expected white rook on f1 after kingside castling, got %v", board.Squares[f1])
+		}
+
+		// Verify e1 is empty
+		if !board.Squares[e1].IsEmpty() {
+			t.Errorf("expected e1 to be empty after castling, got %v", board.Squares[e1])
+		}
+
+		// Verify h1 is empty
+		if !board.Squares[h1].IsEmpty() {
+			t.Errorf("expected h1 to be empty after castling, got %v", board.Squares[h1])
+		}
+	})
+
+	// Test white queenside castling (O-O-O): King e1 -> c1, Rook a1 -> d1
+	t.Run("white queenside castling moves king and rook", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		// Setup: King on e1, Rook on a1, squares b1, c1, d1 empty
+		a1 := NewSquare(0, 0) // 0
+		c1 := NewSquare(2, 0) // 2
+		d1 := NewSquare(3, 0) // 3
+		e1 := NewSquare(4, 0) // 4
+
+		board.Squares[e1] = NewPiece(White, King)
+		board.Squares[a1] = NewPiece(White, Rook)
+
+		// Apply castling move (king moves from e1 to c1)
+		move := Move{From: e1, To: c1}
+		board.applyMove(move)
+
+		// Verify king is on c1
+		if board.Squares[c1].Type() != King || board.Squares[c1].Color() != White {
+			t.Errorf("expected white king on c1 after queenside castling, got %v", board.Squares[c1])
+		}
+
+		// Verify rook is on d1
+		if board.Squares[d1].Type() != Rook || board.Squares[d1].Color() != White {
+			t.Errorf("expected white rook on d1 after queenside castling, got %v", board.Squares[d1])
+		}
+
+		// Verify e1 is empty
+		if !board.Squares[e1].IsEmpty() {
+			t.Errorf("expected e1 to be empty after castling, got %v", board.Squares[e1])
+		}
+
+		// Verify a1 is empty
+		if !board.Squares[a1].IsEmpty() {
+			t.Errorf("expected a1 to be empty after castling, got %v", board.Squares[a1])
+		}
+	})
+
+	// Test black kingside castling (O-O): King e8 -> g8, Rook h8 -> f8
+	t.Run("black kingside castling moves king and rook", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		// Setup: King on e8, Rook on h8, squares f8 and g8 empty
+		e8 := NewSquare(4, 7) // 60
+		f8 := NewSquare(5, 7) // 61
+		g8 := NewSquare(6, 7) // 62
+		h8 := NewSquare(7, 7) // 63
+
+		board.Squares[e8] = NewPiece(Black, King)
+		board.Squares[h8] = NewPiece(Black, Rook)
+
+		// Apply castling move (king moves from e8 to g8)
+		move := Move{From: e8, To: g8}
+		board.applyMove(move)
+
+		// Verify king is on g8
+		if board.Squares[g8].Type() != King || board.Squares[g8].Color() != Black {
+			t.Errorf("expected black king on g8 after kingside castling, got %v", board.Squares[g8])
+		}
+
+		// Verify rook is on f8
+		if board.Squares[f8].Type() != Rook || board.Squares[f8].Color() != Black {
+			t.Errorf("expected black rook on f8 after kingside castling, got %v", board.Squares[f8])
+		}
+
+		// Verify e8 is empty
+		if !board.Squares[e8].IsEmpty() {
+			t.Errorf("expected e8 to be empty after castling, got %v", board.Squares[e8])
+		}
+
+		// Verify h8 is empty
+		if !board.Squares[h8].IsEmpty() {
+			t.Errorf("expected h8 to be empty after castling, got %v", board.Squares[h8])
+		}
+	})
+
+	// Test black queenside castling (O-O-O): King e8 -> c8, Rook a8 -> d8
+	t.Run("black queenside castling moves king and rook", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		// Setup: King on e8, Rook on a8, squares b8, c8, d8 empty
+		a8 := NewSquare(0, 7) // 56
+		c8 := NewSquare(2, 7) // 58
+		d8 := NewSquare(3, 7) // 59
+		e8 := NewSquare(4, 7) // 60
+
+		board.Squares[e8] = NewPiece(Black, King)
+		board.Squares[a8] = NewPiece(Black, Rook)
+
+		// Apply castling move (king moves from e8 to c8)
+		move := Move{From: e8, To: c8}
+		board.applyMove(move)
+
+		// Verify king is on c8
+		if board.Squares[c8].Type() != King || board.Squares[c8].Color() != Black {
+			t.Errorf("expected black king on c8 after queenside castling, got %v", board.Squares[c8])
+		}
+
+		// Verify rook is on d8
+		if board.Squares[d8].Type() != Rook || board.Squares[d8].Color() != Black {
+			t.Errorf("expected black rook on d8 after queenside castling, got %v", board.Squares[d8])
+		}
+
+		// Verify e8 is empty
+		if !board.Squares[e8].IsEmpty() {
+			t.Errorf("expected e8 to be empty after castling, got %v", board.Squares[e8])
+		}
+
+		// Verify a8 is empty
+		if !board.Squares[a8].IsEmpty() {
+			t.Errorf("expected a8 to be empty after castling, got %v", board.Squares[a8])
+		}
+	})
+
+	// Test that normal king moves don't trigger rook movement
+	t.Run("normal king move does not move rook", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		e1 := NewSquare(4, 0)
+		f1 := NewSquare(5, 0)
+		h1 := NewSquare(7, 0)
+
+		board.Squares[e1] = NewPiece(White, King)
+		board.Squares[h1] = NewPiece(White, Rook)
+
+		// Apply a normal king move (one square to the right)
+		move := Move{From: e1, To: f1}
+		board.applyMove(move)
+
+		// Verify king is on f1
+		if board.Squares[f1].Type() != King || board.Squares[f1].Color() != White {
+			t.Errorf("expected white king on f1 after normal move, got %v", board.Squares[f1])
+		}
+
+		// Verify rook is still on h1 (not moved)
+		if board.Squares[h1].Type() != Rook || board.Squares[h1].Color() != White {
+			t.Errorf("expected white rook to remain on h1 after normal king move, got %v", board.Squares[h1])
+		}
+
+		// Verify e1 is empty
+		if !board.Squares[e1].IsEmpty() {
+			t.Errorf("expected e1 to be empty after king move, got %v", board.Squares[e1])
+		}
+	})
+}

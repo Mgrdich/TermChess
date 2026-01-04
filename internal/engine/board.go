@@ -135,6 +135,30 @@ func (b *Board) applyMove(m Move) {
 	b.Squares[m.To] = piece
 	b.Squares[m.From] = Piece(Empty)
 
+	// Handle castling: if king moves 2 squares horizontally, also move the rook
+	if piece.Type() == King {
+		fileDiff := m.To.File() - m.From.File()
+		if fileDiff == 2 {
+			// Kingside castling: move rook from h-file to f-file
+			rookFromFile := 7 // h-file
+			rookToFile := 5   // f-file
+			rank := m.From.Rank()
+			rookFrom := NewSquare(rookFromFile, rank)
+			rookTo := NewSquare(rookToFile, rank)
+			b.Squares[rookTo] = b.Squares[rookFrom]
+			b.Squares[rookFrom] = Piece(Empty)
+		} else if fileDiff == -2 {
+			// Queenside castling: move rook from a-file to d-file
+			rookFromFile := 0 // a-file
+			rookToFile := 3   // d-file
+			rank := m.From.Rank()
+			rookFrom := NewSquare(rookFromFile, rank)
+			rookTo := NewSquare(rookToFile, rank)
+			b.Squares[rookTo] = b.Squares[rookFrom]
+			b.Squares[rookFrom] = Piece(Empty)
+		}
+	}
+
 	// Toggle active color
 	if b.ActiveColor == White {
 		b.ActiveColor = Black
