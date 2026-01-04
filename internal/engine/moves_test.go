@@ -437,6 +437,278 @@ func TestGeneratePawnMoves(t *testing.T) {
 	})
 }
 
+func TestEnPassantCapture(t *testing.T) {
+	t.Run("white pawn can capture en passant", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pawns except the ones we need
+		for sq := Square(8); sq < 16; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+		for sq := Square(48); sq < 56; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+
+		// Place white pawn on d5 (file 3, rank 4)
+		d5 := NewSquare(3, 4)
+		board.Squares[d5] = NewPiece(White, Pawn)
+
+		// Place black pawn on e5 (simulating it just moved e7-e5)
+		e5 := NewSquare(4, 4)
+		board.Squares[e5] = NewPiece(Black, Pawn)
+
+		// Set en passant square to e6 (file 4, rank 5)
+		e6 := NewSquare(4, 5)
+		board.EnPassantSq = int8(e6)
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from d5
+		d5Moves := []Move{}
+		for _, m := range moves {
+			if m.From == d5 {
+				d5Moves = append(d5Moves, m)
+			}
+		}
+
+		// Should have d6 (forward) and e6 (en passant capture)
+		hasEnPassant := false
+		for _, m := range d5Moves {
+			if m.To == e6 {
+				hasEnPassant = true
+			}
+		}
+
+		if !hasEnPassant {
+			t.Error("white pawn on d5 should be able to capture en passant on e6")
+		}
+	})
+
+	t.Run("black pawn can capture en passant", func(t *testing.T) {
+		board := NewBoard()
+		board.ActiveColor = Black
+
+		// Clear all pawns except the ones we need
+		for sq := Square(8); sq < 16; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+		for sq := Square(48); sq < 56; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+
+		// Place black pawn on f4 (file 5, rank 3)
+		f4 := NewSquare(5, 3)
+		board.Squares[f4] = NewPiece(Black, Pawn)
+
+		// Place white pawn on e4 (simulating it just moved e2-e4)
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Pawn)
+
+		// Set en passant square to e3 (file 4, rank 2)
+		e3 := NewSquare(4, 2)
+		board.EnPassantSq = int8(e3)
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from f4
+		f4Moves := []Move{}
+		for _, m := range moves {
+			if m.From == f4 {
+				f4Moves = append(f4Moves, m)
+			}
+		}
+
+		// Should have f3 (forward) and e3 (en passant capture)
+		hasEnPassant := false
+		for _, m := range f4Moves {
+			if m.To == e3 {
+				hasEnPassant = true
+			}
+		}
+
+		if !hasEnPassant {
+			t.Error("black pawn on f4 should be able to capture en passant on e3")
+		}
+	})
+
+	t.Run("en passant not generated when pawn on wrong rank", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pawns except the ones we need
+		for sq := Square(8); sq < 16; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+		for sq := Square(48); sq < 56; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+
+		// Place white pawn on d4 (rank 3, not rank 4)
+		d4 := NewSquare(3, 3)
+		board.Squares[d4] = NewPiece(White, Pawn)
+
+		// Set en passant square to e6 (would be valid if pawn was on rank 4)
+		e6 := NewSquare(4, 5)
+		board.EnPassantSq = int8(e6)
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from d4
+		d4Moves := []Move{}
+		for _, m := range moves {
+			if m.From == d4 {
+				d4Moves = append(d4Moves, m)
+			}
+		}
+
+		// Should NOT have en passant capture
+		hasEnPassant := false
+		for _, m := range d4Moves {
+			if m.To == e6 {
+				hasEnPassant = true
+			}
+		}
+
+		if hasEnPassant {
+			t.Error("pawn on wrong rank should not be able to capture en passant")
+		}
+	})
+
+	t.Run("en passant not generated when pawn not adjacent", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pawns except the ones we need
+		for sq := Square(8); sq < 16; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+		for sq := Square(48); sq < 56; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+
+		// Place white pawn on b5 (file 1, rank 4)
+		b5 := NewSquare(1, 4)
+		board.Squares[b5] = NewPiece(White, Pawn)
+
+		// Set en passant square to e6 (not adjacent to b-file)
+		e6 := NewSquare(4, 5)
+		board.EnPassantSq = int8(e6)
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from b5
+		b5Moves := []Move{}
+		for _, m := range moves {
+			if m.From == b5 {
+				b5Moves = append(b5Moves, m)
+			}
+		}
+
+		// Should NOT have en passant capture
+		hasEnPassant := false
+		for _, m := range b5Moves {
+			if m.To == e6 {
+				hasEnPassant = true
+			}
+		}
+
+		if hasEnPassant {
+			t.Error("pawn not adjacent to en passant square should not be able to capture")
+		}
+	})
+
+	t.Run("en passant not generated when EnPassantSq is -1", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pawns except the ones we need
+		for sq := Square(8); sq < 16; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+		for sq := Square(48); sq < 56; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+
+		// Place white pawn on d5 (file 3, rank 4)
+		d5 := NewSquare(3, 4)
+		board.Squares[d5] = NewPiece(White, Pawn)
+
+		// Place black pawn on e5 (adjacent, but no en passant square set)
+		e5 := NewSquare(4, 4)
+		board.Squares[e5] = NewPiece(Black, Pawn)
+
+		// EnPassantSq is -1 (default/no en passant)
+		board.EnPassantSq = -1
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from d5
+		d5Moves := []Move{}
+		for _, m := range moves {
+			if m.From == d5 {
+				d5Moves = append(d5Moves, m)
+			}
+		}
+
+		// Should only have d6 (forward), no en passant
+		e6 := NewSquare(4, 5)
+		hasEnPassant := false
+		for _, m := range d5Moves {
+			if m.To == e6 {
+				hasEnPassant = true
+			}
+		}
+
+		if hasEnPassant {
+			t.Error("en passant should not be generated when EnPassantSq is -1")
+		}
+
+		// Should have d6 forward move
+		d6 := NewSquare(3, 5)
+		hasForward := false
+		for _, m := range d5Moves {
+			if m.To == d6 {
+				hasForward = true
+			}
+		}
+		if !hasForward {
+			t.Error("pawn should still have forward move to d6")
+		}
+	})
+
+	t.Run("en passant capture on both sides", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pawns
+		for sq := Square(8); sq < 16; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+		for sq := Square(48); sq < 56; sq++ {
+			board.Squares[sq] = Piece(Empty)
+		}
+
+		// Place white pawns on d5 and f5
+		d5 := NewSquare(3, 4)
+		f5 := NewSquare(5, 4)
+		board.Squares[d5] = NewPiece(White, Pawn)
+		board.Squares[f5] = NewPiece(White, Pawn)
+
+		// Place black pawn on e5 (between the white pawns)
+		e5 := NewSquare(4, 4)
+		board.Squares[e5] = NewPiece(Black, Pawn)
+
+		// Set en passant square to e6
+		e6 := NewSquare(4, 5)
+		board.EnPassantSq = int8(e6)
+
+		moves := board.generatePawnMoves()
+
+		// Count en passant captures to e6
+		epCount := 0
+		for _, m := range moves {
+			if m.To == e6 {
+				epCount++
+			}
+		}
+
+		if epCount != 2 {
+			t.Errorf("expected 2 pawns to be able to capture en passant, got %d", epCount)
+		}
+	})
+}
+
 func TestMakeMove(t *testing.T) {
 	t.Run("e2e4 moves pawn and clears e2", func(t *testing.T) {
 		board := NewBoard()

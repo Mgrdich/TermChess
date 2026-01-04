@@ -88,7 +88,7 @@
 
 - [ ] **Slice 7: En passant implementation**
   - [x] Update `MakeMove()` to set en passant square when pawn moves two squares
-  - [ ] Update pawn move generation to include en passant captures when available
+  - [x] Update pawn move generation to include en passant captures when available
   - [ ] Update `MakeMove()` to handle en passant capture (remove captured pawn)
   - [ ] Clear en passant square after any move (only valid immediately)
   - [ ] Add unit tests for en passant capture

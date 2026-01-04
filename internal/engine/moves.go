@@ -83,7 +83,7 @@ func (m Move) String() string {
 }
 
 // generatePawnMoves generates all pseudo-legal pawn moves for the active color.
-// This does not check for check or en passant (handled in later slices).
+// This includes forward moves, double pushes, diagonal captures, and en passant.
 func (b *Board) generatePawnMoves() []Move {
 	var moves []Move
 
@@ -139,6 +139,30 @@ func (b *Board) generatePawnMoves() []Move {
 				// Can capture if there's an enemy piece
 				if !targetPiece.IsEmpty() && targetPiece.Color() != b.ActiveColor {
 					moves = append(moves, Move{From: sq, To: captureSq})
+				}
+			}
+		}
+
+		// En passant capture
+		if b.EnPassantSq >= 0 {
+			epSquare := Square(b.EnPassantSq)
+			epFile := epSquare.File()
+			epRank := epSquare.Rank()
+
+			// Check if this pawn can capture en passant
+			// Pawn must be adjacent (file diff = 1) and on the correct rank
+			fileDiff := file - epFile
+			if fileDiff < 0 {
+				fileDiff = -fileDiff
+			}
+
+			if fileDiff == 1 {
+				// White pawns: must be on rank 4 (index 4), ep square on rank 5
+				// Black pawns: must be on rank 3 (index 3), ep square on rank 2
+				if b.ActiveColor == White && rank == 4 && epRank == 5 {
+					moves = append(moves, Move{From: sq, To: epSquare})
+				} else if b.ActiveColor == Black && rank == 3 && epRank == 2 {
+					moves = append(moves, Move{From: sq, To: epSquare})
 				}
 			}
 		}
