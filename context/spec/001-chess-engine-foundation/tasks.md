@@ -73,13 +73,13 @@
 ## Slice 6: Castling
 *Goal: Implement castling move generation and validation.*
 
-- [ ] **Slice 6: Castling implementation**
+- [x] **Slice 6: Castling implementation**
   - [x] Implement castling move generation (kingside and queenside for both colors)
   - [x] Validate castling conditions: rights not lost, no pieces between, king not in check, king doesn't pass through check
   - [x] Update `MakeMove()` to handle castling (move both king and rook)
   - [x] Update castling rights when king or rook moves
-  - [ ] Add unit tests for all 4 castling variations
-  - [ ] Add unit tests for castling being blocked (pieces in way, through check, rights lost)
+  - [x] Add unit tests for all 4 castling variations
+  - [x] Add unit tests for castling being blocked (pieces in way, through check, rights lost)
 
 ---
 
