@@ -159,6 +159,43 @@ func (b *Board) applyMove(m Move) {
 		}
 	}
 
+	// Update castling rights
+
+	// If king moves, remove both castling rights for that color
+	if piece.Type() == King {
+		if piece.Color() == White {
+			b.CastlingRights &^= (CastleWhiteKing | CastleWhiteQueen)
+		} else {
+			b.CastlingRights &^= (CastleBlackKing | CastleBlackQueen)
+		}
+	}
+
+	// If rook moves from original square, remove that side's castling right
+	if piece.Type() == Rook {
+		switch m.From {
+		case NewSquare(0, 0): // a1
+			b.CastlingRights &^= CastleWhiteQueen
+		case NewSquare(7, 0): // h1
+			b.CastlingRights &^= CastleWhiteKing
+		case NewSquare(0, 7): // a8
+			b.CastlingRights &^= CastleBlackQueen
+		case NewSquare(7, 7): // h8
+			b.CastlingRights &^= CastleBlackKing
+		}
+	}
+
+	// If a piece is captured on a rook's original square, remove that castling right
+	switch m.To {
+	case NewSquare(0, 0): // a1
+		b.CastlingRights &^= CastleWhiteQueen
+	case NewSquare(7, 0): // h1
+		b.CastlingRights &^= CastleWhiteKing
+	case NewSquare(0, 7): // a8
+		b.CastlingRights &^= CastleBlackQueen
+	case NewSquare(7, 7): // h8
+		b.CastlingRights &^= CastleBlackKing
+	}
+
 	// Toggle active color
 	if b.ActiveColor == White {
 		b.ActiveColor = Black

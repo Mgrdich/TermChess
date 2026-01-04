@@ -985,3 +985,386 @@ func TestApplyMoveCastling(t *testing.T) {
 		}
 	})
 }
+
+func TestCastlingRightsUpdate(t *testing.T) {
+	// Test that white king move removes both white castling rights
+	t.Run("white king move removes both white castling rights", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		e1 := NewSquare(4, 0) // e1
+		e2 := NewSquare(4, 1) // e2
+
+		board.Squares[e1] = NewPiece(White, King)
+
+		move := Move{From: e1, To: e2}
+		board.applyMove(move)
+
+		// White castling rights should be removed
+		if board.CastlingRights&CastleWhiteKing != 0 {
+			t.Error("CastleWhiteKing should be removed after white king moves")
+		}
+		if board.CastlingRights&CastleWhiteQueen != 0 {
+			t.Error("CastleWhiteQueen should be removed after white king moves")
+		}
+		// Black castling rights should remain
+		if board.CastlingRights&CastleBlackKing == 0 {
+			t.Error("CastleBlackKing should remain after white king moves")
+		}
+		if board.CastlingRights&CastleBlackQueen == 0 {
+			t.Error("CastleBlackQueen should remain after white king moves")
+		}
+	})
+
+	// Test that black king move removes both black castling rights
+	t.Run("black king move removes both black castling rights", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		e8 := NewSquare(4, 7) // e8
+		e7 := NewSquare(4, 6) // e7
+
+		board.Squares[e8] = NewPiece(Black, King)
+
+		move := Move{From: e8, To: e7}
+		board.applyMove(move)
+
+		// Black castling rights should be removed
+		if board.CastlingRights&CastleBlackKing != 0 {
+			t.Error("CastleBlackKing should be removed after black king moves")
+		}
+		if board.CastlingRights&CastleBlackQueen != 0 {
+			t.Error("CastleBlackQueen should be removed after black king moves")
+		}
+		// White castling rights should remain
+		if board.CastlingRights&CastleWhiteKing == 0 {
+			t.Error("CastleWhiteKing should remain after black king moves")
+		}
+		if board.CastlingRights&CastleWhiteQueen == 0 {
+			t.Error("CastleWhiteQueen should remain after black king moves")
+		}
+	})
+
+	// Test that white h1 rook move removes white kingside castling
+	t.Run("white h1 rook move removes white kingside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		h1 := NewSquare(7, 0) // h1
+		h2 := NewSquare(7, 1) // h2
+
+		board.Squares[h1] = NewPiece(White, Rook)
+
+		move := Move{From: h1, To: h2}
+		board.applyMove(move)
+
+		// Only CastleWhiteKing should be removed
+		if board.CastlingRights&CastleWhiteKing != 0 {
+			t.Error("CastleWhiteKing should be removed after h1 rook moves")
+		}
+		if board.CastlingRights&CastleWhiteQueen == 0 {
+			t.Error("CastleWhiteQueen should remain after h1 rook moves")
+		}
+		if board.CastlingRights&CastleBlackKing == 0 {
+			t.Error("CastleBlackKing should remain after h1 rook moves")
+		}
+		if board.CastlingRights&CastleBlackQueen == 0 {
+			t.Error("CastleBlackQueen should remain after h1 rook moves")
+		}
+	})
+
+	// Test that white a1 rook move removes white queenside castling
+	t.Run("white a1 rook move removes white queenside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		a1 := NewSquare(0, 0) // a1
+		a2 := NewSquare(0, 1) // a2
+
+		board.Squares[a1] = NewPiece(White, Rook)
+
+		move := Move{From: a1, To: a2}
+		board.applyMove(move)
+
+		// Only CastleWhiteQueen should be removed
+		if board.CastlingRights&CastleWhiteQueen != 0 {
+			t.Error("CastleWhiteQueen should be removed after a1 rook moves")
+		}
+		if board.CastlingRights&CastleWhiteKing == 0 {
+			t.Error("CastleWhiteKing should remain after a1 rook moves")
+		}
+		if board.CastlingRights&CastleBlackKing == 0 {
+			t.Error("CastleBlackKing should remain after a1 rook moves")
+		}
+		if board.CastlingRights&CastleBlackQueen == 0 {
+			t.Error("CastleBlackQueen should remain after a1 rook moves")
+		}
+	})
+
+	// Test that black h8 rook move removes black kingside castling
+	t.Run("black h8 rook move removes black kingside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		h8 := NewSquare(7, 7) // h8
+		h7 := NewSquare(7, 6) // h7
+
+		board.Squares[h8] = NewPiece(Black, Rook)
+
+		move := Move{From: h8, To: h7}
+		board.applyMove(move)
+
+		// Only CastleBlackKing should be removed
+		if board.CastlingRights&CastleBlackKing != 0 {
+			t.Error("CastleBlackKing should be removed after h8 rook moves")
+		}
+		if board.CastlingRights&CastleBlackQueen == 0 {
+			t.Error("CastleBlackQueen should remain after h8 rook moves")
+		}
+		if board.CastlingRights&CastleWhiteKing == 0 {
+			t.Error("CastleWhiteKing should remain after h8 rook moves")
+		}
+		if board.CastlingRights&CastleWhiteQueen == 0 {
+			t.Error("CastleWhiteQueen should remain after h8 rook moves")
+		}
+	})
+
+	// Test that black a8 rook move removes black queenside castling
+	t.Run("black a8 rook move removes black queenside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		a8 := NewSquare(0, 7) // a8
+		a7 := NewSquare(0, 6) // a7
+
+		board.Squares[a8] = NewPiece(Black, Rook)
+
+		move := Move{From: a8, To: a7}
+		board.applyMove(move)
+
+		// Only CastleBlackQueen should be removed
+		if board.CastlingRights&CastleBlackQueen != 0 {
+			t.Error("CastleBlackQueen should be removed after a8 rook moves")
+		}
+		if board.CastlingRights&CastleBlackKing == 0 {
+			t.Error("CastleBlackKing should remain after a8 rook moves")
+		}
+		if board.CastlingRights&CastleWhiteKing == 0 {
+			t.Error("CastleWhiteKing should remain after a8 rook moves")
+		}
+		if board.CastlingRights&CastleWhiteQueen == 0 {
+			t.Error("CastleWhiteQueen should remain after a8 rook moves")
+		}
+	})
+
+	// Test capture on h1 removes white kingside castling
+	t.Run("capture on h1 removes white kingside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		h1 := NewSquare(7, 0) // h1
+		g2 := NewSquare(6, 1) // g2
+
+		board.Squares[h1] = NewPiece(White, Rook)
+		board.Squares[g2] = NewPiece(Black, Bishop) // Black bishop to capture the rook
+
+		move := Move{From: g2, To: h1}
+		board.applyMove(move)
+
+		// CastleWhiteKing should be removed due to capture on h1
+		if board.CastlingRights&CastleWhiteKing != 0 {
+			t.Error("CastleWhiteKing should be removed after capture on h1")
+		}
+		if board.CastlingRights&CastleWhiteQueen == 0 {
+			t.Error("CastleWhiteQueen should remain after capture on h1")
+		}
+	})
+
+	// Test capture on a1 removes white queenside castling
+	t.Run("capture on a1 removes white queenside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		a1 := NewSquare(0, 0) // a1
+		b2 := NewSquare(1, 1) // b2
+
+		board.Squares[a1] = NewPiece(White, Rook)
+		board.Squares[b2] = NewPiece(Black, Bishop) // Black bishop to capture the rook
+
+		move := Move{From: b2, To: a1}
+		board.applyMove(move)
+
+		// CastleWhiteQueen should be removed due to capture on a1
+		if board.CastlingRights&CastleWhiteQueen != 0 {
+			t.Error("CastleWhiteQueen should be removed after capture on a1")
+		}
+		if board.CastlingRights&CastleWhiteKing == 0 {
+			t.Error("CastleWhiteKing should remain after capture on a1")
+		}
+	})
+
+	// Test capture on h8 removes black kingside castling
+	t.Run("capture on h8 removes black kingside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		h8 := NewSquare(7, 7) // h8
+		g7 := NewSquare(6, 6) // g7
+
+		board.Squares[h8] = NewPiece(Black, Rook)
+		board.Squares[g7] = NewPiece(White, Bishop) // White bishop to capture the rook
+
+		move := Move{From: g7, To: h8}
+		board.applyMove(move)
+
+		// CastleBlackKing should be removed due to capture on h8
+		if board.CastlingRights&CastleBlackKing != 0 {
+			t.Error("CastleBlackKing should be removed after capture on h8")
+		}
+		if board.CastlingRights&CastleBlackQueen == 0 {
+			t.Error("CastleBlackQueen should remain after capture on h8")
+		}
+	})
+
+	// Test capture on a8 removes black queenside castling
+	t.Run("capture on a8 removes black queenside castling", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		a8 := NewSquare(0, 7) // a8
+		b7 := NewSquare(1, 6) // b7
+
+		board.Squares[a8] = NewPiece(Black, Rook)
+		board.Squares[b7] = NewPiece(White, Bishop) // White bishop to capture the rook
+
+		move := Move{From: b7, To: a8}
+		board.applyMove(move)
+
+		// CastleBlackQueen should be removed due to capture on a8
+		if board.CastlingRights&CastleBlackQueen != 0 {
+			t.Error("CastleBlackQueen should be removed after capture on a8")
+		}
+		if board.CastlingRights&CastleBlackKing == 0 {
+			t.Error("CastleBlackKing should remain after capture on a8")
+		}
+	})
+
+	// Test that already removed castling rights stay removed
+	t.Run("already removed castling rights stay removed", func(t *testing.T) {
+		// Start with only black castling rights
+		board := &Board{ActiveColor: White, CastlingRights: CastleBlackKing | CastleBlackQueen}
+		e1 := NewSquare(4, 0) // e1
+		e2 := NewSquare(4, 1) // e2
+
+		board.Squares[e1] = NewPiece(White, King)
+
+		move := Move{From: e1, To: e2}
+		board.applyMove(move)
+
+		// White rights were already 0, should still be 0
+		if board.CastlingRights&CastleWhiteKing != 0 {
+			t.Error("CastleWhiteKing should still be 0")
+		}
+		if board.CastlingRights&CastleWhiteQueen != 0 {
+			t.Error("CastleWhiteQueen should still be 0")
+		}
+		// Black rights should remain unchanged
+		if board.CastlingRights&CastleBlackKing == 0 {
+			t.Error("CastleBlackKing should remain")
+		}
+		if board.CastlingRights&CastleBlackQueen == 0 {
+			t.Error("CastleBlackQueen should remain")
+		}
+	})
+
+	// Test that other moves don't affect castling rights
+	t.Run("other moves do not affect castling rights", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		e2 := NewSquare(4, 1) // e2
+		e4 := NewSquare(4, 3) // e4
+
+		board.Squares[e2] = NewPiece(White, Pawn)
+
+		move := Move{From: e2, To: e4}
+		board.applyMove(move)
+
+		// All castling rights should remain
+		if board.CastlingRights != CastleAll {
+			t.Errorf("expected all castling rights to remain, got %d", board.CastlingRights)
+		}
+	})
+
+	// Test that knight moves don't affect castling rights
+	t.Run("knight moves do not affect castling rights", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		g1 := NewSquare(6, 0) // g1
+		f3 := NewSquare(5, 2) // f3
+
+		board.Squares[g1] = NewPiece(White, Knight)
+
+		move := Move{From: g1, To: f3}
+		board.applyMove(move)
+
+		// All castling rights should remain
+		if board.CastlingRights != CastleAll {
+			t.Errorf("expected all castling rights to remain after knight move, got %d", board.CastlingRights)
+		}
+	})
+
+	// Test that rook moving from non-original square doesn't affect castling rights
+	t.Run("rook from non-original square does not affect castling rights", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		d1 := NewSquare(3, 0) // d1 (not a1 or h1)
+		d4 := NewSquare(3, 3) // d4
+
+		board.Squares[d1] = NewPiece(White, Rook)
+
+		move := Move{From: d1, To: d4}
+		board.applyMove(move)
+
+		// All castling rights should remain
+		if board.CastlingRights != CastleAll {
+			t.Errorf("expected all castling rights to remain after rook moves from d1, got %d", board.CastlingRights)
+		}
+	})
+
+	// Test castling itself removes both rights for that color
+	t.Run("white kingside castling removes both white castling rights", func(t *testing.T) {
+		board := &Board{ActiveColor: White, CastlingRights: CastleAll}
+		e1 := NewSquare(4, 0) // e1
+		g1 := NewSquare(6, 0) // g1
+		h1 := NewSquare(7, 0) // h1
+
+		board.Squares[e1] = NewPiece(White, King)
+		board.Squares[h1] = NewPiece(White, Rook)
+
+		// Castling move (king moves 2 squares)
+		move := Move{From: e1, To: g1}
+		board.applyMove(move)
+
+		// Both white castling rights should be removed
+		if board.CastlingRights&CastleWhiteKing != 0 {
+			t.Error("CastleWhiteKing should be removed after castling")
+		}
+		if board.CastlingRights&CastleWhiteQueen != 0 {
+			t.Error("CastleWhiteQueen should be removed after castling")
+		}
+		// Black castling rights should remain
+		if board.CastlingRights&CastleBlackKing == 0 {
+			t.Error("CastleBlackKing should remain after white castles")
+		}
+		if board.CastlingRights&CastleBlackQueen == 0 {
+			t.Error("CastleBlackQueen should remain after white castles")
+		}
+	})
+
+	// Test black queenside castling removes both black castling rights
+	t.Run("black queenside castling removes both black castling rights", func(t *testing.T) {
+		board := &Board{ActiveColor: Black, CastlingRights: CastleAll}
+		e8 := NewSquare(4, 7) // e8
+		c8 := NewSquare(2, 7) // c8
+		a8 := NewSquare(0, 7) // a8
+
+		board.Squares[e8] = NewPiece(Black, King)
+		board.Squares[a8] = NewPiece(Black, Rook)
+
+		// Castling move (king moves 2 squares)
+		move := Move{From: e8, To: c8}
+		board.applyMove(move)
+
+		// Both black castling rights should be removed
+		if board.CastlingRights&CastleBlackKing != 0 {
+			t.Error("CastleBlackKing should be removed after castling")
+		}
+		if board.CastlingRights&CastleBlackQueen != 0 {
+			t.Error("CastleBlackQueen should be removed after castling")
+		}
+		// White castling rights should remain
+		if board.CastlingRights&CastleWhiteKing == 0 {
+			t.Error("CastleWhiteKing should remain after black castles")
+		}
+		if board.CastlingRights&CastleWhiteQueen == 0 {
+			t.Error("CastleWhiteQueen should remain after black castles")
+		}
+	})
+}
