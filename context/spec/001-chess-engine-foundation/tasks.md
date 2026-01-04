@@ -45,14 +45,14 @@
 ## Slice 4: Knight, Bishop, Rook, Queen Moves
 *Goal: Generate moves for sliding and jumping pieces.*
 
-- [ ] **Slice 4: Non-pawn piece move generation**
-  - [ ] Implement knight move generation (L-shape, can jump)
-  - [ ] Implement bishop move generation (diagonal sliding, blocked by pieces)
-  - [ ] Implement rook move generation (orthogonal sliding, blocked by pieces)
-  - [ ] Implement queen move generation (combines bishop + rook)
-  - [ ] Implement king move generation (one square any direction, no castling yet)
-  - [ ] Implement `Board.PseudoLegalMoves()` that generates all pseudo-legal moves for active color
-  - [ ] Add unit tests for each piece type from various positions
+- [x] **Slice 4: Non-pawn piece move generation**
+  - [x] Implement knight move generation (L-shape, can jump)
+  - [x] Implement bishop move generation (diagonal sliding, blocked by pieces)
+  - [x] Implement rook move generation (orthogonal sliding, blocked by pieces)
+  - [x] Implement queen move generation (combines bishop + rook)
+  - [x] Implement king move generation (one square any direction, no castling yet)
+  - [x] Implement `Board.PseudoLegalMoves()` that generates all pseudo-legal moves for active color
+  - [x] Add unit tests for each piece type from various positions
 
 ---
 

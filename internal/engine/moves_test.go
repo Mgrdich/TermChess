@@ -556,3 +556,475 @@ func TestMakeMove(t *testing.T) {
 		}
 	})
 }
+
+// Helper function to check if a move exists in a list of moves
+func containsMove(moves []Move, from, to Square) bool {
+	for _, m := range moves {
+		if m.From == from && m.To == to {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to count moves from a specific square
+func countMovesFrom(moves []Move, sq Square) int {
+	count := 0
+	for _, m := range moves {
+		if m.From == sq {
+			count++
+		}
+	}
+	return count
+}
+
+func TestGenerateKnightMoves(t *testing.T) {
+	t.Run("knight on e4 can reach 8 squares", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white knight on e4
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Knight)
+
+		moves := board.generateKnightMoves()
+
+		// Knight on e4 should be able to reach:
+		// f6, g5, g3, f2, d2, c3, c5, d6
+		expectedTargets := []Square{
+			NewSquare(5, 5), // f6
+			NewSquare(6, 4), // g5
+			NewSquare(6, 2), // g3
+			NewSquare(5, 1), // f2
+			NewSquare(3, 1), // d2
+			NewSquare(2, 2), // c3
+			NewSquare(2, 4), // c5
+			NewSquare(3, 5), // d6
+		}
+
+		if len(moves) != 8 {
+			t.Errorf("knight on e4 expected 8 moves, got %d", len(moves))
+		}
+
+		for _, target := range expectedTargets {
+			if !containsMove(moves, e4, target) {
+				t.Errorf("knight on e4 should be able to move to %s", target.String())
+			}
+		}
+	})
+
+	t.Run("knight on a1 corner has only 2 legal squares", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white knight on a1
+		a1 := NewSquare(0, 0)
+		board.Squares[a1] = NewPiece(White, Knight)
+
+		moves := board.generateKnightMoves()
+
+		// Knight on a1 should only reach: b3, c2
+		if len(moves) != 2 {
+			t.Errorf("knight on a1 expected 2 moves, got %d", len(moves))
+		}
+
+		b3 := NewSquare(1, 2)
+		c2 := NewSquare(2, 1)
+		if !containsMove(moves, a1, b3) {
+			t.Error("knight on a1 should be able to move to b3")
+		}
+		if !containsMove(moves, a1, c2) {
+			t.Error("knight on a1 should be able to move to c2")
+		}
+	})
+
+	t.Run("knight can jump over pieces", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white knight on b1, surrounded by pawns on a2, b2, c2, b3
+		b1 := NewSquare(1, 0)
+		board.Squares[b1] = NewPiece(White, Knight)
+		board.Squares[NewSquare(0, 1)] = NewPiece(White, Pawn) // a2
+		board.Squares[NewSquare(1, 1)] = NewPiece(White, Pawn) // b2
+		board.Squares[NewSquare(2, 1)] = NewPiece(White, Pawn) // c2
+		board.Squares[NewSquare(1, 2)] = NewPiece(White, Pawn) // b3
+
+		moves := board.generateKnightMoves()
+
+		// Knight can still reach a3 and c3 despite being surrounded
+		a3 := NewSquare(0, 2)
+		c3 := NewSquare(2, 2)
+		d2 := NewSquare(3, 1)
+
+		if !containsMove(moves, b1, a3) {
+			t.Error("knight on b1 should be able to jump to a3")
+		}
+		if !containsMove(moves, b1, c3) {
+			t.Error("knight on b1 should be able to jump to c3")
+		}
+		if !containsMove(moves, b1, d2) {
+			t.Error("knight on b1 should be able to jump to d2")
+		}
+	})
+
+	t.Run("knight captures enemy but not own piece", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white knight on e4
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Knight)
+
+		// Place white pawn on f6 (can't capture)
+		f6 := NewSquare(5, 5)
+		board.Squares[f6] = NewPiece(White, Pawn)
+
+		// Place black pawn on d6 (can capture)
+		d6 := NewSquare(3, 5)
+		board.Squares[d6] = NewPiece(Black, Pawn)
+
+		moves := board.generateKnightMoves()
+
+		// Should not be able to move to f6 (own piece)
+		if containsMove(moves, e4, f6) {
+			t.Error("knight should not be able to capture own piece on f6")
+		}
+
+		// Should be able to capture on d6
+		if !containsMove(moves, e4, d6) {
+			t.Error("knight should be able to capture enemy piece on d6")
+		}
+	})
+}
+
+func TestGenerateBishopMoves(t *testing.T) {
+	t.Run("bishop on e4 empty board", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white bishop on e4
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Bishop)
+
+		moves := board.generateBishopMoves()
+
+		// Bishop on e4 should be able to reach:
+		// f5, g6, h7 (NE diagonal)
+		// f3, g2, h1 (SE diagonal)
+		// d3, c2, b1 (SW diagonal)
+		// d5, c6, b7, a8 (NW diagonal)
+		// Total: 13 squares
+		if len(moves) != 13 {
+			t.Errorf("bishop on e4 expected 13 moves, got %d", len(moves))
+		}
+
+		// Check a few specific squares
+		if !containsMove(moves, e4, NewSquare(7, 6)) { // h7
+			t.Error("bishop should reach h7")
+		}
+		if !containsMove(moves, e4, NewSquare(0, 7)) { // a8
+			t.Error("bishop should reach a8")
+		}
+	})
+
+	t.Run("bishop blocked by own piece stops before it", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white bishop on e4 and white pawn on f5
+		e4 := NewSquare(4, 3)
+		f5 := NewSquare(5, 4)
+		board.Squares[e4] = NewPiece(White, Bishop)
+		board.Squares[f5] = NewPiece(White, Pawn)
+
+		moves := board.generateBishopMoves()
+
+		// Should not reach f5 or beyond in that diagonal
+		if containsMove(moves, e4, f5) {
+			t.Error("bishop should not move to own piece on f5")
+		}
+		if containsMove(moves, e4, NewSquare(6, 5)) { // g6
+			t.Error("bishop should not jump over own piece to g6")
+		}
+	})
+
+	t.Run("bishop can capture enemy piece and stops", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white bishop on e4 and black pawn on f5
+		e4 := NewSquare(4, 3)
+		f5 := NewSquare(5, 4)
+		board.Squares[e4] = NewPiece(White, Bishop)
+		board.Squares[f5] = NewPiece(Black, Pawn)
+
+		moves := board.generateBishopMoves()
+
+		// Can capture on f5
+		if !containsMove(moves, e4, f5) {
+			t.Error("bishop should be able to capture on f5")
+		}
+		// Should not go beyond f5 in that diagonal
+		if containsMove(moves, e4, NewSquare(6, 5)) { // g6
+			t.Error("bishop should stop after capturing on f5")
+		}
+	})
+}
+
+func TestGenerateRookMoves(t *testing.T) {
+	t.Run("rook on e4 empty board", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white rook on e4
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Rook)
+
+		moves := board.generateRookMoves()
+
+		// Rook on e4 should be able to reach:
+		// e1, e2, e3, e5, e6, e7, e8 (vertical: 7 squares)
+		// a4, b4, c4, d4, f4, g4, h4 (horizontal: 7 squares)
+		// Total: 14 squares
+		if len(moves) != 14 {
+			t.Errorf("rook on e4 expected 14 moves, got %d", len(moves))
+		}
+
+		// Check edges
+		if !containsMove(moves, e4, NewSquare(4, 0)) { // e1
+			t.Error("rook should reach e1")
+		}
+		if !containsMove(moves, e4, NewSquare(4, 7)) { // e8
+			t.Error("rook should reach e8")
+		}
+		if !containsMove(moves, e4, NewSquare(0, 3)) { // a4
+			t.Error("rook should reach a4")
+		}
+		if !containsMove(moves, e4, NewSquare(7, 3)) { // h4
+			t.Error("rook should reach h4")
+		}
+	})
+
+	t.Run("rook blocked by pieces", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white rook on e4 and white pawn on e6, black pawn on c4
+		e4 := NewSquare(4, 3)
+		e6 := NewSquare(4, 5)
+		c4 := NewSquare(2, 3)
+
+		board.Squares[e4] = NewPiece(White, Rook)
+		board.Squares[e6] = NewPiece(White, Pawn)
+		board.Squares[c4] = NewPiece(Black, Pawn)
+
+		moves := board.generateRookMoves()
+
+		// Should reach e5 but not e6 or e7
+		if !containsMove(moves, e4, NewSquare(4, 4)) { // e5
+			t.Error("rook should reach e5")
+		}
+		if containsMove(moves, e4, e6) {
+			t.Error("rook should not move to own piece on e6")
+		}
+		if containsMove(moves, e4, NewSquare(4, 6)) { // e7
+			t.Error("rook should not jump over own piece to e7")
+		}
+
+		// Should capture c4 but not reach b4
+		if !containsMove(moves, e4, c4) {
+			t.Error("rook should capture on c4")
+		}
+		if containsMove(moves, e4, NewSquare(1, 3)) { // b4
+			t.Error("rook should not reach b4 after capturing on c4")
+		}
+	})
+}
+
+func TestGenerateQueenMoves(t *testing.T) {
+	t.Run("queen combines bishop and rook movement", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white queen on e4
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Queen)
+
+		moves := board.generateQueenMoves()
+
+		// Queen on e4 should reach:
+		// Rook moves: 14
+		// Bishop moves: 13
+		// Total: 27
+		if len(moves) != 27 {
+			t.Errorf("queen on e4 expected 27 moves, got %d", len(moves))
+		}
+
+		// Check bishop moves
+		if !containsMove(moves, e4, NewSquare(7, 6)) { // h7 (diagonal)
+			t.Error("queen should reach h7 diagonally")
+		}
+
+		// Check rook moves
+		if !containsMove(moves, e4, NewSquare(4, 7)) { // e8 (vertical)
+			t.Error("queen should reach e8 vertically")
+		}
+		if !containsMove(moves, e4, NewSquare(0, 3)) { // a4 (horizontal)
+			t.Error("queen should reach a4 horizontally")
+		}
+	})
+
+	t.Run("queen blocked appropriately", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white queen on e4, white pawn on e6, black pawn on f5
+		e4 := NewSquare(4, 3)
+		e6 := NewSquare(4, 5)
+		f5 := NewSquare(5, 4)
+
+		board.Squares[e4] = NewPiece(White, Queen)
+		board.Squares[e6] = NewPiece(White, Pawn)
+		board.Squares[f5] = NewPiece(Black, Pawn)
+
+		moves := board.generateQueenMoves()
+
+		// Cannot reach e6 (own piece)
+		if containsMove(moves, e4, e6) {
+			t.Error("queen should not move to own piece on e6")
+		}
+
+		// Can capture f5
+		if !containsMove(moves, e4, f5) {
+			t.Error("queen should capture on f5")
+		}
+
+		// Cannot reach g6 (blocked by f5)
+		if containsMove(moves, e4, NewSquare(6, 5)) {
+			t.Error("queen should not reach g6 after capture on f5")
+		}
+	})
+}
+
+func TestGenerateKingMoves(t *testing.T) {
+	t.Run("king on e4 has 8 moves", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white king on e4
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, King)
+
+		moves := board.generateKingMoves()
+
+		// King should have 8 adjacent squares
+		if len(moves) != 8 {
+			t.Errorf("king on e4 expected 8 moves, got %d", len(moves))
+		}
+
+		// Check all adjacent squares
+		adjacents := []Square{
+			NewSquare(3, 2), // d3
+			NewSquare(4, 2), // e3
+			NewSquare(5, 2), // f3
+			NewSquare(3, 3), // d4
+			NewSquare(5, 3), // f4
+			NewSquare(3, 4), // d5
+			NewSquare(4, 4), // e5
+			NewSquare(5, 4), // f5
+		}
+
+		for _, sq := range adjacents {
+			if !containsMove(moves, e4, sq) {
+				t.Errorf("king on e4 should move to %s", sq.String())
+			}
+		}
+	})
+
+	t.Run("king on a1 has 3 moves (corner)", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white king on a1
+		a1 := NewSquare(0, 0)
+		board.Squares[a1] = NewPiece(White, King)
+
+		moves := board.generateKingMoves()
+
+		// King in corner has only 3 squares
+		if len(moves) != 3 {
+			t.Errorf("king on a1 expected 3 moves, got %d", len(moves))
+		}
+
+		// Check the 3 possible squares: a2, b1, b2
+		if !containsMove(moves, a1, NewSquare(0, 1)) { // a2
+			t.Error("king on a1 should move to a2")
+		}
+		if !containsMove(moves, a1, NewSquare(1, 0)) { // b1
+			t.Error("king on a1 should move to b1")
+		}
+		if !containsMove(moves, a1, NewSquare(1, 1)) { // b2
+			t.Error("king on a1 should move to b2")
+		}
+	})
+
+	t.Run("king can capture enemy but not own piece", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+		// Place white king on e4, white pawn on e5, black pawn on f5
+		e4 := NewSquare(4, 3)
+		e5 := NewSquare(4, 4)
+		f5 := NewSquare(5, 4)
+
+		board.Squares[e4] = NewPiece(White, King)
+		board.Squares[e5] = NewPiece(White, Pawn)
+		board.Squares[f5] = NewPiece(Black, Pawn)
+
+		moves := board.generateKingMoves()
+
+		// Should not move to e5 (own piece)
+		if containsMove(moves, e4, e5) {
+			t.Error("king should not capture own piece on e5")
+		}
+
+		// Should capture on f5
+		if !containsMove(moves, e4, f5) {
+			t.Error("king should capture enemy piece on f5")
+		}
+	})
+}
+
+func TestPseudoLegalMoves(t *testing.T) {
+	t.Run("starting position White has 20 moves", func(t *testing.T) {
+		board := NewBoard()
+		moves := board.PseudoLegalMoves()
+
+		// Starting position: 16 pawn moves (8 pawns x 2) + 4 knight moves (2 knights x 2)
+		// = 20 total pseudo-legal moves
+		if len(moves) != 20 {
+			t.Errorf("starting position expected 20 pseudo-legal moves, got %d", len(moves))
+			// List the moves for debugging
+			t.Logf("Moves: ")
+			for _, m := range moves {
+				t.Logf("  %s", m.String())
+			}
+		}
+	})
+
+	t.Run("starting position Black has 20 moves", func(t *testing.T) {
+		board := NewBoard()
+		board.ActiveColor = Black
+		moves := board.PseudoLegalMoves()
+
+		if len(moves) != 20 {
+			t.Errorf("starting position (Black) expected 20 pseudo-legal moves, got %d", len(moves))
+		}
+	})
+
+	t.Run("PseudoLegalMoves combines all piece generators", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+
+		// Place various white pieces on empty board
+		board.Squares[NewSquare(4, 3)] = NewPiece(White, King)   // e4
+		board.Squares[NewSquare(0, 0)] = NewPiece(White, Knight) // a1
+		board.Squares[NewSquare(7, 7)] = NewPiece(White, Bishop) // h8
+		board.Squares[NewSquare(3, 1)] = NewPiece(White, Pawn)   // d2
+
+		moves := board.PseudoLegalMoves()
+
+		// Count moves by piece
+		kingMoves := countMovesFrom(moves, NewSquare(4, 3))
+		knightMoves := countMovesFrom(moves, NewSquare(0, 0))
+		bishopMoves := countMovesFrom(moves, NewSquare(7, 7))
+		pawnMoves := countMovesFrom(moves, NewSquare(3, 1))
+
+		if kingMoves != 8 {
+			t.Errorf("expected 8 king moves, got %d", kingMoves)
+		}
+		if knightMoves != 2 {
+			t.Errorf("expected 2 knight moves (a1 corner), got %d", knightMoves)
+		}
+		if bishopMoves != 6 {
+			// h8 can reach g7, f6, e5, d4, c3, b2 (6 squares)
+			// a1 is blocked by the knight on a1
+			t.Errorf("expected 6 bishop moves (h8 corner, blocked at a1 by knight), got %d", bishopMoves)
+		}
+		if pawnMoves != 2 {
+			t.Errorf("expected 2 pawn moves (d2 starting rank), got %d", pawnMoves)
+		}
+	})
+}
