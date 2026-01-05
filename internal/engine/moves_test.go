@@ -3428,4 +3428,34 @@ func TestPawnPromotionMakeMove(t *testing.T) {
 			t.Errorf("expected Pawn at e7, got %v", board.Squares[e7].Type())
 		}
 	})
+
+	t.Run("illegal pawn jump to promotion rank gives illegal move error", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// Pawn on e4 (not in position to promote)
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Pawn)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		// Try impossible move e4e8 (4 squares forward)
+		move, _ := ParseMove("e4e8")
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Fatal("MakeMove should fail for illegal pawn jump")
+		}
+
+		// Error should be "illegal move", not "promotion required"
+		if strings.Contains(err.Error(), "promotion") {
+			t.Errorf("error should be about illegal move, not promotion: %v", err)
+		}
+		if !strings.Contains(err.Error(), "illegal") {
+			t.Errorf("error should mention illegal move, got: %v", err)
+		}
+	})
 }

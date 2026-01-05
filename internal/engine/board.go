@@ -119,11 +119,14 @@ func (b *Board) MakeMove(m Move) error {
 	// Get the piece at the from square
 	piece := b.Squares[m.From]
 
-	// Check if this is a pawn reaching the promotion rank
+	// Check if this is a valid pawn promotion move missing the promotion piece
+	// Only trigger this error if the pawn is actually in position to promote (one rank away)
 	if piece.Type() == Pawn {
+		fromRank := m.From.Rank()
 		toRank := m.To.Rank()
-		isPromotionRank := (piece.Color() == White && toRank == 7) || (piece.Color() == Black && toRank == 0)
-		if isPromotionRank && m.Promotion == Empty {
+		isValidPromotion := (piece.Color() == White && fromRank == 6 && toRank == 7) ||
+			(piece.Color() == Black && fromRank == 1 && toRank == 0)
+		if isValidPromotion && m.Promotion == Empty {
 			return fmt.Errorf("pawn promotion requires specifying a piece (q, r, b, n)")
 		}
 	}
