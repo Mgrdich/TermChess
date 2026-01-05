@@ -114,7 +114,23 @@ func (b *Board) Copy() *Board {
 // MakeMove applies a move to the board.
 // It validates that the move is legal before applying it.
 // Returns an error if the move is illegal (invalid piece, wrong color, or leaves king in check).
+// For pawn promotion, the move must include a valid promotion piece (Queen, Rook, Bishop, Knight).
 func (b *Board) MakeMove(m Move) error {
+	// Get the piece at the from square
+	piece := b.Squares[m.From]
+
+	// Check if this is a valid pawn promotion move missing the promotion piece
+	// Only trigger this error if the pawn is actually in position to promote (one rank away)
+	if piece.Type() == Pawn {
+		fromRank := m.From.Rank()
+		toRank := m.To.Rank()
+		isValidPromotion := (piece.Color() == White && fromRank == 6 && toRank == 7) ||
+			(piece.Color() == Black && fromRank == 1 && toRank == 0)
+		if isValidPromotion && m.Promotion == Empty {
+			return fmt.Errorf("pawn promotion requires specifying a piece (q, r, b, n)")
+		}
+	}
+
 	// Check if the move is legal using the full legality check
 	if !b.IsLegalMove(m) {
 		return fmt.Errorf("illegal move: %s", m.String())
@@ -150,6 +166,13 @@ func (b *Board) applyMove(m Move) {
 	// Move the piece
 	b.Squares[m.To] = piece
 	b.Squares[m.From] = Piece(Empty)
+
+	// Handle pawn promotion: replace pawn with promoted piece
+	if piece.Type() == Pawn && m.Promotion != Empty {
+		// Create the promoted piece with the same color as the pawn
+		promotedPiece := NewPiece(piece.Color(), m.Promotion)
+		b.Squares[m.To] = promotedPiece
+	}
 
 	// Handle castling: if king moves 2 squares horizontally, also move the rook
 	if piece.Type() == King {

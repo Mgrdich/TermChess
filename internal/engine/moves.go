@@ -109,19 +109,36 @@ func (b *Board) generatePawnMoves() []Move {
 		file := sq.File()
 		rank := sq.Rank()
 
+		// Determine promotion rank based on color
+		// White pawns promote on rank 7 (index 7), black pawns on rank 0
+		var promotionRank int
+		if b.ActiveColor == White {
+			promotionRank = 7
+		} else {
+			promotionRank = 0
+		}
+
 		// One square forward
 		forwardRank := rank + direction
 		if forwardRank >= 0 && forwardRank <= 7 {
 			forwardSq := NewSquare(file, forwardRank)
 			if b.Squares[forwardSq].IsEmpty() {
-				moves = append(moves, Move{From: sq, To: forwardSq})
+				// Check if this is a promotion move
+				if forwardRank == promotionRank {
+					// Generate 4 promotion moves
+					for _, promoType := range []PieceType{Queen, Rook, Bishop, Knight} {
+						moves = append(moves, Move{From: sq, To: forwardSq, Promotion: promoType})
+					}
+				} else {
+					moves = append(moves, Move{From: sq, To: forwardSq})
 
-				// Two squares forward from starting position
-				if rank == startRank {
-					twoForwardRank := rank + 2*direction
-					twoForwardSq := NewSquare(file, twoForwardRank)
-					if b.Squares[twoForwardSq].IsEmpty() {
-						moves = append(moves, Move{From: sq, To: twoForwardSq})
+					// Two squares forward from starting position
+					if rank == startRank {
+						twoForwardRank := rank + 2*direction
+						twoForwardSq := NewSquare(file, twoForwardRank)
+						if b.Squares[twoForwardSq].IsEmpty() {
+							moves = append(moves, Move{From: sq, To: twoForwardSq})
+						}
 					}
 				}
 			}
@@ -138,7 +155,15 @@ func (b *Board) generatePawnMoves() []Move {
 
 				// Can capture if there's an enemy piece
 				if !targetPiece.IsEmpty() && targetPiece.Color() != b.ActiveColor {
-					moves = append(moves, Move{From: sq, To: captureSq})
+					// Check if this is a promotion capture
+					if captureRank == promotionRank {
+						// Generate 4 promotion moves for capture
+						for _, promoType := range []PieceType{Queen, Rook, Bishop, Knight} {
+							moves = append(moves, Move{From: sq, To: captureSq, Promotion: promoType})
+						}
+					} else {
+						moves = append(moves, Move{From: sq, To: captureSq})
+					}
 				}
 			}
 		}

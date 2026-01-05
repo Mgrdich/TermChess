@@ -2987,3 +2987,475 @@ func TestStartingPositionNoCastling(t *testing.T) {
 		}
 	})
 }
+
+// ============================================================================
+// Pawn Promotion Tests
+// ============================================================================
+
+func TestPawnPromotionMoveGeneration(t *testing.T) {
+	t.Run("white pawn on 7th rank generates 4 promotion moves", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pieces for a clean test
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// Place white pawn on e7 (one square from promotion)
+		e7 := NewSquare(4, 6) // e7
+		board.Squares[e7] = NewPiece(White, Pawn)
+
+		// Place white king (needed for valid position)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from e7
+		e7Moves := []Move{}
+		for _, m := range moves {
+			if m.From == e7 {
+				e7Moves = append(e7Moves, m)
+			}
+		}
+
+		if len(e7Moves) != 4 {
+			t.Errorf("expected 4 promotion moves, got %d", len(e7Moves))
+		}
+
+		// Check we have all 4 promotion types
+		e8 := NewSquare(4, 7) // e8
+		promoTypes := make(map[PieceType]bool)
+		for _, m := range e7Moves {
+			if m.To != e8 {
+				t.Errorf("expected promotion move to e8, got %s", m.To.String())
+			}
+			promoTypes[m.Promotion] = true
+		}
+
+		if !promoTypes[Queen] {
+			t.Error("missing queen promotion")
+		}
+		if !promoTypes[Rook] {
+			t.Error("missing rook promotion")
+		}
+		if !promoTypes[Bishop] {
+			t.Error("missing bishop promotion")
+		}
+		if !promoTypes[Knight] {
+			t.Error("missing knight promotion")
+		}
+	})
+
+	t.Run("black pawn on 2nd rank generates 4 promotion moves", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pieces for a clean test
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// Place black pawn on e2 (one square from promotion)
+		e2 := NewSquare(4, 1) // e2
+		board.Squares[e2] = NewPiece(Black, Pawn)
+
+		// Place black king (needed for valid position)
+		e8 := NewSquare(4, 7)
+		board.Squares[e8] = NewPiece(Black, King)
+
+		board.ActiveColor = Black
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from e2
+		e2Moves := []Move{}
+		for _, m := range moves {
+			if m.From == e2 {
+				e2Moves = append(e2Moves, m)
+			}
+		}
+
+		if len(e2Moves) != 4 {
+			t.Errorf("expected 4 promotion moves, got %d", len(e2Moves))
+		}
+
+		// Check we have all 4 promotion types
+		e1 := NewSquare(4, 0) // e1
+		promoTypes := make(map[PieceType]bool)
+		for _, m := range e2Moves {
+			if m.To != e1 {
+				t.Errorf("expected promotion move to e1, got %s", m.To.String())
+			}
+			promoTypes[m.Promotion] = true
+		}
+
+		if !promoTypes[Queen] {
+			t.Error("missing queen promotion")
+		}
+		if !promoTypes[Rook] {
+			t.Error("missing rook promotion")
+		}
+		if !promoTypes[Bishop] {
+			t.Error("missing bishop promotion")
+		}
+		if !promoTypes[Knight] {
+			t.Error("missing knight promotion")
+		}
+	})
+
+	t.Run("promotion capture generates 4 moves per capture square", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pieces for a clean test
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// Place white pawn on e7
+		e7 := NewSquare(4, 6) // e7
+		board.Squares[e7] = NewPiece(White, Pawn)
+
+		// Place enemy pieces to capture on d8 and f8
+		d8 := NewSquare(3, 7) // d8
+		f8 := NewSquare(5, 7) // f8
+		board.Squares[d8] = NewPiece(Black, Rook)
+		board.Squares[f8] = NewPiece(Black, Knight)
+
+		// Place white king
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+
+		moves := board.generatePawnMoves()
+
+		// Find moves from e7
+		e7Moves := []Move{}
+		for _, m := range moves {
+			if m.From == e7 {
+				e7Moves = append(e7Moves, m)
+			}
+		}
+
+		// Should have 4 forward promotions + 4 capture to d8 + 4 capture to f8 = 12
+		if len(e7Moves) != 12 {
+			t.Errorf("expected 12 promotion moves (4 forward + 4 left + 4 right captures), got %d", len(e7Moves))
+		}
+
+		// Verify we have 4 moves to each square
+		countToD8 := 0
+		countToE8 := 0
+		countToF8 := 0
+		e8 := NewSquare(4, 7)
+		for _, m := range e7Moves {
+			switch m.To {
+			case d8:
+				countToD8++
+			case e8:
+				countToE8++
+			case f8:
+				countToF8++
+			}
+		}
+
+		if countToD8 != 4 {
+			t.Errorf("expected 4 captures to d8, got %d", countToD8)
+		}
+		if countToE8 != 4 {
+			t.Errorf("expected 4 forward moves to e8, got %d", countToE8)
+		}
+		if countToF8 != 4 {
+			t.Errorf("expected 4 captures to f8, got %d", countToF8)
+		}
+	})
+
+	t.Run("non-promotion move does not have promotion piece", func(t *testing.T) {
+		board := NewBoard()
+		moves := board.generatePawnMoves()
+
+		// Check that e2e4 (a normal pawn move) has no promotion
+		e2 := NewSquare(4, 1)
+		e4 := NewSquare(4, 3)
+
+		for _, m := range moves {
+			if m.From == e2 && m.To == e4 {
+				if m.Promotion != Empty {
+					t.Error("non-promotion move should have Empty promotion")
+				}
+				return
+			}
+		}
+		t.Error("e2e4 move not found in generated moves")
+	})
+}
+
+func TestPawnPromotionMakeMove(t *testing.T) {
+	t.Run("promotion replaces pawn with queen", func(t *testing.T) {
+		board := NewBoard()
+		// Clear all pieces for a clean test
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// Place white pawn on e7
+		e7 := NewSquare(4, 6)
+		board.Squares[e7] = NewPiece(White, Pawn)
+
+		// Place kings
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		move, err := ParseMove("e7e8q")
+		if err != nil {
+			t.Fatalf("ParseMove error: %v", err)
+		}
+
+		err = board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("MakeMove error: %v", err)
+		}
+
+		// Check e8 has white queen
+		e8 := NewSquare(4, 7)
+		piece := board.Squares[e8]
+		if piece.Type() != Queen {
+			t.Errorf("expected Queen at e8, got %v", piece.Type())
+		}
+		if piece.Color() != White {
+			t.Errorf("expected White piece at e8, got %v", piece.Color())
+		}
+
+		// Check e7 is empty
+		if !board.Squares[e7].IsEmpty() {
+			t.Error("e7 should be empty after promotion")
+		}
+	})
+
+	t.Run("promotion replaces pawn with rook", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		e7 := NewSquare(4, 6)
+		board.Squares[e7] = NewPiece(White, Pawn)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		move, _ := ParseMove("e7e8r")
+		err := board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("MakeMove error: %v", err)
+		}
+
+		e8 := NewSquare(4, 7)
+		if board.Squares[e8].Type() != Rook {
+			t.Errorf("expected Rook at e8, got %v", board.Squares[e8].Type())
+		}
+	})
+
+	t.Run("promotion replaces pawn with bishop", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		e7 := NewSquare(4, 6)
+		board.Squares[e7] = NewPiece(White, Pawn)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		move, _ := ParseMove("e7e8b")
+		err := board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("MakeMove error: %v", err)
+		}
+
+		e8 := NewSquare(4, 7)
+		if board.Squares[e8].Type() != Bishop {
+			t.Errorf("expected Bishop at e8, got %v", board.Squares[e8].Type())
+		}
+	})
+
+	t.Run("promotion replaces pawn with knight (underpromotion)", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		e7 := NewSquare(4, 6)
+		board.Squares[e7] = NewPiece(White, Pawn)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		move, _ := ParseMove("e7e8n")
+		err := board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("MakeMove error: %v", err)
+		}
+
+		e8 := NewSquare(4, 7)
+		if board.Squares[e8].Type() != Knight {
+			t.Errorf("expected Knight at e8, got %v", board.Squares[e8].Type())
+		}
+	})
+
+	t.Run("black promotion to queen", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		e2 := NewSquare(4, 1)
+		board.Squares[e2] = NewPiece(Black, Pawn)
+		e8 := NewSquare(4, 7)
+		board.Squares[e8] = NewPiece(Black, King)
+		a1 := NewSquare(0, 0)
+		board.Squares[a1] = NewPiece(White, King)
+
+		board.ActiveColor = Black
+
+		move, _ := ParseMove("e2e1q")
+		err := board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("MakeMove error: %v", err)
+		}
+
+		e1 := NewSquare(4, 0)
+		piece := board.Squares[e1]
+		if piece.Type() != Queen {
+			t.Errorf("expected Queen at e1, got %v", piece.Type())
+		}
+		if piece.Color() != Black {
+			t.Errorf("expected Black piece at e1, got %v", piece.Color())
+		}
+	})
+
+	t.Run("promotion with capture", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// White pawn on d7
+		d7 := NewSquare(3, 6)
+		board.Squares[d7] = NewPiece(White, Pawn)
+
+		// Black rook on e8 (can be captured)
+		e8 := NewSquare(4, 7)
+		board.Squares[e8] = NewPiece(Black, Rook)
+
+		// Kings
+		a1 := NewSquare(0, 0)
+		board.Squares[a1] = NewPiece(White, King)
+		h8 := NewSquare(7, 7)
+		board.Squares[h8] = NewPiece(Black, King)
+
+		move, _ := ParseMove("d7e8q")
+		err := board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("MakeMove error: %v", err)
+		}
+
+		// Check e8 has white queen (captured rook)
+		piece := board.Squares[e8]
+		if piece.Type() != Queen {
+			t.Errorf("expected Queen at e8, got %v", piece.Type())
+		}
+		if piece.Color() != White {
+			t.Errorf("expected White piece at e8, got %v", piece.Color())
+		}
+
+		// Check d7 is empty
+		if !board.Squares[d7].IsEmpty() {
+			t.Error("d7 should be empty after promotion capture")
+		}
+	})
+
+	t.Run("promotion without piece fails", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		e7 := NewSquare(4, 6)
+		board.Squares[e7] = NewPiece(White, Pawn)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		// Try to move without promotion piece
+		move, err := ParseMove("e7e8")
+		if err != nil {
+			t.Fatalf("ParseMove error: %v", err)
+		}
+
+		err = board.MakeMove(move)
+		if err == nil {
+			t.Error("MakeMove should fail when promotion piece not specified for pawn reaching 8th rank")
+		}
+		if !strings.Contains(err.Error(), "promotion") {
+			t.Errorf("error message should mention promotion, got: %v", err)
+		}
+	})
+
+	t.Run("pawn on 6th rank doesn't require promotion", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		e6 := NewSquare(4, 5)
+		board.Squares[e6] = NewPiece(White, Pawn)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		move, _ := ParseMove("e6e7")
+		err := board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("MakeMove should not fail for non-promotion pawn move: %v", err)
+		}
+
+		// Check e7 has pawn (not promoted)
+		e7 := NewSquare(4, 6)
+		if board.Squares[e7].Type() != Pawn {
+			t.Errorf("expected Pawn at e7, got %v", board.Squares[e7].Type())
+		}
+	})
+
+	t.Run("illegal pawn jump to promotion rank gives illegal move error", func(t *testing.T) {
+		board := NewBoard()
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// Pawn on e4 (not in position to promote)
+		e4 := NewSquare(4, 3)
+		board.Squares[e4] = NewPiece(White, Pawn)
+		e1 := NewSquare(4, 0)
+		board.Squares[e1] = NewPiece(White, King)
+		a8 := NewSquare(0, 7)
+		board.Squares[a8] = NewPiece(Black, King)
+
+		// Try impossible move e4e8 (4 squares forward)
+		move, _ := ParseMove("e4e8")
+		err := board.MakeMove(move)
+		if err == nil {
+			t.Fatal("MakeMove should fail for illegal pawn jump")
+		}
+
+		// Error should be "illegal move", not "promotion required"
+		if strings.Contains(err.Error(), "promotion") {
+			t.Errorf("error should be about illegal move, not promotion: %v", err)
+		}
+		if !strings.Contains(err.Error(), "illegal") {
+			t.Errorf("error should mention illegal move, got: %v", err)
+		}
+	})
+}
