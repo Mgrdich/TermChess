@@ -111,13 +111,13 @@
 ## Slice 9: Checkmate & Stalemate Detection
 *Goal: Detect game-ending conditions when no legal moves exist.*
 
-- [ ] **Slice 9: Checkmate and stalemate detection**
-  - [ ] Create `internal/engine/rules.go`: Define `GameStatus` enum (Ongoing, Checkmate, Stalemate, Draw variants)
-  - [ ] Implement `Board.Status() GameStatus` that checks for checkmate/stalemate
-  - [ ] Checkmate: in check + no legal moves
-  - [ ] Stalemate: not in check + no legal moves
-  - [ ] Add unit tests with known checkmate positions
-  - [ ] Add unit tests with known stalemate positions
+- [x] **Slice 9: Checkmate and stalemate detection**
+  - [x] Create `internal/engine/rules.go`: Define `GameStatus` enum (Ongoing, Checkmate, Stalemate, Draw variants)
+  - [x] Implement `Board.Status() GameStatus` that checks for checkmate/stalemate
+  - [x] Checkmate: in check + no legal moves
+  - [x] Stalemate: not in check + no legal moves
+  - [x] Add unit tests with known checkmate positions
+  - [x] Add unit tests with known stalemate positions
 
 ---
 
