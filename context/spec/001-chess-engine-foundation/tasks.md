@@ -99,12 +99,12 @@
 ## Slice 8: Pawn Promotion
 *Goal: Implement pawn promotion.*
 
-- [ ] **Slice 8: Pawn promotion implementation**
-  - [ ] Update pawn move generation to require promotion piece when reaching 8th rank
-  - [ ] Update `MakeMove()` to replace pawn with promoted piece
-  - [ ] Update `ParseMove()` to handle promotion suffix ("e7e8q")
-  - [ ] Add unit tests for promotion to all 4 piece types (Q, R, B, N)
-  - [ ] Add unit test that promotion is required (move without promotion piece fails)
+- [x] **Slice 8: Pawn promotion implementation**
+  - [x] Update pawn move generation to require promotion piece when reaching 8th rank
+  - [x] Update `MakeMove()` to replace pawn with promoted piece
+  - [x] Update `ParseMove()` to handle promotion suffix ("e7e8q")
+  - [x] Add unit tests for promotion to all 4 piece types (Q, R, B, N)
+  - [x] Add unit test that promotion is required (move without promotion piece fails)
 
 ---
 
