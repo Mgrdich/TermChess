@@ -84,6 +84,10 @@ func NewBoard() *Board {
 		b.Squares[56+file] = NewPiece(Black, backRank[file])
 	}
 
+	// Compute the initial Zobrist hash and add it to history
+	b.Hash = b.ComputeHash()
+	b.History = append(b.History, b.Hash)
+
 	return b
 }
 
@@ -146,11 +150,31 @@ func (b *Board) MakeMove(m Move) error {
 // External code should use MakeMove() which validates legality first.
 func (b *Board) applyMove(m Move) {
 	piece := b.Squares[m.From]
+	capturedPiece := b.Squares[m.To]
+
+	// Save old state for hash updates
+	oldCastlingRights := b.CastlingRights
+	oldEnPassantSq := b.EnPassantSq
+
+	// --- Zobrist: XOR out the old en passant file (if any) ---
+	if b.EnPassantSq >= 0 {
+		oldEpFile := Square(b.EnPassantSq).File()
+		b.Hash ^= zobristEnPassant[oldEpFile]
+	}
+
+	// --- Zobrist: XOR out the moving piece from its source square ---
+	b.Hash ^= hashPiece(piece, m.From)
+
+	// --- Zobrist: XOR out the captured piece (if any) ---
+	if !capturedPiece.IsEmpty() {
+		b.Hash ^= hashPiece(capturedPiece, m.To)
+	}
 
 	// Handle en passant capture: remove the captured pawn
 	// En passant is detected when a pawn moves to the en passant square
 	// The captured pawn is on the same file as destination, but different rank
-	if piece.Type() == Pawn && b.EnPassantSq >= 0 && m.To == Square(b.EnPassantSq) {
+	var enPassantCapturedPawnSq Square = NoSquare
+	if piece.Type() == Pawn && oldEnPassantSq >= 0 && m.To == Square(oldEnPassantSq) {
 		// White captures: captured pawn is one rank below (rank - 1)
 		// Black captures: captured pawn is one rank above (rank + 1)
 		capturedPawnRank := m.To.Rank()
@@ -159,20 +183,30 @@ func (b *Board) applyMove(m Move) {
 		} else {
 			capturedPawnRank++ // Black captures pawn above
 		}
-		capturedPawnSq := NewSquare(m.To.File(), capturedPawnRank)
-		b.Squares[capturedPawnSq] = Piece(Empty)
+		enPassantCapturedPawnSq = NewSquare(m.To.File(), capturedPawnRank)
+		capturedPawn := b.Squares[enPassantCapturedPawnSq]
+		// --- Zobrist: XOR out the captured pawn ---
+		b.Hash ^= hashPiece(capturedPawn, enPassantCapturedPawnSq)
+		b.Squares[enPassantCapturedPawnSq] = Piece(Empty)
 	}
 
 	// Move the piece
 	b.Squares[m.To] = piece
 	b.Squares[m.From] = Piece(Empty)
 
+	// Determine the final piece at the destination (may be promoted)
+	finalPiece := piece
+
 	// Handle pawn promotion: replace pawn with promoted piece
 	if piece.Type() == Pawn && m.Promotion != Empty {
 		// Create the promoted piece with the same color as the pawn
 		promotedPiece := NewPiece(piece.Color(), m.Promotion)
 		b.Squares[m.To] = promotedPiece
+		finalPiece = promotedPiece
 	}
+
+	// --- Zobrist: XOR in the final piece at the destination ---
+	b.Hash ^= hashPiece(finalPiece, m.To)
 
 	// Handle castling: if king moves 2 squares horizontally, also move the rook
 	if piece.Type() == King {
@@ -184,7 +218,11 @@ func (b *Board) applyMove(m Move) {
 			rank := m.From.Rank()
 			rookFrom := NewSquare(rookFromFile, rank)
 			rookTo := NewSquare(rookToFile, rank)
-			b.Squares[rookTo] = b.Squares[rookFrom]
+			rook := b.Squares[rookFrom]
+			// --- Zobrist: XOR out rook from old square, XOR in at new square ---
+			b.Hash ^= hashPiece(rook, rookFrom)
+			b.Hash ^= hashPiece(rook, rookTo)
+			b.Squares[rookTo] = rook
 			b.Squares[rookFrom] = Piece(Empty)
 		} else if fileDiff == -2 {
 			// Queenside castling: move rook from a-file to d-file
@@ -193,7 +231,11 @@ func (b *Board) applyMove(m Move) {
 			rank := m.From.Rank()
 			rookFrom := NewSquare(rookFromFile, rank)
 			rookTo := NewSquare(rookToFile, rank)
-			b.Squares[rookTo] = b.Squares[rookFrom]
+			rook := b.Squares[rookFrom]
+			// --- Zobrist: XOR out rook from old square, XOR in at new square ---
+			b.Hash ^= hashPiece(rook, rookFrom)
+			b.Hash ^= hashPiece(rook, rookTo)
+			b.Squares[rookTo] = rook
 			b.Squares[rookFrom] = Piece(Empty)
 		}
 	}
@@ -235,6 +277,12 @@ func (b *Board) applyMove(m Move) {
 		b.CastlingRights &^= CastleBlackKing
 	}
 
+	// --- Zobrist: Update castling rights hash (XOR out old, XOR in new) ---
+	if b.CastlingRights != oldCastlingRights {
+		b.Hash ^= zobristCastling[oldCastlingRights]
+		b.Hash ^= zobristCastling[b.CastlingRights]
+	}
+
 	// Set en passant square if pawn moves two squares
 	if piece.Type() == Pawn {
 		rankDiff := m.To.Rank() - m.From.Rank()
@@ -249,6 +297,15 @@ func (b *Board) applyMove(m Move) {
 		b.EnPassantSq = -1
 	}
 
+	// --- Zobrist: XOR in the new en passant file (if any) ---
+	if b.EnPassantSq >= 0 {
+		newEpFile := Square(b.EnPassantSq).File()
+		b.Hash ^= zobristEnPassant[newEpFile]
+	}
+
+	// --- Zobrist: Toggle side to move ---
+	b.Hash ^= zobristSideToMove
+
 	// Toggle active color
 	if b.ActiveColor == White {
 		b.ActiveColor = Black
@@ -257,6 +314,9 @@ func (b *Board) applyMove(m Move) {
 		// Increment full move number after Black's move
 		b.FullMoveNum++
 	}
+
+	// Add the new hash to history for repetition detection
+	b.History = append(b.History, b.Hash)
 }
 
 // InCheck returns true if the active color's king is under attack by the opponent.

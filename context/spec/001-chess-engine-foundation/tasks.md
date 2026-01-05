@@ -59,7 +59,7 @@
 ## Slice 5: Check Detection & Legal Move Filtering
 *Goal: Filter out moves that leave own king in check; detect check state.*
 
-- [ ] **Slice 5: Check detection and legal move generation**
+- [x] **Slice 5: Check detection and legal move generation**
   - [x] Implement `Board.IsSquareAttacked(sq Square, byColor Color) bool`
   - [x] Implement `Board.InCheck() bool` (is active color's king attacked?)
   - [x] Implement `Board.LegalMoves()` that filters pseudo-legal moves by checking if king is left in check
@@ -124,15 +124,15 @@
 ## Slice 10: Zobrist Hashing & Position History
 *Goal: Implement incremental hashing for repetition detection.*
 
-- [ ] **Slice 10: Zobrist hashing implementation**
-  - [ ] Create `internal/engine/zobrist.go`: Generate random values for pieces, side, castling, en passant
-  - [ ] Add `Hash uint64` field to `Board`
-  - [ ] Add `History []uint64` field to track position hashes
-  - [ ] Compute initial hash in `NewBoard()`
-  - [ ] Update hash incrementally in `MakeMove()` via XOR
-  - [ ] Add hash to history after each move
-  - [ ] Add unit tests verifying hash changes appropriately
-  - [ ] Add unit test verifying same position produces same hash
+- [x] **Slice 10: Zobrist hashing implementation**
+  - [x] Create `internal/engine/zobrist.go`: Generate random values for pieces, side, castling, en passant
+  - [x] Add `Hash uint64` field to `Board`
+  - [x] Add `History []uint64` field to track position hashes
+  - [x] Compute initial hash in `NewBoard()`
+  - [x] Update hash incrementally in `MakeMove()` via XOR
+  - [x] Add hash to history after each move
+  - [x] Add unit tests verifying hash changes appropriately
+  - [x] Add unit test verifying same position produces same hash
 
 ---
 
