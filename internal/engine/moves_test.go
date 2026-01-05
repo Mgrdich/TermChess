@@ -231,6 +231,7 @@ func TestBoardCopy(t *testing.T) {
 
 	t.Run("modifying copy doesn't affect original", func(t *testing.T) {
 		original := NewBoard()
+		originalHash := original.Hash // Save the original hash (Zobrist computed)
 		original.History = append(original.History, 12345)
 
 		copied := original.Copy()
@@ -261,14 +262,14 @@ func TestBoardCopy(t *testing.T) {
 		if original.FullMoveNum != 1 {
 			t.Error("original.FullMoveNum was modified")
 		}
-		if original.Hash != 0 {
+		if original.Hash != originalHash {
 			t.Error("original.Hash was modified")
 		}
 		if original.Squares[0].IsEmpty() {
 			t.Error("original.Squares[0] was modified")
 		}
-		if len(original.History) != 1 {
-			t.Errorf("original.History was modified: got length %d, want 1", len(original.History))
+		if len(original.History) != 2 {
+			t.Errorf("original.History was modified: got length %d, want 2", len(original.History))
 		}
 	})
 }

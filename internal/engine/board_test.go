@@ -36,15 +36,18 @@ func TestNewBoard(t *testing.T) {
 		}
 	})
 
-	t.Run("Hash is 0", func(t *testing.T) {
-		if board.Hash != 0 {
-			t.Errorf("expected Hash to be 0, got %d", board.Hash)
+	t.Run("Hash is non-zero (Zobrist hash computed)", func(t *testing.T) {
+		if board.Hash == 0 {
+			t.Error("expected Hash to be non-zero after Zobrist initialization")
 		}
 	})
 
-	t.Run("History is empty", func(t *testing.T) {
-		if len(board.History) != 0 {
-			t.Errorf("expected History to be empty, got length %d", len(board.History))
+	t.Run("History contains initial position", func(t *testing.T) {
+		if len(board.History) != 1 {
+			t.Errorf("expected History to contain initial position (length 1), got length %d", len(board.History))
+		}
+		if board.History[0] != board.Hash {
+			t.Error("expected History[0] to match initial Hash")
 		}
 	})
 }
