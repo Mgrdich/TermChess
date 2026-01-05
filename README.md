@@ -4,6 +4,10 @@ A terminal-based chess application written in Go. Play chess against friends loc
 
 [![CI](https://github.com/Mgrdich/TermChess/actions/workflows/ci.yml/badge.svg)](https://github.com/Mgrdich/TermChess/actions/workflows/ci.yml)
 
+> **100% AI-Generated Project**
+>
+> This entire project — every line of code, all specifications, tests, and documentation — was created using [AWOS (Agentic Way of Software)](https://github.com/provectus/awos). Not a single line of manual code was written.
+
 ## Features
 
 - **Local PvP** — Two players on the same machine
