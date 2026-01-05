@@ -2097,3 +2097,282 @@ func TestEnPassantCaptureExecution(t *testing.T) {
 		}
 	})
 }
+
+func TestEnPassantExpiry(t *testing.T) {
+	// Test that en passant expires after one move (only available immediately after two-square pawn move)
+	t.Run("en passant expires after opponent makes different move", func(t *testing.T) {
+		// Start from standard position
+		board := NewBoard()
+
+		// 1. White plays e2-e4 (sets en passant square to e3)
+		e2 := NewSquare(4, 1)
+		e4 := NewSquare(4, 3)
+		e3 := NewSquare(4, 2)
+
+		move1 := Move{From: e2, To: e4}
+		err := board.MakeMove(move1)
+		if err != nil {
+			t.Fatalf("Move 1 (e2-e4) failed: %v", err)
+		}
+
+		// Verify en passant square is set to e3
+		if board.EnPassantSq != int8(e3) {
+			t.Errorf("expected EnPassantSq to be %d (e3) after e2-e4, got %d", e3, board.EnPassantSq)
+		}
+
+		// 2. Black plays a7-a6 (any move that isn't capturing en passant)
+		a7 := NewSquare(0, 6)
+		a6 := NewSquare(0, 5)
+
+		move2 := Move{From: a7, To: a6}
+		err = board.MakeMove(move2)
+		if err != nil {
+			t.Fatalf("Move 2 (a7-a6) failed: %v", err)
+		}
+
+		// 3. Verify en passant is NO LONGER available (EnPassantSq should be -1)
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after Black's move, got %d", board.EnPassantSq)
+		}
+
+		// 4. Verify it's White's turn again
+		if board.ActiveColor != White {
+			t.Errorf("expected White to move, got %v", board.ActiveColor)
+		}
+
+		// 5. Verify white pawn is still on e4
+		if board.Squares[e4].Type() != Pawn || board.Squares[e4].Color() != White {
+			t.Errorf("expected white pawn on e4, got %v", board.Squares[e4])
+		}
+	})
+
+	// Test en passant expires even when capture opportunity was available
+	t.Run("en passant expires even when opportunity existed but was not taken", func(t *testing.T) {
+		// Set up position where Black pawn on d4 could capture en passant on e3
+		board := &Board{ActiveColor: White}
+
+		// Place kings (required for legal move generation)
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		// Set up initial position: Black pawn already on d4
+		d4 := NewSquare(3, 3) // d4
+		board.Squares[d4] = NewPiece(Black, Pawn)
+
+		// Place white pawn on e2
+		e2 := NewSquare(4, 1)
+		board.Squares[e2] = NewPiece(White, Pawn)
+
+		// Place black pawn on a7 (for Black's alternative move)
+		a7 := NewSquare(0, 6)
+		board.Squares[a7] = NewPiece(Black, Pawn)
+
+		// Place white knight on g1 (for White's subsequent move)
+		g1 := NewSquare(6, 0)
+		f3 := NewSquare(5, 2)
+		board.Squares[g1] = NewPiece(White, Knight)
+
+		// 1. White plays e2-e4 (sets en passant square to e3)
+		e4 := NewSquare(4, 3)
+		e3 := NewSquare(4, 2)
+
+		move1 := Move{From: e2, To: e4}
+		err := board.MakeMove(move1)
+		if err != nil {
+			t.Fatalf("Move 1 (e2-e4) failed: %v", err)
+		}
+
+		// Verify en passant square is set to e3
+		if board.EnPassantSq != int8(e3) {
+			t.Errorf("expected EnPassantSq to be %d (e3) after e2-e4, got %d", e3, board.EnPassantSq)
+		}
+
+		// Verify en passant capture IS available in legal moves
+		legalMoves := board.LegalMoves()
+		foundEP := false
+		for _, m := range legalMoves {
+			if m.From == d4 && m.To == e3 {
+				foundEP = true
+				break
+			}
+		}
+
+		if !foundEP {
+			t.Error("en passant capture d4xe3 should be in legal moves after e2-e4")
+		}
+
+		// 2. Black plays a different move instead of en passant (a7-a6)
+		a6 := NewSquare(0, 5)
+		move2 := Move{From: a7, To: a6}
+		err = board.MakeMove(move2)
+		if err != nil {
+			t.Fatalf("Move 2 (a7-a6) failed: %v", err)
+		}
+
+		// 3. Verify en passant is now expired (EnPassantSq == -1)
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after Black's move, got %d", board.EnPassantSq)
+		}
+
+		// 4. After Black's move (a7-a6), it's now White's turn
+		// Verify it's White's turn
+		if board.ActiveColor != White {
+			t.Errorf("expected White to move after Black's a7-a6, got %v", board.ActiveColor)
+		}
+
+		// 5. Now make a White move (any move), then check Black's legal moves
+		// White plays Nf3
+		move3 := Move{From: g1, To: f3}
+		err = board.MakeMove(move3)
+		if err != nil {
+			t.Fatalf("Move 3 (Ng1-f3) failed: %v", err)
+		}
+
+		// 6. Now it's Black's turn - verify the en passant capture is NOT in legal moves anymore
+		legalMoves = board.LegalMoves()
+		foundEP = false
+		for _, m := range legalMoves {
+			if m.From == d4 && m.To == e3 {
+				foundEP = true
+				break
+			}
+		}
+
+		if foundEP {
+			t.Error("en passant capture d4xe3 should NOT be in legal moves after expiry")
+		}
+
+		// 7. Verify the d4 pawn can still make normal moves (forward towards rank 1 for Black)
+		d3 := NewSquare(3, 2) // Black pawns move "down" the board (towards lower ranks)
+		foundD4Move := false
+		for _, m := range legalMoves {
+			if m.From == d4 {
+				// d4 pawn should be able to move to d3 (forward for Black), not to e3 (en passant expired)
+				if m.To == e3 {
+					t.Errorf("d4 pawn should not be able to move to e3 after en passant expired")
+				}
+				if m.To == d3 {
+					foundD4Move = true
+				}
+			}
+		}
+
+		if !foundD4Move {
+			t.Error("d4 pawn should still be able to move forward to d3")
+		}
+	})
+
+	// Test en passant expires after any move, not just pawn moves
+	t.Run("en passant expires after knight move", func(t *testing.T) {
+		board := &Board{ActiveColor: White}
+
+		// Place kings
+		board.Squares[NewSquare(4, 0)] = NewPiece(White, King) // e1
+		board.Squares[NewSquare(4, 7)] = NewPiece(Black, King) // e8
+
+		// Place white pawn on e2
+		e2 := NewSquare(4, 1)
+		e4 := NewSquare(4, 3)
+		e3 := NewSquare(4, 2)
+		board.Squares[e2] = NewPiece(White, Pawn)
+
+		// Place black knight on g8
+		g8 := NewSquare(6, 7)
+		board.Squares[g8] = NewPiece(Black, Knight)
+
+		// 1. White plays e2-e4
+		move1 := Move{From: e2, To: e4}
+		err := board.MakeMove(move1)
+		if err != nil {
+			t.Fatalf("Move 1 (e2-e4) failed: %v", err)
+		}
+
+		// Verify en passant is set
+		if board.EnPassantSq != int8(e3) {
+			t.Errorf("expected EnPassantSq to be %d (e3), got %d", e3, board.EnPassantSq)
+		}
+
+		// 2. Black plays Ng8-f6 (knight move)
+		f6 := NewSquare(5, 5)
+		move2 := Move{From: g8, To: f6}
+		err = board.MakeMove(move2)
+		if err != nil {
+			t.Fatalf("Move 2 (Ng8-f6) failed: %v", err)
+		}
+
+		// 3. Verify en passant is cleared even after non-pawn move
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected EnPassantSq to be -1 after knight move, got %d", board.EnPassantSq)
+		}
+	})
+
+	// Test en passant expires in real game sequence with multiple opportunities
+	t.Run("en passant expires in realistic multi-move sequence", func(t *testing.T) {
+		board := NewBoard()
+
+		// 1. e2-e4
+		e2 := NewSquare(4, 1)
+		e4 := NewSquare(4, 3)
+		e3 := NewSquare(4, 2)
+		err := board.MakeMove(Move{From: e2, To: e4})
+		if err != nil {
+			t.Fatalf("Move e2-e4 failed: %v", err)
+		}
+
+		if board.EnPassantSq != int8(e3) {
+			t.Errorf("expected en passant on e3, got %d", board.EnPassantSq)
+		}
+
+		// 2. c7-c5 (Black doesn't capture en passant, creates new en passant opportunity)
+		c7 := NewSquare(2, 6)
+		c5 := NewSquare(2, 4)
+		c6 := NewSquare(2, 5)
+		err = board.MakeMove(Move{From: c7, To: c5})
+		if err != nil {
+			t.Fatalf("Move c7-c5 failed: %v", err)
+		}
+
+		// Now en passant should be on c6, NOT e3
+		if board.EnPassantSq != int8(c6) {
+			t.Errorf("expected en passant on c6 after c7-c5, got %d", board.EnPassantSq)
+		}
+
+		// 3. Nf3 (White makes different move, en passant expires)
+		g1 := NewSquare(6, 0)
+		f3 := NewSquare(5, 2)
+		err = board.MakeMove(Move{From: g1, To: f3})
+		if err != nil {
+			t.Fatalf("Move Ng1-f3 failed: %v", err)
+		}
+
+		// En passant should be cleared
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected en passant cleared after Nf3, got %d", board.EnPassantSq)
+		}
+
+		// 4. d7-d5 (Black creates another en passant opportunity)
+		d7 := NewSquare(3, 6)
+		d5 := NewSquare(3, 4)
+		d6 := NewSquare(3, 5)
+		err = board.MakeMove(Move{From: d7, To: d5})
+		if err != nil {
+			t.Fatalf("Move d7-d5 failed: %v", err)
+		}
+
+		// En passant should be on d6
+		if board.EnPassantSq != int8(d6) {
+			t.Errorf("expected en passant on d6 after d7-d5, got %d", board.EnPassantSq)
+		}
+
+		// 5. exd5 (White captures normally, not en passant - pawn takes pawn)
+		err = board.MakeMove(Move{From: e4, To: d5})
+		if err != nil {
+			t.Fatalf("Move e4xd5 failed: %v", err)
+		}
+
+		// En passant should be cleared
+		if board.EnPassantSq != -1 {
+			t.Errorf("expected en passant cleared after exd5, got %d", board.EnPassantSq)
+		}
+	})
+}
