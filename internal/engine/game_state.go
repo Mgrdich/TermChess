@@ -90,10 +90,19 @@ func (b *Board) Status() GameStatus {
 
 	// TODO: Future slices will implement draw detection:
 	// - DrawInsufficientMaterial
-	// - DrawFivefoldRepetition
 	// - DrawSeventyFiveMoveRule
-	// - DrawThreefoldRepetition
 	// - DrawFiftyMoveRule
+
+	// Check for fivefold repetition (automatic draw)
+	repCount := b.repetitionCount()
+	if repCount >= 5 {
+		return DrawFivefoldRepetition
+	}
+
+	// Check for threefold repetition (claimable draw)
+	if repCount >= 3 {
+		return DrawThreefoldRepetition
+	}
 
 	return Ongoing
 }
@@ -116,4 +125,17 @@ func (b *Board) Winner() (Color, bool) {
 		return White, true
 	}
 	return 0, false // No winner (draw, stalemate, or ongoing)
+}
+
+// repetitionCount returns the number of times the current position
+// has occurred in the game history. The current position's hash
+// is included in the history (added after the last move was made).
+func (b *Board) repetitionCount() int {
+	count := 0
+	for _, hash := range b.History {
+		if hash == b.Hash {
+			count++
+		}
+	}
+	return count
 }

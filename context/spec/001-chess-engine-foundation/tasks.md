@@ -139,12 +139,12 @@
 ## Slice 11: Draw by Repetition
 *Goal: Detect threefold and fivefold repetition.*
 
-- [ ] **Slice 11: Repetition draw detection**
-  - [ ] Implement threefold repetition check (count occurrences in history)
-  - [ ] Implement fivefold repetition check (automatic draw)
-  - [ ] Update `Board.Status()` to return appropriate draw status
-  - [ ] Add unit tests with positions that repeat 3 times
-  - [ ] Add unit tests with positions that repeat 5 times
+- [x] **Slice 11: Repetition draw detection**
+  - [x] Implement threefold repetition check (count occurrences in history)
+  - [x] Implement fivefold repetition check (automatic draw)
+  - [x] Update `Board.Status()` to return appropriate draw status
+  - [x] Add unit tests with positions that repeat 3 times
+  - [x] Add unit tests with positions that repeat 5 times
 
 ---
 
