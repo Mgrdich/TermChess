@@ -104,16 +104,16 @@ func (b *Board) IsGameOver() bool {
 	return status != Ongoing
 }
 
-// Winner returns the color of the winning player, or -1 if there is no winner.
-// Returns White (0) if Black is checkmated, Black (1) if White is checkmated,
-// or -1 for stalemate, draws, or ongoing games.
-func (b *Board) Winner() int {
+// Winner returns the color of the winning player and whether there is a winner.
+// Returns (Black, true) if White is checkmated, (White, true) if Black is checkmated,
+// or (0, false) for stalemate, draws, or ongoing games.
+func (b *Board) Winner() (Color, bool) {
 	if b.Status() == Checkmate {
 		// The player to move is checkmated, so the opponent wins
 		if b.ActiveColor == White {
-			return int(Black)
+			return Black, true
 		}
-		return int(White)
+		return White, true
 	}
-	return -1 // No winner (draw, stalemate, or ongoing)
+	return 0, false // No winner (draw, stalemate, or ongoing)
 }

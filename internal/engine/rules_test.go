@@ -444,8 +444,9 @@ func TestIsGameOver(t *testing.T) {
 func TestWinner(t *testing.T) {
 	t.Run("No winner in starting position", func(t *testing.T) {
 		board := NewBoard()
-		if board.Winner() != -1 {
-			t.Errorf("expected no winner (-1), got %d", board.Winner())
+		_, hasWinner := board.Winner()
+		if hasWinner {
+			t.Error("expected no winner in starting position")
 		}
 	})
 
@@ -458,8 +459,12 @@ func TestWinner(t *testing.T) {
 		}
 		setupPosition(board, pieces, Black)
 
-		if board.Winner() != int(White) {
-			t.Errorf("expected White (%d) to win, got %d", White, board.Winner())
+		winner, hasWinner := board.Winner()
+		if !hasWinner {
+			t.Error("expected a winner")
+		}
+		if winner != White {
+			t.Errorf("expected White to win, got %v", winner)
 		}
 	})
 
@@ -481,8 +486,12 @@ func TestWinner(t *testing.T) {
 			t.Errorf("expected Checkmate, got %v", board.Status())
 		}
 
-		if board.Winner() != int(Black) {
-			t.Errorf("expected Black (%d) to win, got %d", Black, board.Winner())
+		winner, hasWinner := board.Winner()
+		if !hasWinner {
+			t.Error("expected a winner")
+		}
+		if winner != Black {
+			t.Errorf("expected Black to win, got %v", winner)
 		}
 	})
 
@@ -495,8 +504,9 @@ func TestWinner(t *testing.T) {
 		}
 		setupPosition(board, pieces, Black)
 
-		if board.Winner() != -1 {
-			t.Errorf("expected no winner (-1) in stalemate, got %d", board.Winner())
+		_, hasWinner := board.Winner()
+		if hasWinner {
+			t.Error("expected no winner in stalemate")
 		}
 	})
 }
