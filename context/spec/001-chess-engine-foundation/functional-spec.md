@@ -1,7 +1,7 @@
 # Functional Specification: Chess Engine Foundation
 
 - **Roadmap Item:** Chess Engine Foundation — Board Representation, Move Validation & Rules, Game State Detection
-- **Status:** Draft
+- **Status:** Completed
 - **Author:** Poe
 
 ---
@@ -37,9 +37,9 @@ The engine must maintain an internal representation of the chess board state.
 - **Move history:** Maintain history of positions for threefold/fivefold repetition detection.
 
 **Acceptance Criteria:**
-- [ ] Given a new game, the board initializes to the standard starting position with all metadata correct.
-- [ ] Given an arbitrary position (piece array + metadata), the board initializes correctly.
-- [ ] The board state is queryable: what piece is on square X, whose turn, castling rights, etc.
+- [x] Given a new game, the board initializes to the standard starting position with all metadata correct.
+- [x] Given an arbitrary position (piece array + metadata), the board initializes correctly.
+- [x] The board state is queryable: what piece is on square X, whose turn, castling rights, etc.
 
 ---
 
@@ -66,21 +66,21 @@ The engine must validate moves and enforce all standard chess rules.
 
 **Special Rules:**
 
-| Rule | Description |
-|------|-------------|
-| **Castling** | King moves two squares toward rook; rook jumps over king. Requires: neither piece has moved, no pieces between, king not in check, king doesn't pass through or land in check. |
-| **En passant** | Pawn captures enemy pawn that just moved two squares, as if it moved one square. Only available immediately after the two-square move. |
-| **Pawn promotion** | Pawn reaching the 8th rank must promote to Queen, Rook, Bishop, or Knight (player's choice). Cannot promote to Pawn or King. |
-| **Check** | King is under attack. Player must move out of check, block, or capture the attacker. |
+| Rule               | Description                                                                                                                                                                    |
+|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Castling**       | King moves two squares toward rook; rook jumps over king. Requires: neither piece has moved, no pieces between, king not in check, king doesn't pass through or land in check. |
+| **En passant**     | Pawn captures enemy pawn that just moved two squares, as if it moved one square. Only available immediately after the two-square move.                                         |
+| **Pawn promotion** | Pawn reaching the 8th rank must promote to Queen, Rook, Bishop, or Knight (player's choice). Cannot promote to Pawn or King.                                                   |
+| **Check**          | King is under attack. Player must move out of check, block, or capture the attacker.                                                                                           |
 
 **Acceptance Criteria:**
-- [ ] Given a position, the engine returns all legal moves.
-- [ ] Given a legal move, the engine applies it and updates the board state correctly.
-- [ ] Given an illegal move, the engine rejects it and returns an error.
-- [ ] Castling is allowed only when all conditions are met; rejected otherwise.
-- [ ] En passant is available only immediately after a two-square pawn move.
-- [ ] Pawn promotion requires specifying the promotion piece (Q, R, B, N).
-- [ ] A player in check can only make moves that escape check.
+- [x] Given a position, the engine returns all legal moves.
+- [x] Given a legal move, the engine applies it and updates the board state correctly.
+- [x] Given an illegal move, the engine rejects it and returns an error.
+- [x] Castling is allowed only when all conditions are met; rejected otherwise.
+- [x] En passant is available only immediately after a two-square pawn move.
+- [x] Pawn promotion requires specifying the promotion piece (Q, R, B, N).
+- [x] A player in check can only make moves that escape check.
 
 ---
 
@@ -103,14 +103,14 @@ The engine must detect and declare game-ending conditions.
 | **75-move rule**          | 75 moves without pawn move or capture — automatic draw.                                                            |
 
 **Acceptance Criteria:**
-- [ ] Given a checkmate position, the engine declares the winner.
-- [ ] Given a stalemate position, the engine declares a draw.
-- [ ] Given insufficient material, the engine declares a draw.
-- [ ] Given threefold repetition, the engine declares a draw.
-- [ ] Given fivefold repetition, the engine declares a draw.
-- [ ] Given 50 moves without pawn move/capture, the engine declares a draw.
-- [ ] Given 75 moves without pawn move/capture, the engine declares a draw.
-- [ ] The engine provides a game status: `ongoing`, `checkmate`, `stalemate`, `draw` (with reason).
+- [x] Given a checkmate position, the engine declares the winner.
+- [x] Given a stalemate position, the engine declares a draw.
+- [x] Given insufficient material, the engine declares a draw.
+- [x] Given threefold repetition, the engine declares a draw.
+- [x] Given fivefold repetition, the engine declares a draw.
+- [x] Given 50 moves without pawn move/capture, the engine declares a draw.
+- [x] Given 75 moves without pawn move/capture, the engine declares a draw.
+- [x] The engine provides a game status: `ongoing`, `checkmate`, `stalemate`, `draw` (with reason).
 
 ---
 

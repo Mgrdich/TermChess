@@ -163,21 +163,21 @@
 ## Slice 13: Insufficient Material Draw
 *Goal: Detect draws from insufficient mating material.*
 
-- [ ] **Slice 13: Insufficient material detection**
-  - [ ] Implement material counting
-  - [ ] Detect K vs K
-  - [ ] Detect K+B vs K, K+N vs K
-  - [ ] Detect K+B vs K+B (same color bishops)
-  - [ ] Update `Board.Status()` to return `DrawInsufficientMaterial`
-  - [ ] Add unit tests for each insufficient material scenario
+- [x] **Slice 13: Insufficient material detection**
+  - [x] Implement material counting
+  - [x] Detect K vs K
+  - [x] Detect K+B vs K, K+N vs K
+  - [x] Detect K+B vs K+B (same color bishops)
+  - [x] Update `Board.Status()` to return `DrawInsufficientMaterial`
+  - [x] Add unit tests for each insufficient material scenario
 
 ---
 
 ## Slice 14: Perft Testing & Validation
 *Goal: Validate move generation correctness with perft tests.*
 
-- [ ] **Slice 14: Perft testing suite**
-  - [ ] Implement `Perft(depth int) uint64` that counts leaf nodes
-  - [ ] Add perft test for starting position: depth 1 (20), depth 2 (400), depth 3 (8902), depth 4 (197281)
-  - [ ] Add perft tests for known "Kiwipete" and other tricky positions
-  - [ ] Fix any bugs discovered by perft mismatches
+- [x] **Slice 14: Perft testing suite**
+  - [x] Implement `Perft(depth int) uint64` that counts leaf nodes
+  - [x] Add perft test for starting position: depth 1 (20), depth 2 (400), depth 3 (8902), depth 4 (197281)
+  - [x] Add perft tests for known "Kiwipete" and other tricky positions
+  - [x] Fix any bugs discovered by perft mismatches

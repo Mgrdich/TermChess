@@ -401,3 +401,56 @@ func (b *Board) String() string {
 
 	return result
 }
+
+// Perft performs a performance test of move generation by counting
+// all leaf nodes at a given depth. This is used to validate that
+// move generation is correct by comparing against known results.
+//
+// Perft(0) = 1 (current position counts as 1 node)
+// Perft(1) = number of legal moves from current position
+// Perft(n) = sum of Perft(n-1) for each legal move
+//
+// This is the gold standard for debugging chess move generation.
+func (b *Board) Perft(depth int) uint64 {
+	if depth == 0 {
+		return 1
+	}
+
+	moves := b.LegalMoves()
+	if depth == 1 {
+		return uint64(len(moves))
+	}
+
+	nodes := uint64(0)
+	for _, move := range moves {
+		boardCopy := b.Copy()
+		// Use applyMove instead of MakeMove to avoid redundant legality checks
+		// We already know these moves are legal from LegalMoves()
+		boardCopy.applyMove(move)
+		nodes += boardCopy.Perft(depth - 1)
+	}
+	return nodes
+}
+
+// Divide performs a perft with per-move breakdown, useful for debugging.
+// Returns a map of move strings to their node counts at depth-1.
+func (b *Board) Divide(depth int) map[string]uint64 {
+	result := make(map[string]uint64)
+
+	moves := b.LegalMoves()
+	for _, move := range moves {
+		boardCopy := b.Copy()
+		boardCopy.applyMove(move)
+
+		var nodes uint64
+		if depth <= 1 {
+			nodes = 1
+		} else {
+			nodes = boardCopy.Perft(depth - 1)
+		}
+
+		result[move.String()] = nodes
+	}
+
+	return result
+}

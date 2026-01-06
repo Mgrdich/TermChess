@@ -8,10 +8,10 @@ _This roadmap outlines our strategic direction based on user needs and project g
 
 _The highest priority features that form the core foundation of the product._
 
-- [ ] **Chess Engine Foundation**
-  - [ ] **Board Representation:** Establish the internal chess board state that tracks piece positions and game status.
-  - [ ] **Move Validation & Rules:** Implement all standard chess rules including legal move detection, castling, en passant, and pawn promotion.
-  - [ ] **Game State Detection:** Detect check, checkmate, stalemate, and draw conditions to properly end games.
+- [x] **Chess Engine Foundation**
+  - [x] **Board Representation:** Establish the internal chess board state that tracks piece positions and game status.
+  - [x] **Move Validation & Rules:** Implement all standard chess rules including legal move detection, castling, en passant, and pawn promotion.
+  - [x] **Game State Detection:** Detect check, checkmate, stalemate, and draw conditions to properly end games.
 
 - [ ] **FEN Support**
   - [ ] **Export Current Position:** Allow users to copy/display the FEN string of the current game state at any time.
