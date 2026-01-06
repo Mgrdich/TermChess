@@ -155,3 +155,126 @@ func FromFEN(fen string) (*Board, error) {
 
 	return b, nil
 }
+
+// pieceToChar converts a Piece to its FEN character representation.
+// Returns uppercase for White pieces, lowercase for Black pieces.
+// Returns '?' for Empty pieces (should not occur in valid FEN generation).
+func pieceToChar(p Piece) rune {
+	// Map piece types to their FEN characters
+	pieceChars := map[PieceType]rune{
+		Pawn:   'P',
+		Knight: 'N',
+		Bishop: 'B',
+		Rook:   'R',
+		Queen:  'Q',
+		King:   'K',
+	}
+
+	// Get the character for this piece type
+	char, ok := pieceChars[p.Type()]
+	if !ok {
+		return '?' // Should not happen for valid pieces
+	}
+
+	// Convert to lowercase for Black pieces
+	if p.Color() == Black {
+		char = char - 'A' + 'a'
+	}
+
+	return char
+}
+
+// ToFEN converts the board position to FEN (Forsyth-Edwards Notation) format.
+// FEN format consists of 6 space-separated fields:
+// 1. Piece placement (from rank 8 to rank 1, separated by '/')
+// 2. Active color ('w' or 'b')
+// 3. Castling rights (combination of 'KQkq' or '-' if none)
+// 4. En passant target square (algebraic notation or '-' if none)
+// 5. Halfmove clock (for fifty-move rule)
+// 6. Fullmove number (starts at 1, increments after Black's move)
+func (b *Board) ToFEN() string {
+	var fen strings.Builder
+
+	// Field 1: Piece placement
+	// Iterate through ranks from 8 to 1 (rank 7 down to rank 0)
+	for rank := 7; rank >= 0; rank-- {
+		emptyCount := 0
+
+		// Iterate through files from a to h (file 0 to 7)
+		for file := 0; file < 8; file++ {
+			sq := NewSquare(file, rank)
+			piece := b.Squares[sq]
+
+			if piece.IsEmpty() {
+				// Count consecutive empty squares
+				emptyCount++
+			} else {
+				// Write out the count of empty squares if any
+				if emptyCount > 0 {
+					fen.WriteRune(rune('0' + emptyCount))
+					emptyCount = 0
+				}
+				// Write the piece character
+				fen.WriteRune(pieceToChar(piece))
+			}
+		}
+
+		// Write any remaining empty squares for this rank
+		if emptyCount > 0 {
+			fen.WriteRune(rune('0' + emptyCount))
+		}
+
+		// Add rank separator (except after the last rank)
+		if rank > 0 {
+			fen.WriteRune('/')
+		}
+	}
+
+	// Field 2: Active color
+	fen.WriteRune(' ')
+	if b.ActiveColor == White {
+		fen.WriteRune('w')
+	} else {
+		fen.WriteRune('b')
+	}
+
+	// Field 3: Castling rights
+	fen.WriteRune(' ')
+	castlingStr := ""
+	if b.CastlingRights&CastleWhiteKing != 0 {
+		castlingStr += "K"
+	}
+	if b.CastlingRights&CastleWhiteQueen != 0 {
+		castlingStr += "Q"
+	}
+	if b.CastlingRights&CastleBlackKing != 0 {
+		castlingStr += "k"
+	}
+	if b.CastlingRights&CastleBlackQueen != 0 {
+		castlingStr += "q"
+	}
+	if castlingStr == "" {
+		castlingStr = "-"
+	}
+	fen.WriteString(castlingStr)
+
+	// Field 4: En passant target square
+	fen.WriteRune(' ')
+	if b.EnPassantSq < 0 {
+		fen.WriteRune('-')
+	} else {
+		// Convert en passant square index to algebraic notation
+		epSquare := Square(b.EnPassantSq)
+		fen.WriteString(epSquare.String())
+	}
+
+	// Field 5: Halfmove clock
+	fen.WriteRune(' ')
+	fen.WriteString(fmt.Sprintf("%d", b.HalfMoveClock))
+
+	// Field 6: Fullmove number
+	fen.WriteRune(' ')
+	fen.WriteString(fmt.Sprintf("%d", b.FullMoveNum))
+
+	return fen.String()
+}
