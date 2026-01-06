@@ -68,14 +68,18 @@ func (s GameStatus) String() string {
 //   - If in check -> Checkmate
 //   - If not in check -> Stalemate
 //
-// 2. Draw conditions (to be implemented in future slices):
-//   - Insufficient material
-//   - Fivefold repetition (automatic)
-//   - Seventy-five-move rule (automatic)
-//   - Threefold repetition (claimable)
-//   - Fifty-move rule (claimable)
+// 2. Draw conditions:
+//   - Fivefold repetition (automatic draw, game ends)
+//   - Threefold repetition (claimable draw, player may claim)
+//   - TODO: Seventy-five-move rule (automatic draw, game ends)
+//   - TODO: Fifty-move rule (claimable draw, player may claim)
+//   - TODO: Insufficient material (automatic draw, game ends)
 //
 // 3. Otherwise -> Ongoing
+//
+// Note: Claimable draws (threefold, fifty-move) do not automatically end the game.
+// Use CanClaimDraw() to check if a draw is available, and IsGameOver() to check
+// if the game has actually ended.
 func (b *Board) Status() GameStatus {
 	// Generate all legal moves for the active player
 	legalMoves := b.LegalMoves()
@@ -90,18 +94,50 @@ func (b *Board) Status() GameStatus {
 
 	// TODO: Future slices will implement draw detection:
 	// - DrawInsufficientMaterial
-	// - DrawFivefoldRepetition
 	// - DrawSeventyFiveMoveRule
-	// - DrawThreefoldRepetition
 	// - DrawFiftyMoveRule
+
+	// Check for fivefold repetition (automatic draw)
+	repCount := b.repetitionCount()
+	if repCount >= 5 {
+		return DrawFivefoldRepetition
+	}
+
+	// Check for threefold repetition (claimable draw)
+	if repCount >= 3 {
+		return DrawThreefoldRepetition
+	}
 
 	return Ongoing
 }
 
-// IsGameOver returns true if the game has ended (checkmate, stalemate, or draw).
+// IsGameOver returns true if the game has ended due to an automatic game-ending
+// condition: checkmate, stalemate, or automatic draws (fivefold repetition,
+// seventy-five-move rule, insufficient material).
+//
+// Note: This does NOT include claimable draws (threefold repetition, fifty-move rule).
+// Use CanClaimDraw() to check if a draw is available to claim.
 func (b *Board) IsGameOver() bool {
 	status := b.Status()
-	return status != Ongoing
+	// Game is over for automatic conditions only (not claimable draws)
+	switch status {
+	case Checkmate, Stalemate, DrawFivefoldRepetition, DrawSeventyFiveMoveRule, DrawInsufficientMaterial:
+		return true
+	default:
+		return false
+	}
+}
+
+// CanClaimDraw returns true if a draw is available to claim according to FIDE rules.
+// This includes:
+//   - Threefold repetition: the same position has occurred 3 or more times
+//   - Fifty-move rule: 50 moves have been made without a pawn move or capture
+//
+// Unlike automatic draws (fivefold, seventy-five-move), these draws require a player
+// to claim them. The game can continue if the player chooses not to claim.
+func (b *Board) CanClaimDraw() bool {
+	status := b.Status()
+	return status == DrawThreefoldRepetition || status == DrawFiftyMoveRule
 }
 
 // Winner returns the color of the winning player and whether there is a winner.
@@ -116,4 +152,17 @@ func (b *Board) Winner() (Color, bool) {
 		return White, true
 	}
 	return 0, false // No winner (draw, stalemate, or ongoing)
+}
+
+// repetitionCount returns the number of times the current position
+// has occurred in the game history. The current position's hash
+// is included in the history (added after the last move was made).
+func (b *Board) repetitionCount() int {
+	count := 0
+	for _, hash := range b.History {
+		if hash == b.Hash {
+			count++
+		}
+	}
+	return count
 }

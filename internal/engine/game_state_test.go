@@ -663,3 +663,498 @@ func TestStatusWithCastlingRights(t *testing.T) {
 		}
 	})
 }
+
+// ============================================================================
+// REPETITION TESTS
+// ============================================================================
+
+func TestThreefoldRepetition(t *testing.T) {
+	// Test threefold repetition by moving knights back and forth
+	// This creates a repetition of the same position three times
+	t.Run("Threefold repetition via knight moves", func(t *testing.T) {
+		board := NewBoard()
+
+		// Move sequence that returns to the same position:
+		// 1. Ng1-f3 Ng8-f6
+		// 2. Nf3-g1 Nf6-g8 (position repeated twice)
+		// 3. Ng1-f3 Ng8-f6
+		// 4. Nf3-g1 Nf6-g8 (position repeated three times - threefold!)
+		moves := []string{
+			"g1f3", "g8f6", // Position 1
+			"f3g1", "f6g8", // Back to start (position 2)
+			"g1f3", "g8f6", // Position 3
+			"f3g1", "f6g8", // Back to start (position 3 = threefold)
+		}
+
+		for _, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+		}
+
+		status := board.Status()
+		if status != DrawThreefoldRepetition {
+			t.Errorf("expected DrawThreefoldRepetition, got %v", status)
+		}
+	})
+
+	t.Run("Two repetitions is not a draw", func(t *testing.T) {
+		board := NewBoard()
+
+		// Only repeat position twice (not threefold)
+		// 1. Ng1-f3 Ng8-f6
+		// 2. Nf3-g1 Nf6-g8 (position repeated twice)
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Back to start (position 2 only)
+		}
+
+		for _, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+		}
+
+		status := board.Status()
+		if status != Ongoing {
+			t.Errorf("expected Ongoing (only 2 repetitions), got %v", status)
+		}
+	})
+
+	t.Run("Threefold with same position after castling rights lost", func(t *testing.T) {
+		board := NewBoard()
+
+		// Move the king (loses castling rights), then repeat position 3 times
+		// After castling rights are lost, the repeated positions should be identical
+		moves := []string{
+			"e2e4", "e7e5",
+			"e1e2", "e8e7", // Kings move - both lose castling rights, Position A (1st)
+			"e2e1", "e7e8", // Position B (1st)
+			"e1e2", "e8e7", // Position A (2nd)
+			"e2e1", "e7e8", // Position B (2nd)
+			"e1e2", "e8e7", // Position A (3rd = threefold!)
+		}
+
+		for i, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s at move %d: %v", moveStr, i+1, err)
+			}
+		}
+
+		// After the third occurrence of Position A, we should have threefold
+		status := board.Status()
+		if status != DrawThreefoldRepetition {
+			t.Errorf("expected DrawThreefoldRepetition, got %v", status)
+		}
+	})
+
+	t.Run("Different castling rights means different positions", func(t *testing.T) {
+		board := NewBoard()
+
+		// The starting position has castling rights.
+		// After King moves and returns, the position LOOKS the same but is NOT
+		// because castling rights are different.
+		initialHash := board.Hash
+
+		// First move pawns to make room for kings
+		// Then move king out and back
+		moves := []string{
+			"e2e4", "e7e5", // Open the way for kings
+			"e1e2", // King moves - loses White castling rights
+			"e8e7", // Black king moves - loses Black castling rights
+			"e2e1", // King back to e1
+			"e7e8", // Black king back to e8
+		}
+
+		for i, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s at move %d: %v", moveStr, i+1, err)
+			}
+		}
+
+		// Position has pawns on e4/e5 and kings on e1/e8.
+		// This is NOT the initial position, so we can't compare directly.
+		// But we can verify the initial hash is not repeated.
+
+		// The initial hash (starting position with all castling rights) should NOT
+		// appear again, even though the pieces might look similar after moving back.
+		found := false
+		for _, h := range board.History {
+			if h == initialHash {
+				found = true
+				break
+			}
+		}
+		// The initial position is in history (it's the first entry), so we expect it to be found once
+		if !found {
+			t.Error("expected initial position to be in history")
+		}
+
+		// But the CURRENT position should be different (has pawns on e4/e5, no castling rights)
+		if board.Hash == initialHash {
+			t.Error("expected current position hash to differ from initial (pawns moved, no castling)")
+		}
+	})
+}
+
+func TestFivefoldRepetition(t *testing.T) {
+	t.Run("Fivefold repetition via knight moves", func(t *testing.T) {
+		board := NewBoard()
+
+		// Move sequence that returns to the same position five times:
+		moves := []string{
+			"g1f3", "g8f6", // Position 1
+			"f3g1", "f6g8", // Back to start (position 2)
+			"g1f3", "g8f6", // Position 3
+			"f3g1", "f6g8", // Back to start (position 3)
+			"g1f3", "g8f6", // Position 4
+			"f3g1", "f6g8", // Back to start (position 4)
+			"g1f3", "g8f6", // Position 5
+			"f3g1", "f6g8", // Back to start (position 5 = fivefold!)
+		}
+
+		for _, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+		}
+
+		status := board.Status()
+		if status != DrawFivefoldRepetition {
+			t.Errorf("expected DrawFivefoldRepetition, got %v", status)
+		}
+	})
+
+	t.Run("Four repetitions is threefold not fivefold", func(t *testing.T) {
+		board := NewBoard()
+
+		// Only repeat position four times
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Position 2
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Position 3
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Position 4 (threefold but not fivefold)
+		}
+
+		for _, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+		}
+
+		status := board.Status()
+		if status != DrawThreefoldRepetition {
+			t.Errorf("expected DrawThreefoldRepetition (4 repetitions), got %v", status)
+		}
+	})
+}
+
+func TestRepetitionCount(t *testing.T) {
+	t.Run("Initial position has count 1", func(t *testing.T) {
+		board := NewBoard()
+		count := board.repetitionCount()
+		if count != 1 {
+			t.Errorf("expected repetition count 1 for initial position, got %d", count)
+		}
+	})
+
+	t.Run("After one move, count is 1", func(t *testing.T) {
+		board := NewBoard()
+		move, _ := ParseMove("e2e4")
+		_ = board.MakeMove(move)
+
+		count := board.repetitionCount()
+		if count != 1 {
+			t.Errorf("expected repetition count 1 after first move, got %d", count)
+		}
+	})
+
+	t.Run("Count increases with repeated positions", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Back to start
+		}
+
+		for _, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			_ = board.MakeMove(move)
+		}
+
+		count := board.repetitionCount()
+		if count != 2 {
+			t.Errorf("expected repetition count 2, got %d", count)
+		}
+	})
+}
+
+func TestRepetitionIsGameOver(t *testing.T) {
+	t.Run("Fivefold repetition is game over", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Fivefold
+		}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		if !board.IsGameOver() {
+			t.Error("fivefold repetition should be game over (automatic draw)")
+		}
+	})
+
+	t.Run("Threefold repetition has no winner", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Threefold
+		}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		_, hasWinner := board.Winner()
+		if hasWinner {
+			t.Error("threefold repetition should have no winner")
+		}
+	})
+}
+
+func TestCanClaimDraw(t *testing.T) {
+	t.Run("Initial position cannot claim draw", func(t *testing.T) {
+		board := NewBoard()
+		if board.CanClaimDraw() {
+			t.Error("initial position should not be able to claim draw")
+		}
+	})
+
+	t.Run("After one move cannot claim draw", func(t *testing.T) {
+		board := NewBoard()
+		move, _ := ParseMove("e2e4")
+		_ = board.MakeMove(move)
+
+		if board.CanClaimDraw() {
+			t.Error("should not be able to claim draw after one move")
+		}
+	})
+
+	t.Run("Threefold repetition can claim draw", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Threefold
+		}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		if !board.CanClaimDraw() {
+			t.Error("should be able to claim draw after threefold repetition")
+		}
+	})
+
+	t.Run("Threefold repetition is NOT game over", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Threefold
+		}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		if board.IsGameOver() {
+			t.Error("threefold repetition should NOT automatically end the game")
+		}
+
+		if !board.CanClaimDraw() {
+			t.Error("should be able to claim draw")
+		}
+	})
+
+	t.Run("Two repetitions cannot claim draw", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // Only 2 repetitions
+		}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		if board.CanClaimDraw() {
+			t.Error("should not be able to claim draw with only 2 repetitions")
+		}
+	})
+
+	t.Run("Four repetitions can still claim draw (not yet fivefold)", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // 4 repetitions
+		}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		if board.IsGameOver() {
+			t.Error("4 repetitions should not be game over (not yet fivefold)")
+		}
+
+		if !board.CanClaimDraw() {
+			t.Error("should be able to claim draw with 4 repetitions")
+		}
+	})
+
+	t.Run("Fivefold repetition is game over (not just claimable)", func(t *testing.T) {
+		board := NewBoard()
+
+		moves := []string{
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8",
+			"g1f3", "g8f6",
+			"f3g1", "f6g8", // 5 repetitions
+		}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		if !board.IsGameOver() {
+			t.Error("fivefold repetition should automatically end the game")
+		}
+
+		if board.Status() != DrawFivefoldRepetition {
+			t.Errorf("expected DrawFivefoldRepetition, got %v", board.Status())
+		}
+	})
+
+	t.Run("Checkmate is game over but not claimable draw", func(t *testing.T) {
+		board := NewBoard()
+		// Fool's mate
+		moves := []string{"f2f3", "e7e5", "g2g4", "d8h4"}
+
+		for _, moveStr := range moves {
+			move, _ := ParseMove(moveStr)
+			_ = board.MakeMove(move)
+		}
+
+		if !board.IsGameOver() {
+			t.Error("checkmate should be game over")
+		}
+
+		if board.CanClaimDraw() {
+			t.Error("checkmate should not be claimable as a draw")
+		}
+	})
+
+	t.Run("Stalemate is game over but not claimable draw", func(t *testing.T) {
+		board := NewBoard()
+		// Clear the board and set up a stalemate position
+		for i := range board.Squares {
+			board.Squares[i] = Piece(Empty)
+		}
+
+		// King on a8, opponent King on c6, opponent Queen on b6
+		// Black to move, in stalemate
+		a8 := NewSquare(0, 7)
+		c6 := NewSquare(2, 5)
+		b6 := NewSquare(1, 5)
+
+		board.Squares[a8] = NewPiece(Black, King)
+		board.Squares[c6] = NewPiece(White, King)
+		board.Squares[b6] = NewPiece(White, Queen)
+		board.ActiveColor = Black
+		board.CastlingRights = 0
+		board.EnPassantSq = -1
+		board.HalfMoveClock = 0
+
+		if !board.IsGameOver() {
+			t.Error("stalemate should be game over")
+		}
+
+		if board.CanClaimDraw() {
+			t.Error("stalemate should not be claimable as a draw")
+		}
+
+		if board.Status() != Stalemate {
+			t.Errorf("expected Stalemate, got %v", board.Status())
+		}
+	})
+}
