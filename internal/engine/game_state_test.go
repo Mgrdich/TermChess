@@ -1158,3 +1158,372 @@ func TestCanClaimDraw(t *testing.T) {
 		}
 	})
 }
+
+// ============================================================================
+// MOVE COUNT DRAW TESTS (FIFTY-MOVE AND SEVENTY-FIVE-MOVE RULES)
+// ============================================================================
+
+func TestHalfMoveClockIncrement(t *testing.T) {
+	t.Run("Half-move clock increments on non-pawn, non-capture moves", func(t *testing.T) {
+		board := NewBoard()
+
+		// Move knights back and forth (no pawn moves, no captures)
+		moves := []string{
+			"g1f3", // White knight: halfmove = 1
+			"g8f6", // Black knight: halfmove = 2
+			"f3g1", // White knight: halfmove = 3
+			"f6g8", // Black knight: halfmove = 4
+		}
+
+		for i, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+
+			expectedClock := uint8(i + 1)
+			if board.HalfMoveClock != expectedClock {
+				t.Errorf("after move %d (%s): expected HalfMoveClock=%d, got %d", i+1, moveStr, expectedClock, board.HalfMoveClock)
+			}
+		}
+	})
+}
+
+func TestHalfMoveClockResetOnPawnMove(t *testing.T) {
+	t.Run("Half-move clock resets on pawn move", func(t *testing.T) {
+		board := NewBoard()
+
+		// Build up the half-move clock with knight moves
+		moves := []string{
+			"g1f3", // halfmove = 1
+			"g8f6", // halfmove = 2
+			"f3g1", // halfmove = 3
+			"f6g8", // halfmove = 4
+			"e2e4", // Pawn move: halfmove = 0
+		}
+
+		for i, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+
+			if i < 4 {
+				expectedClock := uint8(i + 1)
+				if board.HalfMoveClock != expectedClock {
+					t.Errorf("after move %d (%s): expected HalfMoveClock=%d, got %d", i+1, moveStr, expectedClock, board.HalfMoveClock)
+				}
+			} else {
+				// After pawn move, clock should be reset to 0
+				if board.HalfMoveClock != 0 {
+					t.Errorf("after pawn move (%s): expected HalfMoveClock=0, got %d", moveStr, board.HalfMoveClock)
+				}
+			}
+		}
+	})
+}
+
+func TestHalfMoveClockResetOnCapture(t *testing.T) {
+	t.Run("Half-move clock resets on capture", func(t *testing.T) {
+		board := NewBoard()
+
+		// Build up the half-move clock, then capture
+		moves := []string{
+			"g1f3", // halfmove = 1
+			"e7e5", // Pawn move: halfmove = 0
+			"f3g1", // halfmove = 1
+			"e5e4", // Pawn move: halfmove = 0
+			"d2d3", // Pawn move: halfmove = 0
+			"e4d3", // Capture on d3: halfmove = 0
+		}
+
+		for _, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+		}
+
+		// After the capture, clock should be 0
+		if board.HalfMoveClock != 0 {
+			t.Errorf("after capture: expected HalfMoveClock=0, got %d", board.HalfMoveClock)
+		}
+	})
+}
+
+func TestHalfMoveClockResetOnEnPassant(t *testing.T) {
+	t.Run("Half-move clock resets on en passant capture", func(t *testing.T) {
+		board := NewBoard()
+
+		// Set up and execute an en passant capture
+		moves := []string{
+			"e2e4", // Pawn move: halfmove = 0
+			"a7a6", // Pawn move: halfmove = 0
+			"e4e5", // Pawn move: halfmove = 0
+			"d7d5", // Two-square pawn move: halfmove = 0
+			"e5d6", // En passant capture: halfmove = 0
+		}
+
+		for _, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+		}
+
+		// After the en passant capture, clock should be 0
+		if board.HalfMoveClock != 0 {
+			t.Errorf("after en passant: expected HalfMoveClock=0, got %d", board.HalfMoveClock)
+		}
+	})
+}
+
+func TestFiftyMoveRule(t *testing.T) {
+	t.Run("Fifty-move rule at exactly 100 half-moves", func(t *testing.T) {
+		board := NewBoard()
+
+		// Clear the board and set up a simple position: King vs King with Queens
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("d1"): NewPiece(White, Queen),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("d8"): NewPiece(Black, Queen),
+		}
+		setupPosition(board, pieces, White)
+
+		// Manually set the half-move clock to 99
+		board.HalfMoveClock = 99
+
+		// Make one more non-pawn, non-capture move to reach 100
+		move, err := ParseMove("d1d2")
+		if err != nil {
+			t.Fatalf("failed to parse move: %v", err)
+		}
+		err = board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("failed to make move: %v", err)
+		}
+
+		// Verify half-move clock is 100
+		if board.HalfMoveClock != 100 {
+			t.Errorf("expected HalfMoveClock=100, got %d", board.HalfMoveClock)
+		}
+
+		// Verify status is DrawFiftyMoveRule
+		status := board.Status()
+		if status != DrawFiftyMoveRule {
+			t.Errorf("expected DrawFiftyMoveRule, got %v", status)
+		}
+
+		// Verify it's a claimable draw, not automatic game over
+		if board.IsGameOver() {
+			t.Error("fifty-move rule should not automatically end the game")
+		}
+
+		if !board.CanClaimDraw() {
+			t.Error("should be able to claim draw at 50 moves")
+		}
+	})
+
+	t.Run("Forty-nine moves is not a draw", func(t *testing.T) {
+		board := NewBoard()
+
+		// Clear the board and set up a simple position
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("d1"): NewPiece(White, Queen),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("d8"): NewPiece(Black, Queen),
+		}
+		setupPosition(board, pieces, White)
+
+		// Set half-move clock to 99 (just under 50 moves)
+		board.HalfMoveClock = 99
+
+		// Verify status is Ongoing
+		status := board.Status()
+		if status != Ongoing {
+			t.Errorf("expected Ongoing at 99 half-moves, got %v", status)
+		}
+
+		if board.CanClaimDraw() {
+			t.Error("should not be able to claim draw at 49.5 moves")
+		}
+	})
+}
+
+func TestSeventyFiveMoveRule(t *testing.T) {
+	t.Run("Seventy-five-move rule at exactly 150 half-moves", func(t *testing.T) {
+		board := NewBoard()
+
+		// Clear the board and set up a simple position
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("d1"): NewPiece(White, Queen),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("d8"): NewPiece(Black, Queen),
+		}
+		setupPosition(board, pieces, White)
+
+		// Manually set the half-move clock to 149
+		board.HalfMoveClock = 149
+
+		// Make one more non-pawn, non-capture move to reach 150
+		move, err := ParseMove("d1d2")
+		if err != nil {
+			t.Fatalf("failed to parse move: %v", err)
+		}
+		err = board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("failed to make move: %v", err)
+		}
+
+		// Verify half-move clock is 150
+		if board.HalfMoveClock != 150 {
+			t.Errorf("expected HalfMoveClock=150, got %d", board.HalfMoveClock)
+		}
+
+		// Verify status is DrawSeventyFiveMoveRule
+		status := board.Status()
+		if status != DrawSeventyFiveMoveRule {
+			t.Errorf("expected DrawSeventyFiveMoveRule, got %v", status)
+		}
+
+		// Verify it's an automatic game over, not just claimable
+		if !board.IsGameOver() {
+			t.Error("seventy-five-move rule should automatically end the game")
+		}
+	})
+
+	t.Run("Seventy-four moves is fifty-move rule, not seventy-five", func(t *testing.T) {
+		board := NewBoard()
+
+		// Clear the board and set up a simple position
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("d1"): NewPiece(White, Queen),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("d8"): NewPiece(Black, Queen),
+		}
+		setupPosition(board, pieces, White)
+
+		// Set half-move clock to 149 (just under 75 moves)
+		board.HalfMoveClock = 149
+
+		// Verify status is DrawFiftyMoveRule (claimable), not DrawSeventyFiveMoveRule
+		status := board.Status()
+		if status != DrawFiftyMoveRule {
+			t.Errorf("expected DrawFiftyMoveRule at 149 half-moves, got %v", status)
+		}
+
+		if board.IsGameOver() {
+			t.Error("should not be game over at 74.5 moves")
+		}
+
+		if !board.CanClaimDraw() {
+			t.Error("should be able to claim draw at 74.5 moves (fifty-move rule)")
+		}
+	})
+}
+
+func TestMoveCountDrawPriority(t *testing.T) {
+	t.Run("Seventy-five-move rule takes priority over fifty-move rule", func(t *testing.T) {
+		board := NewBoard()
+
+		// Clear the board and set up a simple position
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("d1"): NewPiece(White, Queen),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("d8"): NewPiece(Black, Queen),
+		}
+		setupPosition(board, pieces, White)
+
+		// Set half-move clock to 150
+		board.HalfMoveClock = 150
+
+		// Status should be DrawSeventyFiveMoveRule, not DrawFiftyMoveRule
+		status := board.Status()
+		if status != DrawSeventyFiveMoveRule {
+			t.Errorf("expected DrawSeventyFiveMoveRule at 150 half-moves, got %v", status)
+		}
+	})
+}
+
+func TestMoveCountResetScenarios(t *testing.T) {
+	t.Run("Half-move clock resets correctly in a game scenario", func(t *testing.T) {
+		board := NewBoard()
+
+		// Sequence: knight moves (increment), pawn move (reset), more knight moves
+		moves := []string{
+			"g1f3", // halfmove = 1
+			"g8f6", // halfmove = 2
+			"e2e4", // Pawn move: halfmove = 0
+			"f6g8", // halfmove = 1
+			"f3g1", // halfmove = 2
+		}
+
+		expectedClocks := []uint8{1, 2, 0, 1, 2}
+
+		for i, moveStr := range moves {
+			move, err := ParseMove(moveStr)
+			if err != nil {
+				t.Fatalf("failed to parse move %s: %v", moveStr, err)
+			}
+			err = board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("failed to make move %s: %v", moveStr, err)
+			}
+
+			if board.HalfMoveClock != expectedClocks[i] {
+				t.Errorf("after move %d (%s): expected HalfMoveClock=%d, got %d", i+1, moveStr, expectedClocks[i], board.HalfMoveClock)
+			}
+		}
+	})
+
+	t.Run("Pawn promotion resets half-move clock", func(t *testing.T) {
+		board := NewBoard()
+
+		// Set up a position where a pawn can promote
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("e7"): NewPiece(White, Pawn), // About to promote
+			squareFromNotation("h8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		// Set half-move clock to 10
+		board.HalfMoveClock = 10
+
+		// Promote the pawn
+		move, err := ParseMove("e7e8q")
+		if err != nil {
+			t.Fatalf("failed to parse move: %v", err)
+		}
+		err = board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("failed to make move: %v", err)
+		}
+
+		// After pawn promotion, clock should be reset to 0
+		if board.HalfMoveClock != 0 {
+			t.Errorf("after pawn promotion: expected HalfMoveClock=0, got %d", board.HalfMoveClock)
+		}
+	})
+}

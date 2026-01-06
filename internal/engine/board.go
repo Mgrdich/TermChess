@@ -156,6 +156,17 @@ func (b *Board) applyMove(m Move) {
 	oldCastlingRights := b.CastlingRights
 	oldEnPassantSq := b.EnPassantSq
 
+	// Manage half-move clock for fifty-move rule
+	// Reset on pawn moves or captures, increment otherwise
+	isCapture := !capturedPiece.IsEmpty()
+	isPawnMove := piece.Type() == Pawn
+
+	if isPawnMove || isCapture {
+		b.HalfMoveClock = 0
+	} else {
+		b.HalfMoveClock++
+	}
+
 	// --- Zobrist: XOR out the old en passant file (if any) ---
 	if b.EnPassantSq >= 0 {
 		oldEpFile := Square(b.EnPassantSq).File()
