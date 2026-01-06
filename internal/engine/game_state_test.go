@@ -1527,3 +1527,316 @@ func TestMoveCountResetScenarios(t *testing.T) {
 		}
 	})
 }
+
+// ============================================================================
+// INSUFFICIENT MATERIAL TESTS
+// ============================================================================
+
+func TestInsufficientMaterial_KingVsKing(t *testing.T) {
+	t.Run("K vs K is insufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status != DrawInsufficientMaterial {
+			t.Errorf("expected DrawInsufficientMaterial, got %v", status)
+		}
+
+		if !board.IsGameOver() {
+			t.Error("insufficient material should be game over")
+		}
+	})
+}
+
+func TestInsufficientMaterial_KingBishopVsKing(t *testing.T) {
+	t.Run("K+B vs K is insufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("c1"): NewPiece(White, Bishop),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status != DrawInsufficientMaterial {
+			t.Errorf("expected DrawInsufficientMaterial, got %v", status)
+		}
+	})
+
+	t.Run("K vs K+B is insufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("c8"): NewPiece(Black, Bishop),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status != DrawInsufficientMaterial {
+			t.Errorf("expected DrawInsufficientMaterial, got %v", status)
+		}
+	})
+}
+
+func TestInsufficientMaterial_KingKnightVsKing(t *testing.T) {
+	t.Run("K+N vs K is insufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("g1"): NewPiece(White, Knight),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status != DrawInsufficientMaterial {
+			t.Errorf("expected DrawInsufficientMaterial, got %v", status)
+		}
+	})
+
+	t.Run("K vs K+N is insufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("g8"): NewPiece(Black, Knight),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status != DrawInsufficientMaterial {
+			t.Errorf("expected DrawInsufficientMaterial, got %v", status)
+		}
+	})
+}
+
+func TestInsufficientMaterial_SameColorBishops(t *testing.T) {
+	t.Run("K+B vs K+B with both bishops on light squares", func(t *testing.T) {
+		board := NewBoard()
+		// a1 is a dark square (0+0=0, even)
+		// c1 is a light square (2+0=2, even)
+		// Actually, let me recalculate: a1 = file 0, rank 0, (0+0)%2=0 (dark)
+		// b1 = file 1, rank 0, (1+0)%2=1 (light)
+		// c1 = file 2, rank 0, (2+0)%2=0 (dark)
+		// d1 = file 3, rank 0, (3+0)%2=1 (light)
+		// So d1 and d8 are both light squares: d1=(3+0)%2=1, d8=(3+7)%2=0... wait
+		// Let me use h1 and a8: h1=(7+0)%2=1, a8=(0+7)%2=1 - both light!
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("h1"): NewPiece(White, Bishop), // light square
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("a8"): NewPiece(Black, Bishop), // light square
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status != DrawInsufficientMaterial {
+			t.Errorf("expected DrawInsufficientMaterial for same-color bishops, got %v", status)
+		}
+	})
+
+	t.Run("K+B vs K+B with both bishops on dark squares", func(t *testing.T) {
+		board := NewBoard()
+		// a1 and h8 are both dark squares: a1=(0+0)%2=0, h8=(7+7)%2=0
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("a1"): NewPiece(White, Bishop), // dark square
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("h8"): NewPiece(Black, Bishop), // dark square
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status != DrawInsufficientMaterial {
+			t.Errorf("expected DrawInsufficientMaterial for same-color bishops, got %v", status)
+		}
+	})
+
+	t.Run("K+B vs K+B with bishops on different colors is NOT insufficient", func(t *testing.T) {
+		board := NewBoard()
+		// a1 is dark (0+0)%2=0, a8 is light (0+7)%2=1
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("a1"): NewPiece(White, Bishop), // dark square
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("a8"): NewPiece(Black, Bishop), // light square
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("expected NOT DrawInsufficientMaterial for opposite-color bishops, got %v", status)
+		}
+		if status != Ongoing {
+			t.Errorf("expected Ongoing for opposite-color bishops, got %v", status)
+		}
+	})
+}
+
+func TestInsufficientMaterial_SufficientMaterial(t *testing.T) {
+	t.Run("K+Q vs K is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("d1"): NewPiece(White, Queen),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+Q vs K should NOT be insufficient material, got %v", status)
+		}
+	})
+
+	t.Run("K+R vs K is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("a1"): NewPiece(White, Rook),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+R vs K should NOT be insufficient material, got %v", status)
+		}
+	})
+
+	t.Run("K+P vs K is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("e2"): NewPiece(White, Pawn),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+P vs K should NOT be insufficient material, got %v", status)
+		}
+	})
+
+	t.Run("K+B+B vs K is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("c1"): NewPiece(White, Bishop),
+			squareFromNotation("f1"): NewPiece(White, Bishop),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+B+B vs K should NOT be insufficient material, got %v", status)
+		}
+	})
+
+	t.Run("K+N+N vs K is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("b1"): NewPiece(White, Knight),
+			squareFromNotation("g1"): NewPiece(White, Knight),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+N+N vs K should NOT be insufficient material, got %v", status)
+		}
+	})
+
+	t.Run("K+B+N vs K is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("c1"): NewPiece(White, Bishop),
+			squareFromNotation("g1"): NewPiece(White, Knight),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+B+N vs K should NOT be insufficient material, got %v", status)
+		}
+	})
+
+	t.Run("K+B vs K+N is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("c1"): NewPiece(White, Bishop),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("g8"): NewPiece(Black, Knight),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+B vs K+N should NOT be insufficient material, got %v", status)
+		}
+	})
+
+	t.Run("K+N vs K+N is sufficient material", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("g1"): NewPiece(White, Knight),
+			squareFromNotation("e8"): NewPiece(Black, King),
+			squareFromNotation("g8"): NewPiece(Black, Knight),
+		}
+		setupPosition(board, pieces, White)
+
+		status := board.Status()
+		if status == DrawInsufficientMaterial {
+			t.Errorf("K+N vs K+N should NOT be insufficient material, got %v", status)
+		}
+	})
+}
+
+func TestInsufficientMaterial_IsGameOver(t *testing.T) {
+	t.Run("Insufficient material is game over", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		if !board.IsGameOver() {
+			t.Error("insufficient material should be game over")
+		}
+
+		if board.CanClaimDraw() {
+			t.Error("insufficient material should not be claimable (it's automatic)")
+		}
+	})
+}
+
+func TestInsufficientMaterial_NoWinner(t *testing.T) {
+	t.Run("Insufficient material has no winner", func(t *testing.T) {
+		board := NewBoard()
+		pieces := map[Square]Piece{
+			squareFromNotation("e1"): NewPiece(White, King),
+			squareFromNotation("e8"): NewPiece(Black, King),
+		}
+		setupPosition(board, pieces, White)
+
+		_, hasWinner := board.Winner()
+		if hasWinner {
+			t.Error("insufficient material should have no winner (it's a draw)")
+		}
+	})
+}

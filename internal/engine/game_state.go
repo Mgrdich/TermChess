@@ -71,9 +71,9 @@ func (s GameStatus) String() string {
 // 2. Draw conditions:
 //   - Fivefold repetition (automatic draw, game ends)
 //   - Seventy-five-move rule (automatic draw, game ends)
+//   - Insufficient material (automatic draw, game ends)
 //   - Threefold repetition (claimable draw, player may claim)
 //   - Fifty-move rule (claimable draw, player may claim)
-//   - TODO: Insufficient material (automatic draw, game ends)
 //
 // 3. Otherwise -> Ongoing
 //
@@ -106,6 +106,11 @@ func (b *Board) Status() GameStatus {
 		return DrawSeventyFiveMoveRule
 	}
 
+	// Check for insufficient material (automatic draw)
+	if b.hasInsufficientMaterial() {
+		return DrawInsufficientMaterial
+	}
+
 	// Check for claimable draws (these require a player to claim)
 
 	// Check for threefold repetition (claimable draw)
@@ -118,9 +123,6 @@ func (b *Board) Status() GameStatus {
 	if b.HalfMoveClock >= 100 {
 		return DrawFiftyMoveRule
 	}
-
-	// TODO: Future slices will implement draw detection:
-	// - DrawInsufficientMaterial
 
 	return Ongoing
 }
@@ -179,4 +181,133 @@ func (b *Board) repetitionCount() int {
 		}
 	}
 	return count
+}
+
+// materialCount holds the count of each piece type for both colors.
+type materialCount struct {
+	whitePawns   int
+	whiteKnights int
+	whiteBishops int
+	whiteRooks   int
+	whiteQueens  int
+	blackPawns   int
+	blackKnights int
+	blackBishops int
+	blackRooks   int
+	blackQueens  int
+	// Bishops stored by their square for color detection
+	whiteBishopSquares []Square
+	blackBishopSquares []Square
+}
+
+// countMaterial counts all pieces on the board (excluding kings).
+func (b *Board) countMaterial() materialCount {
+	mc := materialCount{
+		whiteBishopSquares: []Square{},
+		blackBishopSquares: []Square{},
+	}
+
+	for sq := Square(0); sq < 64; sq++ {
+		piece := b.Squares[sq]
+		if piece.IsEmpty() {
+			continue
+		}
+
+		pieceType := piece.Type()
+		pieceColor := piece.Color()
+
+		if pieceColor == White {
+			switch pieceType {
+			case Pawn:
+				mc.whitePawns++
+			case Knight:
+				mc.whiteKnights++
+			case Bishop:
+				mc.whiteBishops++
+				mc.whiteBishopSquares = append(mc.whiteBishopSquares, sq)
+			case Rook:
+				mc.whiteRooks++
+			case Queen:
+				mc.whiteQueens++
+			}
+		} else { // Black
+			switch pieceType {
+			case Pawn:
+				mc.blackPawns++
+			case Knight:
+				mc.blackKnights++
+			case Bishop:
+				mc.blackBishops++
+				mc.blackBishopSquares = append(mc.blackBishopSquares, sq)
+			case Rook:
+				mc.blackRooks++
+			case Queen:
+				mc.blackQueens++
+			}
+		}
+	}
+
+	return mc
+}
+
+// hasInsufficientMaterial returns true if neither side can force checkmate.
+// This occurs in the following scenarios:
+// - K vs K (king versus king)
+// - K+B vs K (king and bishop versus king)
+// - K+N vs K (king and knight versus king)
+// - K+B vs K+B where both bishops are on the same color squares
+func (b *Board) hasInsufficientMaterial() bool {
+	mc := b.countMaterial()
+
+	// If there are any pawns, rooks, or queens, there is sufficient material
+	if mc.whitePawns > 0 || mc.blackPawns > 0 ||
+		mc.whiteRooks > 0 || mc.blackRooks > 0 ||
+		mc.whiteQueens > 0 || mc.blackQueens > 0 {
+		return false
+	}
+
+	// Count total minor pieces (knights and bishops) for each side
+	whiteMinorPieces := mc.whiteKnights + mc.whiteBishops
+	blackMinorPieces := mc.blackKnights + mc.blackBishops
+
+	// K vs K (no minor pieces on either side)
+	if whiteMinorPieces == 0 && blackMinorPieces == 0 {
+		return true
+	}
+
+	// K+B vs K or K vs K+B (one bishop, no other pieces)
+	if whiteMinorPieces == 1 && mc.whiteBishops == 1 && blackMinorPieces == 0 {
+		return true
+	}
+	if blackMinorPieces == 1 && mc.blackBishops == 1 && whiteMinorPieces == 0 {
+		return true
+	}
+
+	// K+N vs K or K vs K+N (one knight, no other pieces)
+	if whiteMinorPieces == 1 && mc.whiteKnights == 1 && blackMinorPieces == 0 {
+		return true
+	}
+	if blackMinorPieces == 1 && mc.blackKnights == 1 && whiteMinorPieces == 0 {
+		return true
+	}
+
+	// K+B vs K+B with same-color bishops
+	// (one bishop each, both on the same square color)
+	if mc.whiteBishops == 1 && mc.blackBishops == 1 &&
+		whiteMinorPieces == 1 && blackMinorPieces == 1 {
+		// Check if bishops are on the same color squares
+		// A square's color is determined by (rank + file) % 2
+		// If both have the same parity, they're on the same color
+		whiteBishopSq := mc.whiteBishopSquares[0]
+		blackBishopSq := mc.blackBishopSquares[0]
+
+		whiteSquareColor := (whiteBishopSq.Rank() + whiteBishopSq.File()) % 2
+		blackSquareColor := (blackBishopSq.Rank() + blackBishopSq.File()) % 2
+
+		if whiteSquareColor == blackSquareColor {
+			return true
+		}
+	}
+
+	return false
 }

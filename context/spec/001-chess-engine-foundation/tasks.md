@@ -163,13 +163,13 @@
 ## Slice 13: Insufficient Material Draw
 *Goal: Detect draws from insufficient mating material.*
 
-- [ ] **Slice 13: Insufficient material detection**
-  - [ ] Implement material counting
-  - [ ] Detect K vs K
-  - [ ] Detect K+B vs K, K+N vs K
-  - [ ] Detect K+B vs K+B (same color bishops)
-  - [ ] Update `Board.Status()` to return `DrawInsufficientMaterial`
-  - [ ] Add unit tests for each insufficient material scenario
+- [x] **Slice 13: Insufficient material detection**
+  - [x] Implement material counting
+  - [x] Detect K vs K
+  - [x] Detect K+B vs K, K+N vs K
+  - [x] Detect K+B vs K+B (same color bishops)
+  - [x] Update `Board.Status()` to return `DrawInsufficientMaterial`
+  - [x] Add unit tests for each insufficient material scenario
 
 ---
 
