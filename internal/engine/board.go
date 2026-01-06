@@ -160,9 +160,8 @@ func (b *Board) applyMove(m Move) {
 	// Reset on pawn moves or captures, increment otherwise
 	isCapture := !capturedPiece.IsEmpty()
 	isPawnMove := piece.Type() == Pawn
-	isEnPassantCapture := isPawnMove && oldEnPassantSq >= 0 && m.To == Square(oldEnPassantSq)
 
-	if isPawnMove || isCapture || isEnPassantCapture {
+	if isPawnMove || isCapture {
 		b.HalfMoveClock = 0
 	} else {
 		b.HalfMoveClock++
