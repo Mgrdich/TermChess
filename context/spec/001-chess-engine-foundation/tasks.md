@@ -176,8 +176,8 @@
 ## Slice 14: Perft Testing & Validation
 *Goal: Validate move generation correctness with perft tests.*
 
-- [ ] **Slice 14: Perft testing suite**
-  - [ ] Implement `Perft(depth int) uint64` that counts leaf nodes
-  - [ ] Add perft test for starting position: depth 1 (20), depth 2 (400), depth 3 (8902), depth 4 (197281)
-  - [ ] Add perft tests for known "Kiwipete" and other tricky positions
-  - [ ] Fix any bugs discovered by perft mismatches
+- [x] **Slice 14: Perft testing suite**
+  - [x] Implement `Perft(depth int) uint64` that counts leaf nodes
+  - [x] Add perft test for starting position: depth 1 (20), depth 2 (400), depth 3 (8902), depth 4 (197281)
+  - [x] Add perft tests for known "Kiwipete" and other tricky positions
+  - [x] Fix any bugs discovered by perft mismatches

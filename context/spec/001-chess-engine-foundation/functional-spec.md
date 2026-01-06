@@ -66,12 +66,12 @@ The engine must validate moves and enforce all standard chess rules.
 
 **Special Rules:**
 
-| Rule | Description |
-|------|-------------|
-| **Castling** | King moves two squares toward rook; rook jumps over king. Requires: neither piece has moved, no pieces between, king not in check, king doesn't pass through or land in check. |
-| **En passant** | Pawn captures enemy pawn that just moved two squares, as if it moved one square. Only available immediately after the two-square move. |
-| **Pawn promotion** | Pawn reaching the 8th rank must promote to Queen, Rook, Bishop, or Knight (player's choice). Cannot promote to Pawn or King. |
-| **Check** | King is under attack. Player must move out of check, block, or capture the attacker. |
+| Rule               | Description                                                                                                                                                                    |
+|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Castling**       | King moves two squares toward rook; rook jumps over king. Requires: neither piece has moved, no pieces between, king not in check, king doesn't pass through or land in check. |
+| **En passant**     | Pawn captures enemy pawn that just moved two squares, as if it moved one square. Only available immediately after the two-square move.                                         |
+| **Pawn promotion** | Pawn reaching the 8th rank must promote to Queen, Rook, Bishop, or Knight (player's choice). Cannot promote to Pawn or King.                                                   |
+| **Check**          | King is under attack. Player must move out of check, block, or capture the attacker.                                                                                           |
 
 **Acceptance Criteria:**
 - [ ] Given a position, the engine returns all legal moves.
