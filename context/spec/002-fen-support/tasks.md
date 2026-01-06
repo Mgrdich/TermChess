@@ -3,14 +3,14 @@
 ## Slice 1: FEN Export (ToFEN)
 *Goal: Board can be exported to a valid FEN string.*
 
-- [ ] **Slice 1: Export board position to FEN string**
-  - [ ] Create `internal/engine/fen.go` with `pieceToChar(p Piece) rune` helper function
-  - [ ] Implement `(b *Board) ToFEN() string` method
-  - [ ] Add unit tests for `ToFEN()` with empty board
-  - [ ] Add unit tests for `ToFEN()` with standard starting position
-  - [ ] Add unit tests for `ToFEN()` with various castling rights combinations
-  - [ ] Add unit tests for `ToFEN()` with en passant square set
-  - [ ] Add unit tests for `ToFEN()` with various halfmove/fullmove values
+- [x] **Slice 1: Export board position to FEN string**
+  - [x] Create `internal/engine/fen.go` with `pieceToChar(p Piece) rune` helper function
+  - [x] Implement `(b *Board) ToFEN() string` method
+  - [x] Add unit tests for `ToFEN()` with empty board
+  - [x] Add unit tests for `ToFEN()` with standard starting position
+  - [x] Add unit tests for `ToFEN()` with various castling rights combinations
+  - [x] Add unit tests for `ToFEN()` with en passant square set
+  - [x] Add unit tests for `ToFEN()` with various halfmove/fullmove values
 
 ---
 
