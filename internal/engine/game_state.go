@@ -70,9 +70,9 @@ func (s GameStatus) String() string {
 //
 // 2. Draw conditions:
 //   - Fivefold repetition (automatic draw, game ends)
+//   - Seventy-five-move rule (automatic draw, game ends)
 //   - Threefold repetition (claimable draw, player may claim)
-//   - TODO: Seventy-five-move rule (automatic draw, game ends)
-//   - TODO: Fifty-move rule (claimable draw, player may claim)
+//   - Fifty-move rule (claimable draw, player may claim)
 //   - TODO: Insufficient material (automatic draw, game ends)
 //
 // 3. Otherwise -> Ongoing
@@ -92,10 +92,7 @@ func (b *Board) Status() GameStatus {
 		return Stalemate
 	}
 
-	// TODO: Future slices will implement draw detection:
-	// - DrawInsufficientMaterial
-	// - DrawSeventyFiveMoveRule
-	// - DrawFiftyMoveRule
+	// Check for automatic draws first (these end the game immediately)
 
 	// Check for fivefold repetition (automatic draw)
 	repCount := b.repetitionCount()
@@ -103,10 +100,27 @@ func (b *Board) Status() GameStatus {
 		return DrawFivefoldRepetition
 	}
 
+	// Check for seventy-five-move rule (automatic draw)
+	// 75 full moves = 150 half-moves
+	if b.HalfMoveClock >= 150 {
+		return DrawSeventyFiveMoveRule
+	}
+
+	// Check for claimable draws (these require a player to claim)
+
 	// Check for threefold repetition (claimable draw)
 	if repCount >= 3 {
 		return DrawThreefoldRepetition
 	}
+
+	// Check for fifty-move rule (claimable draw)
+	// 50 full moves = 100 half-moves
+	if b.HalfMoveClock >= 100 {
+		return DrawFiftyMoveRule
+	}
+
+	// TODO: Future slices will implement draw detection:
+	// - DrawInsufficientMaterial
 
 	return Ongoing
 }

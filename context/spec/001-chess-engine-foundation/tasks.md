@@ -151,12 +151,12 @@
 ## Slice 12: Draw by Move Rules (50/75)
 *Goal: Detect draws from 50-move and 75-move rules.*
 
-- [ ] **Slice 12: Move count draw detection**
-  - [ ] Update `MakeMove()` to increment/reset half-move clock appropriately
-  - [ ] Implement 50-move rule detection
-  - [ ] Implement 75-move rule detection (automatic draw)
-  - [ ] Update `Board.Status()` to return appropriate draw status
-  - [ ] Add unit tests for 50-move and 75-move scenarios
+- [x] **Slice 12: Move count draw detection**
+  - [x] Update `MakeMove()` to increment/reset half-move clock appropriately
+  - [x] Implement 50-move rule detection
+  - [x] Implement 75-move rule detection (automatic draw)
+  - [x] Update `Board.Status()` to return appropriate draw status
+  - [x] Add unit tests for 50-move and 75-move scenarios
 
 ---
 
