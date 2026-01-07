@@ -1038,3 +1038,412 @@ func hasSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+// TestRoundTripParseFENToFEN tests FEN string -> ParseFEN -> ToFEN -> verify matches original.
+// This test verifies that parsing a FEN string and exporting it produces the same FEN string.
+func TestRoundTripParseFENToFEN(t *testing.T) {
+	tests := []struct {
+		name string
+		fen  string
+	}{
+		{
+			name: "starting position",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+		},
+		{
+			name: "empty board",
+			fen:  "8/8/8/8/8/8/8/8 w - - 0 1",
+		},
+		{
+			name: "complex position - kiwipete",
+			fen:  "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		},
+		{
+			name: "endgame position",
+			fen:  "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+		},
+		{
+			name: "position with en passant - e3",
+			fen:  "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+		},
+		{
+			name: "position with en passant - d6",
+			fen:  "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+		},
+		{
+			name: "position with en passant - a3",
+			fen:  "rnbqkbnr/1ppppppp/8/8/pP6/8/P1PPPPPP/RNBQKBNR w KQkq a3 0 2",
+		},
+		{
+			name: "position with en passant - h6",
+			fen:  "rnbqkbnr/pppppp1p/8/6pP/8/8/PPPPPPP1/RNBQKBNR w KQkq h6 0 2",
+		},
+		{
+			name: "no castling rights",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1",
+		},
+		{
+			name: "white kingside castling only",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w K - 0 1",
+		},
+		{
+			name: "white queenside castling only",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Q - 0 1",
+		},
+		{
+			name: "black kingside castling only",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w k - 0 1",
+		},
+		{
+			name: "black queenside castling only",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w q - 0 1",
+		},
+		{
+			name: "partial castling rights - Kq",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kq - 0 1",
+		},
+		{
+			name: "partial castling rights - Qk",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Qk - 0 1",
+		},
+		{
+			name: "black to move",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1",
+		},
+		{
+			name: "non-zero halfmove clock",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 10 6",
+		},
+		{
+			name: "large fullmove number",
+			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 100",
+		},
+		{
+			name: "approaching fifty-move rule",
+			fen:  "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 48 30",
+		},
+		{
+			name: "complex position with en passant and partial castling",
+			fen:  "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b Kq e3 5 10",
+		},
+		{
+			name: "position 3",
+			fen:  "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+		},
+		{
+			name: "position 4",
+			fen:  "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+		},
+		{
+			name: "position 5",
+			fen:  "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Parse FEN to board
+			board, err := ParseFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("ParseFEN() error: %v", err)
+			}
+
+			// Convert back to FEN
+			generatedFEN := board.ToFEN()
+
+			// Should match the original
+			if generatedFEN != tt.fen {
+				t.Errorf("Round trip failed:\n  original:  %q\n  generated: %q", tt.fen, generatedFEN)
+			}
+		})
+	}
+}
+
+// TestRoundTripBoardToFENToBoard tests Board -> ToFEN -> ParseFEN -> verify board matches.
+// This test verifies that creating a board, exporting to FEN, and parsing back produces
+// an equivalent board state.
+func TestRoundTripBoardToFENToBoard(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func() *Board
+	}{
+		{
+			name: "standard starting position",
+			setup: func() *Board {
+				return NewBoard()
+			},
+		},
+		{
+			name: "empty board",
+			setup: func() *Board {
+				return &Board{
+					Squares:        [64]Piece{},
+					ActiveColor:    White,
+					CastlingRights: 0,
+					EnPassantSq:    -1,
+					HalfMoveClock:  0,
+					FullMoveNum:    1,
+					Hash:           0,
+					History:        []uint64{},
+				}
+			},
+		},
+		{
+			name: "board with partial castling rights",
+			setup: func() *Board {
+				b := NewBoard()
+				b.CastlingRights = CastleWhiteKing | CastleBlackQueen
+				return b
+			},
+		},
+		{
+			name: "board with en passant square",
+			setup: func() *Board {
+				b := NewBoard()
+				b.EnPassantSq = int8(NewSquare(4, 2)) // e3
+				return b
+			},
+		},
+		{
+			name: "board with black to move",
+			setup: func() *Board {
+				b := NewBoard()
+				b.ActiveColor = Black
+				return b
+			},
+		},
+		{
+			name: "board with non-zero clocks",
+			setup: func() *Board {
+				b := NewBoard()
+				b.HalfMoveClock = 25
+				b.FullMoveNum = 50
+				return b
+			},
+		},
+		{
+			name: "board with no castling rights",
+			setup: func() *Board {
+				b := NewBoard()
+				b.CastlingRights = 0
+				return b
+			},
+		},
+		{
+			name: "complex board state",
+			setup: func() *Board {
+				b := NewBoard()
+				b.ActiveColor = Black
+				b.CastlingRights = CastleBlackKing
+				b.EnPassantSq = int8(NewSquare(3, 5)) // d6
+				b.HalfMoveClock = 10
+				b.FullMoveNum = 25
+				return b
+			},
+		},
+		{
+			name: "board with custom piece placement",
+			setup: func() *Board {
+				b := &Board{
+					Squares:        [64]Piece{},
+					ActiveColor:    White,
+					CastlingRights: CastleAll,
+					EnPassantSq:    -1,
+					HalfMoveClock:  0,
+					FullMoveNum:    1,
+					Hash:           0,
+					History:        []uint64{},
+				}
+				// Place white king on e1
+				b.Squares[NewSquare(4, 0)] = NewPiece(White, King)
+				// Place black king on e8
+				b.Squares[NewSquare(4, 7)] = NewPiece(Black, King)
+				// Place white rook on a1
+				b.Squares[NewSquare(0, 0)] = NewPiece(White, Rook)
+				// Place black rook on h8
+				b.Squares[NewSquare(7, 7)] = NewPiece(Black, Rook)
+				return b
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create the original board
+			original := tt.setup()
+
+			// Export to FEN
+			fen := original.ToFEN()
+
+			// Parse back to board
+			parsed, err := ParseFEN(fen)
+			if err != nil {
+				t.Fatalf("ParseFEN() error: %v", err)
+			}
+
+			// Compare all board fields
+			if parsed.ActiveColor != original.ActiveColor {
+				t.Errorf("ActiveColor mismatch: got %v, want %v", parsed.ActiveColor, original.ActiveColor)
+			}
+
+			if parsed.CastlingRights != original.CastlingRights {
+				t.Errorf("CastlingRights mismatch: got %v, want %v", parsed.CastlingRights, original.CastlingRights)
+			}
+
+			if parsed.EnPassantSq != original.EnPassantSq {
+				t.Errorf("EnPassantSq mismatch: got %v, want %v", parsed.EnPassantSq, original.EnPassantSq)
+			}
+
+			if parsed.HalfMoveClock != original.HalfMoveClock {
+				t.Errorf("HalfMoveClock mismatch: got %v, want %v", parsed.HalfMoveClock, original.HalfMoveClock)
+			}
+
+			if parsed.FullMoveNum != original.FullMoveNum {
+				t.Errorf("FullMoveNum mismatch: got %v, want %v", parsed.FullMoveNum, original.FullMoveNum)
+			}
+
+			// Compare all squares
+			for sq := Square(0); sq < 64; sq++ {
+				if parsed.Squares[sq] != original.Squares[sq] {
+					t.Errorf("Square %v mismatch: got %v, want %v", sq, parsed.Squares[sq], original.Squares[sq])
+				}
+			}
+		})
+	}
+}
+
+// TestRoundTripStartingPosition specifically tests the standard starting position round-trip.
+// This verifies that the starting position can be reliably converted between board and FEN representations.
+func TestRoundTripStartingPosition(t *testing.T) {
+	startingFEN := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+	// Test direction 1: FEN -> Board -> FEN
+	t.Run("FEN to Board to FEN", func(t *testing.T) {
+		board, err := ParseFEN(startingFEN)
+		if err != nil {
+			t.Fatalf("ParseFEN() error: %v", err)
+		}
+
+		generatedFEN := board.ToFEN()
+		if generatedFEN != startingFEN {
+			t.Errorf("Round trip failed:\n  original:  %q\n  generated: %q", startingFEN, generatedFEN)
+		}
+	})
+
+	// Test direction 2: Board -> FEN -> Board
+	t.Run("Board to FEN to Board", func(t *testing.T) {
+		original := NewBoard()
+		fen := original.ToFEN()
+
+		// Verify the FEN matches the standard starting position
+		if fen != startingFEN {
+			t.Errorf("NewBoard().ToFEN() = %q, want %q", fen, startingFEN)
+		}
+
+		// Parse it back
+		parsed, err := ParseFEN(fen)
+		if err != nil {
+			t.Fatalf("ParseFEN() error: %v", err)
+		}
+
+		// Compare all fields
+		if parsed.ActiveColor != original.ActiveColor {
+			t.Errorf("ActiveColor mismatch: got %v, want %v", parsed.ActiveColor, original.ActiveColor)
+		}
+		if parsed.CastlingRights != original.CastlingRights {
+			t.Errorf("CastlingRights mismatch: got %v, want %v", parsed.CastlingRights, original.CastlingRights)
+		}
+		if parsed.EnPassantSq != original.EnPassantSq {
+			t.Errorf("EnPassantSq mismatch: got %v, want %v", parsed.EnPassantSq, original.EnPassantSq)
+		}
+		if parsed.HalfMoveClock != original.HalfMoveClock {
+			t.Errorf("HalfMoveClock mismatch: got %v, want %v", parsed.HalfMoveClock, original.HalfMoveClock)
+		}
+		if parsed.FullMoveNum != original.FullMoveNum {
+			t.Errorf("FullMoveNum mismatch: got %v, want %v", parsed.FullMoveNum, original.FullMoveNum)
+		}
+
+		// Compare all squares
+		for sq := Square(0); sq < 64; sq++ {
+			if parsed.Squares[sq] != original.Squares[sq] {
+				t.Errorf("Square %v mismatch: got %v, want %v", sq, parsed.Squares[sq], original.Squares[sq])
+			}
+		}
+	})
+}
+
+// TestRoundTripComplexPositions tests round-trip conversion for complex positions with
+// various combinations of en passant, partial castling rights, and non-zero clocks.
+func TestRoundTripComplexPositions(t *testing.T) {
+	tests := []struct {
+		name string
+		fen  string
+	}{
+		{
+			name: "en passant with partial castling - white kingside only",
+			fen:  "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b K e3 0 1",
+		},
+		{
+			name: "en passant with partial castling - black queenside only",
+			fen:  "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w q d6 0 2",
+		},
+		{
+			name: "en passant with no castling rights",
+			fen:  "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b - e3 0 1",
+		},
+		{
+			name: "en passant with non-zero halfmove clock",
+			fen:  "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 5 1",
+		},
+		{
+			name: "partial castling Kq with non-zero clocks",
+			fen:  "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w Kq - 10 15",
+		},
+		{
+			name: "partial castling Qk with en passant",
+			fen:  "rnbqkbnr/pp1ppppp/8/2pP4/8/8/PPP1PPPP/RNBQKBNR w Qk c6 0 2",
+		},
+		{
+			name: "complex endgame with high clocks",
+			fen:  "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 b - - 47 100",
+		},
+		{
+			name: "all features combined - en passant, partial castling, black to move, non-zero clocks",
+			fen:  "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b Kq e3 5 10",
+		},
+		{
+			name: "single castling right with en passant and clocks",
+			fen:  "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w K d6 3 2",
+		},
+		{
+			name: "white queenside castling only with en passant",
+			fen:  "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b Q e3 0 1",
+		},
+		{
+			name: "black kingside castling only with en passant",
+			fen:  "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w k d6 0 2",
+		},
+		{
+			name: "approaching fifty-move rule with partial castling",
+			fen:  "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w q - 49 30",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Parse FEN to board
+			board, err := ParseFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("ParseFEN() error: %v", err)
+			}
+
+			// Convert back to FEN
+			generatedFEN := board.ToFEN()
+
+			// Should match the original
+			if generatedFEN != tt.fen {
+				t.Errorf("Round trip failed:\n  original:  %q\n  generated: %q", tt.fen, generatedFEN)
+			}
+		})
+	}
+}

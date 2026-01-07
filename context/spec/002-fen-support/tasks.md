@@ -48,11 +48,11 @@
 ## Slice 4: Round-trip Tests
 *Goal: Verify FEN export and import are consistent.*
 
-- [ ] **Slice 4: Round-trip verification tests**
-  - [ ] Add test: parse FEN → export → verify matches original
-  - [ ] Add test: create board manually → export → parse → verify board matches
-  - [ ] Add test: standard starting position round-trip
-  - [ ] Add test: complex position with en passant and partial castling round-trip
+- [x] **Slice 4: Round-trip verification tests**
+  - [x] Add test: parse FEN → export → verify matches original
+  - [x] Add test: create board manually → export → parse → verify board matches
+  - [x] Add test: standard starting position round-trip
+  - [x] Add test: complex position with en passant and partial castling round-trip
 
 ---
 
