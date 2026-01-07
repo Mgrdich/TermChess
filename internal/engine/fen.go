@@ -81,15 +81,18 @@ func FromFEN(fen string) (*Board, error) {
 				// Empty squares
 				emptyCount := int(ch - '0')
 				file += emptyCount
+			} else if ch == '0' || ch == '9' {
+				// Invalid digit
+				return nil, fmt.Errorf("invalid piece character: %c", ch)
 			} else {
 				// Piece
-				if file > 7 {
-					return nil, fmt.Errorf("too many pieces in rank %d", rank+1)
-				}
-
 				piece, err := charToPiece(ch)
 				if err != nil {
 					return nil, err
+				}
+
+				if file > 7 {
+					return nil, fmt.Errorf("rank %d has too many squares, expected 8", rank+1)
 				}
 
 				sq := NewSquare(file, rank)
@@ -146,10 +149,10 @@ func FromFEN(fen string) (*Board, error) {
 
 	// Part 5: Half-move clock
 	halfMove, err := strconv.Atoi(parts[4])
-	if err != nil {
+	if err != nil || halfMove < 0 {
 		return nil, fmt.Errorf("invalid half-move clock: %s", parts[4])
 	}
-	if halfMove < 0 || halfMove > 255 {
+	if halfMove > 255 {
 		return nil, fmt.Errorf("half-move clock out of range: %d", halfMove)
 	}
 	b.HalfMoveClock = uint8(halfMove)

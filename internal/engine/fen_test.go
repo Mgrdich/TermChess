@@ -733,3 +733,308 @@ func TestToFENRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+// TestParseFENValidation tests validation of FEN strings with comprehensive error cases.
+// This validates Slice 3: FEN Validation & Error Handling.
+func TestParseFENValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		fen         string
+		wantErr     bool
+		errContains string // Substring that should appear in error message
+	}{
+		// Valid FEN strings (should not error)
+		{
+			name:    "valid - starting position",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr: false,
+		},
+		{
+			name:    "valid - position with en passant",
+			fen:     "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+			wantErr: false,
+		},
+		{
+			name:    "valid - no castling rights",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1",
+			wantErr: false,
+		},
+
+		// Field count validation
+		{
+			name:        "invalid - too few fields (5)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0",
+			wantErr:     true,
+			errContains: "6 parts",
+		},
+		{
+			name:        "invalid - too few fields (3)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq",
+			wantErr:     true,
+			errContains: "6 parts",
+		},
+		{
+			name:        "invalid - too many fields (7)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 extra",
+			wantErr:     true,
+			errContains: "6 parts",
+		},
+
+		// Rank count validation
+		{
+			name:        "invalid - too few ranks (7)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "8 ranks",
+		},
+		{
+			name:        "invalid - too many ranks (9)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "8 ranks",
+		},
+
+		// Invalid piece characters
+		{
+			name:        "invalid - invalid piece character (X)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPXPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "invalid piece character",
+		},
+		{
+			name:        "invalid - invalid piece character (lowercase w in active color position)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+			wantErr:     false, // This is valid
+		},
+		{
+			name:        "invalid - digit 9 in piece placement",
+			fen:         "rnbqkbnr/pppppppp/9/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "invalid piece character",
+		},
+		{
+			name:        "invalid - digit 0 in piece placement",
+			fen:         "rnbqkbnr/pppppppp/0/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "invalid piece character",
+		},
+
+		// Rank square count validation
+		{
+			name:        "invalid - rank has too many squares (9)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "squares",
+		},
+		{
+			name:        "invalid - rank has too few squares (7)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "squares",
+		},
+		{
+			name:        "invalid - rank with numbers summing to 9",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/54/RNBQKBNR w KQkq - 0 1",
+			wantErr:     true,
+			errContains: "squares",
+		},
+
+		// Active color validation
+		{
+			name:        "invalid - active color is 'x'",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR x KQkq - 0 1",
+			wantErr:     true,
+			errContains: "invalid active color",
+		},
+		{
+			name:        "invalid - active color is 'W' (uppercase)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR W KQkq - 0 1",
+			wantErr:     true,
+			errContains: "invalid active color",
+		},
+		{
+			name:        "invalid - active color is 'B' (uppercase)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR B KQkq - 0 1",
+			wantErr:     true,
+			errContains: "invalid active color",
+		},
+		{
+			name:        "invalid - active color is empty",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR  KQkq - 0 1",
+			wantErr:     true,
+			errContains: "6 parts",
+		},
+
+		// Castling rights validation
+		{
+			name:        "invalid - castling rights contains 'X'",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQX - 0 1",
+			wantErr:     true,
+			errContains: "invalid castling character",
+		},
+		{
+			name:        "invalid - castling rights contains lowercase letters other than kq",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w abc - 0 1",
+			wantErr:     true,
+			errContains: "invalid castling character",
+		},
+		{
+			name:        "invalid - castling rights contains number",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w K1 - 0 1",
+			wantErr:     true,
+			errContains: "invalid castling character",
+		},
+		{
+			name:    "valid - castling rights subset (Kq)",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kq - 0 1",
+			wantErr: false,
+		},
+		{
+			name:    "valid - castling rights subset (Q)",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Q - 0 1",
+			wantErr: false,
+		},
+
+		// En passant validation
+		{
+			name:        "invalid - en passant square outside board (z9)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq z9 0 1",
+			wantErr:     true,
+			errContains: "invalid en passant square",
+		},
+		{
+			name:        "invalid - en passant square invalid file (i3)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq i3 0 1",
+			wantErr:     true,
+			errContains: "invalid en passant square",
+		},
+		{
+			name:        "invalid - en passant square invalid rank (a0)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq a0 0 1",
+			wantErr:     true,
+			errContains: "invalid en passant square",
+		},
+		{
+			name:        "invalid - en passant square invalid rank (a9)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq a9 0 1",
+			wantErr:     true,
+			errContains: "invalid en passant square",
+		},
+		{
+			name:        "invalid - en passant square too short (e)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e 0 1",
+			wantErr:     true,
+			errContains: "invalid en passant square",
+		},
+		{
+			name:        "invalid - en passant square too long (e33)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e33 0 1",
+			wantErr:     true,
+			errContains: "invalid en passant square",
+		},
+		{
+			name:    "valid - en passant is dash",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr: false,
+		},
+
+		// Halfmove clock validation
+		{
+			name:        "invalid - halfmove clock is negative",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - -1 1",
+			wantErr:     true,
+			errContains: "invalid half-move clock",
+		},
+		{
+			name:        "invalid - halfmove clock is not a number",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - abc 1",
+			wantErr:     true,
+			errContains: "invalid half-move clock",
+		},
+		{
+			name:        "invalid - halfmove clock is too large (> 255)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 256 1",
+			wantErr:     true,
+			errContains: "half-move clock out of range",
+		},
+		{
+			name:    "valid - halfmove clock is 0",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr: false,
+		},
+		{
+			name:    "valid - halfmove clock is 50",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 50 1",
+			wantErr: false,
+		},
+
+		// Fullmove number validation
+		{
+			name:        "invalid - fullmove number is zero",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0",
+			wantErr:     true,
+			errContains: "full move number out of range",
+		},
+		{
+			name:        "invalid - fullmove number is negative",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 -1",
+			wantErr:     true,
+			errContains: "full move number out of range",
+		},
+		{
+			name:        "invalid - fullmove number is not a number",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 abc",
+			wantErr:     true,
+			errContains: "invalid full move number",
+		},
+		{
+			name:        "invalid - fullmove number is too large (> 65535)",
+			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 65536",
+			wantErr:     true,
+			errContains: "full move number out of range",
+		},
+		{
+			name:    "valid - fullmove number is 1",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			wantErr: false,
+		},
+		{
+			name:    "valid - fullmove number is large (1000)",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1000",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseFEN(tt.fen)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("ParseFEN() expected error, got nil")
+				} else if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+					t.Errorf("ParseFEN() error = %q, should contain %q", err.Error(), tt.errContains)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ParseFEN() unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// contains checks if a string contains a substring (case-insensitive).
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && hasSubstring(s, substr)))
+}
+
+// hasSubstring performs a simple substring search.
+func hasSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

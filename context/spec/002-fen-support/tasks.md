@@ -31,17 +31,17 @@
 ## Slice 3: FEN Validation & Error Handling
 *Goal: Invalid FEN strings are rejected with errors.*
 
-- [ ] **Slice 3: Validate FEN and return meaningful errors**
-  - [ ] Add validation for wrong field count (not 6 fields)
-  - [ ] Add validation for wrong rank count (not 8 ranks)
-  - [ ] Add validation for invalid piece characters
-  - [ ] Add validation for rank not summing to 8 squares
-  - [ ] Add validation for invalid active color
-  - [ ] Add validation for invalid castling rights
-  - [ ] Add validation for invalid en passant square
-  - [ ] Add validation for invalid halfmove clock (negative)
-  - [ ] Add validation for invalid fullmove number (zero/negative)
-  - [ ] Add unit tests for each error case
+- [x] **Slice 3: Validate FEN and return meaningful errors**
+  - [x] Add validation for wrong field count (not 6 fields)
+  - [x] Add validation for wrong rank count (not 8 ranks)
+  - [x] Add validation for invalid piece characters
+  - [x] Add validation for rank not summing to 8 squares
+  - [x] Add validation for invalid active color
+  - [x] Add validation for invalid castling rights
+  - [x] Add validation for invalid en passant square
+  - [x] Add validation for invalid halfmove clock (negative)
+  - [x] Add validation for invalid fullmove number (zero/negative)
+  - [x] Add unit tests for each error case
 
 ---
 
