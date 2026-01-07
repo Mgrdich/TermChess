@@ -17,14 +17,14 @@
 ## Slice 2: FEN Import (ParseFEN)
 *Goal: Valid FEN strings can be parsed into a Board.*
 
-- [ ] **Slice 2: Parse FEN string into board position**
-  - [ ] Implement `charToPiece(c rune) (Piece, error)` helper function
-  - [ ] Implement `ParseFEN(fen string) (*Board, error)` function
-  - [ ] Add unit tests for parsing standard starting position
-  - [ ] Add unit tests for parsing positions with various piece layouts
-  - [ ] Add unit tests for parsing all castling right combinations
-  - [ ] Add unit tests for parsing en passant squares
-  - [ ] Add unit tests for parsing various clock values
+- [x] **Slice 2: Parse FEN string into board position**
+  - [x] Implement `charToPiece(c rune) (Piece, error)` helper function
+  - [x] Implement `ParseFEN(fen string) (*Board, error)` function
+  - [x] Add unit tests for parsing standard starting position
+  - [x] Add unit tests for parsing positions with various piece layouts
+  - [x] Add unit tests for parsing all castling right combinations
+  - [x] Add unit tests for parsing en passant squares
+  - [x] Add unit tests for parsing various clock values
 
 ---
 

@@ -6,6 +6,45 @@ import (
 	"strings"
 )
 
+// charToPiece converts a FEN character to a Piece.
+// Uppercase characters represent White pieces, lowercase represent Black pieces.
+// Valid characters: P/p (Pawn), N/n (Knight), B/b (Bishop), R/r (Rook), Q/q (Queen), K/k (King)
+// Returns an error for invalid characters.
+func charToPiece(c rune) (Piece, error) {
+	var color Color
+	var pieceType PieceType
+
+	// Determine color (uppercase = White, lowercase = Black)
+	if c >= 'A' && c <= 'Z' {
+		color = White
+	} else if c >= 'a' && c <= 'z' {
+		color = Black
+		c = c - 'a' + 'A' // Convert to uppercase for matching
+	} else {
+		return Piece(Empty), fmt.Errorf("invalid piece character: %c", c)
+	}
+
+	// Determine piece type
+	switch c {
+	case 'P':
+		pieceType = Pawn
+	case 'N':
+		pieceType = Knight
+	case 'B':
+		pieceType = Bishop
+	case 'R':
+		pieceType = Rook
+	case 'Q':
+		pieceType = Queen
+	case 'K':
+		pieceType = King
+	default:
+		return Piece(Empty), fmt.Errorf("invalid piece character: %c", c)
+	}
+
+	return NewPiece(color, pieceType), nil
+}
+
 // FromFEN creates a Board from a FEN (Forsyth-Edwards Notation) string.
 // FEN format: <pieces> <active> <castling> <ep> <halfmove> <fullmove>
 // Example: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -48,37 +87,13 @@ func FromFEN(fen string) (*Board, error) {
 					return nil, fmt.Errorf("too many pieces in rank %d", rank+1)
 				}
 
-				var color Color
-				var pieceType PieceType
-
-				// Determine color (uppercase = White, lowercase = Black)
-				if ch >= 'A' && ch <= 'Z' {
-					color = White
-				} else {
-					color = Black
-					ch = ch - 'a' + 'A' // Convert to uppercase for matching
-				}
-
-				// Determine piece type
-				switch ch {
-				case 'P':
-					pieceType = Pawn
-				case 'N':
-					pieceType = Knight
-				case 'B':
-					pieceType = Bishop
-				case 'R':
-					pieceType = Rook
-				case 'Q':
-					pieceType = Queen
-				case 'K':
-					pieceType = King
-				default:
-					return nil, fmt.Errorf("invalid piece character: %c", ch)
+				piece, err := charToPiece(ch)
+				if err != nil {
+					return nil, err
 				}
 
 				sq := NewSquare(file, rank)
-				b.Squares[sq] = NewPiece(color, pieceType)
+				b.Squares[sq] = piece
 				file++
 			}
 		}
@@ -277,4 +292,10 @@ func (b *Board) ToFEN() string {
 	fen.WriteString(fmt.Sprintf("%d", b.FullMoveNum))
 
 	return fen.String()
+}
+
+// ParseFEN is an alias for FromFEN that creates a Board from a FEN string.
+// This function provides an alternative naming convention for consistency with other parsers.
+func ParseFEN(fen string) (*Board, error) {
+	return FromFEN(fen)
 }
