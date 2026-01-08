@@ -1,7 +1,7 @@
 # Functional Specification: FEN Support
 
 - **Roadmap Item:** FEN Support — Export Current Position, Import FEN to Start Game
-- **Status:** Draft
+- **Status:** Completed
 - **Author:** Poe
 
 ---
