@@ -1,6 +1,9 @@
 package engine
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestCharToPiece tests the charToPiece helper function.
 func TestCharToPiece(t *testing.T) {
@@ -1011,7 +1014,7 @@ func TestParseFENValidation(t *testing.T) {
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ParseFEN() expected error, got nil")
-				} else if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+				} else if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("ParseFEN() error = %q, should contain %q", err.Error(), tt.errContains)
 				}
 			} else {
@@ -1021,22 +1024,6 @@ func TestParseFENValidation(t *testing.T) {
 			}
 		})
 	}
-}
-
-// contains checks if a string contains a substring (case-insensitive).
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && hasSubstring(s, substr)))
-}
-
-// hasSubstring performs a simple substring search.
-func hasSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // TestRoundTripParseFENToFEN tests FEN string -> ParseFEN -> ToFEN -> verify matches original.
