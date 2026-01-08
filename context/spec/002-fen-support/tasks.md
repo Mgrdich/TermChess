@@ -59,8 +59,8 @@
 ## Slice 5: Clipboard Utility
 *Goal: FEN strings can be copied to system clipboard.*
 
-- [ ] **Slice 5: Clipboard support for FEN export**
-  - [ ] Add `golang.design/x/clipboard` dependency to `go.mod`
-  - [ ] Create `internal/util/clipboard.go` with `CopyToClipboard(text string) error`
-  - [ ] Add graceful error handling (fallback if clipboard unavailable)
-  - [ ] Add basic test for clipboard functionality
+- [x] **Slice 5: Clipboard support for FEN export**
+  - [x] Add `golang.design/x/clipboard` dependency to `go.mod`
+  - [x] Create `internal/util/clipboard.go` with `CopyToClipboard(text string) error`
+  - [x] Add graceful error handling (fallback if clipboard unavailable)
+  - [x] Add basic test for clipboard functionality
