@@ -9,34 +9,28 @@ import (
 // The test verifies that the function can be called without panicking.
 func TestCopyToClipboard(t *testing.T) {
 	tests := []struct {
-		name    string
-		text    string
-		wantErr bool
+		name string
+		text string
 	}{
 		{
-			name:    "copy simple text",
-			text:    "Hello, World!",
-			wantErr: false,
+			name: "copy simple text",
+			text: "Hello, World!",
 		},
 		{
-			name:    "copy empty string",
-			text:    "",
-			wantErr: false,
+			name: "copy empty string",
+			text: "",
 		},
 		{
-			name:    "copy FEN string",
-			text:    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-			wantErr: false,
+			name: "copy FEN string",
+			text: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 		},
 		{
-			name:    "copy multiline text",
-			text:    "Line 1\nLine 2\nLine 3",
-			wantErr: false,
+			name: "copy multiline text",
+			text: "Line 1\nLine 2\nLine 3",
 		},
 		{
-			name:    "copy text with special characters",
-			text:    "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?",
-			wantErr: false,
+			name: "copy text with special characters",
+			text: "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?",
 		},
 	}
 
@@ -54,10 +48,7 @@ func TestCopyToClipboard(t *testing.T) {
 				return
 			}
 
-			// If we got here, clipboard operation succeeded
-			if tt.wantErr {
-				t.Errorf("CopyToClipboard() error = nil, wantErr = %v", tt.wantErr)
-			}
+			// If we got here, clipboard operation succeeded (no assertions needed)
 		})
 	}
 }
