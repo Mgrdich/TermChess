@@ -13,9 +13,9 @@ _The highest priority features that form the core foundation of the product._
   - [x] **Move Validation & Rules:** Implement all standard chess rules including legal move detection, castling, en passant, and pawn promotion.
   - [x] **Game State Detection:** Detect check, checkmate, stalemate, and draw conditions to properly end games.
 
-- [ ] **FEN Support**
-  - [ ] **Export Current Position:** Allow users to copy/display the FEN string of the current game state at any time.
-  - [ ] **Import FEN to Start Game:** Enable users to start a new game from any valid FEN position.
+- [x] **FEN Support**
+  - [x] **Export Current Position:** Allow users to copy/display the FEN string of the current game state at any time.
+  - [x] **Import FEN to Start Game:** Enable users to start a new game from any valid FEN position.
 
 - [ ] **Terminal Interface**
   - [ ] **ASCII/Unicode Board Display:** Render the chess board clearly in the terminal with piece symbols and coordinates.
