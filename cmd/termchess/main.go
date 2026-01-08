@@ -5,6 +5,12 @@ import (
 	"fmt"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
+
+	// Terminal UI dependencies for future implementation
+	_ "github.com/BurntSushi/toml"
+	_ "github.com/charmbracelet/bubbles"
+	_ "github.com/charmbracelet/bubbletea"
+	_ "github.com/charmbracelet/lipgloss"
 )
 
 func main() {

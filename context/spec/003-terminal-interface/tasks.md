@@ -4,7 +4,7 @@
 
 **Goal:** User can launch the app, see a main menu, and exit gracefully.
 
-- [ ] Add Bubbletea dependencies (`bubbletea`, `lipgloss`, `bubbles`, `toml`) to `go.mod`
+- [x] Add Bubbletea dependencies (`bubbletea`, `lipgloss`, `bubbles`, `toml`) to `go.mod`
 - [ ] Create `internal/ui/` package directory structure
 - [ ] Create `internal/ui/model.go` with basic Model struct (screen state, menu options)
 - [ ] Create `internal/ui/view.go` with View function that renders main menu
