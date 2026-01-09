@@ -16,20 +16,20 @@ func TestPerft(t *testing.T) {
 		expected []uint64
 	}{
 		{
-			name: "starting position",
-			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			name:   "starting position",
+			fen:    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 			depths: []int{1, 2, 3, 4},
 			expected: []uint64{
-				20,      // depth 1
-				400,     // depth 2
-				8902,    // depth 3
-				197281,  // depth 4
+				20,     // depth 1
+				400,    // depth 2
+				8902,   // depth 3
+				197281, // depth 4
 				// 4865609 is depth 5, takes longer so commented out for faster tests
 			},
 		},
 		{
-			name: "kiwipete position",
-			fen:  "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+			name:   "kiwipete position",
+			fen:    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
 			depths: []int{1, 2, 3, 4},
 			expected: []uint64{
 				48,      // depth 1
@@ -60,8 +60,8 @@ func TestPerft(t *testing.T) {
 			},
 		},
 		{
-			name: "position 5 (same as kiwipete but different move number)",
-			fen:  "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+			name:   "position 5 (same as kiwipete but different move number)",
+			fen:    "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
 			depths: []int{1, 2, 3},
 			expected: []uint64{
 				44,    // depth 1

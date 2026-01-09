@@ -45,6 +45,22 @@ _Once the foundational features are complete, we will move on to these high-valu
 
 ### Phase 3
 
+_Enhanced user interaction and visual experience._
+
+- [ ] **Mouse Interaction & UI/UX Enhancements**
+  - [ ] **Click-to-Select Pieces:** Allow users to click on a piece to select it for moving.
+  - [ ] **Click-to-Move:** Allow users to click on a destination square to complete a move.
+  - [ ] **Visual Feedback:** Highlight selected pieces and valid move destinations on hover/click.
+  - [ ] **Beautiful Board Themes:** Offer multiple color schemes and board styles (classic, modern, minimalist, etc.).
+  - [ ] **Smooth Animations:** Add subtle animations for piece movement and board transitions.
+  - [ ] **Enhanced Typography:** Improve text rendering with better fonts and spacing for readability.
+  - [ ] **Visual Polish:** Refine borders, shadows, and spacing to create a polished, professional appearance.
+  - [ ] **Accessibility Features:** Ensure color contrast ratios meet standards and add screen reader support.
+
+---
+
+### Phase 4
+
 _Make the application accessible to users via simple command-line installation._
 
 - [ ] **CLI Distribution**
@@ -55,7 +71,7 @@ _Make the application accessible to users via simple command-line installation._
 
 ---
 
-### Phase 4
+### Phase 5
 
 _Features planned for future consideration. Their priority and scope may be refined based on feedback from earlier phases._
 
@@ -68,14 +84,3 @@ _Features planned for future consideration. Their priority and scope may be refi
   - [ ] **UCI Protocol Support:** Implement the Universal Chess Interface protocol to communicate with external engines.
   - [ ] **External Engine Mode:** Allow users to play against any UCI-compatible engine (e.g., Stockfish, Komodo).
   - [ ] **Engine Configuration:** Let users specify engine path and basic settings (skill level, think time).
-
----
-
-### Phase 5
-
-_Enhanced user interaction capabilities._
-
-- [ ] **Mouse Interaction**
-  - [ ] **Click-to-Select Pieces:** Allow users to click on a piece to select it for moving.
-  - [ ] **Click-to-Move:** Allow users to click on a destination square to complete a move.
-  - [ ] **Visual Feedback:** Highlight selected pieces and valid move destinations on hover/click.

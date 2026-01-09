@@ -4,58 +4,58 @@
 
 **Goal:** User can launch the app, see a main menu, and exit gracefully.
 
-- [ ] Add Bubbletea dependencies (`bubbletea`, `lipgloss`, `bubbles`, `toml`) to `go.mod`
-- [ ] Create `internal/ui/` package directory structure
-- [ ] Create `internal/ui/model.go` with basic Model struct (screen state, menu options)
-- [ ] Create `internal/ui/view.go` with View function that renders main menu
-- [ ] Create `internal/ui/update.go` with Update function for keyboard navigation
-- [ ] Update `cmd/termchess/main.go` to initialize Bubbletea program with alternate screen
-- [ ] Test: Run app, navigate menu with arrow keys, quit with 'q' or Ctrl+C
+- [x] Add Bubbletea dependencies (`bubbletea`, `lipgloss`, `bubbles`, `toml`) to `go.mod`
+- [x] Create `internal/ui/` package directory structure
+- [x] Create `internal/ui/model.go` with basic Model struct (screen state, menu options)
+- [x] Create `internal/ui/view.go` with View function that renders main menu
+- [x] Create `internal/ui/update.go` with Update function for keyboard navigation
+- [x] Update `cmd/termchess/main.go` to initialize Bubbletea program with alternate screen
+- [x] Test: Run app, navigate menu with arrow keys, quit with 'q' or Ctrl+C
 
 ## Slice 2: Display Static Board in ASCII
 
 **Goal:** User can select "New Game" and see a chess board (no moves yet).
 
-- [ ] Create `internal/ui/config.go` with Config struct (UseUnicode, ShowCoords, UseColors, ShowMoveHistory)
-- [ ] Create `internal/ui/board.go` with BoardRenderer struct
-- [ ] Implement ASCII board rendering for starting position (with coordinates)
-- [ ] Add GamePlay screen state to model
-- [ ] Add screen transition: MainMenu → "New Game" → GamePlay screen
-- [ ] Update View to render board when in GamePlay screen
-- [ ] Test: Select "New Game", see ASCII board with pieces in starting position
+- [x] Create `internal/ui/config.go` with Config struct (UseUnicode, ShowCoords, UseColors, ShowMoveHistory)
+- [x] Create `internal/ui/board.go` with BoardRenderer struct
+- [x] Implement ASCII board rendering for starting position (with coordinates)
+- [x] Add GamePlay screen state to model
+- [x] Add screen transition: MainMenu → "New Game" → GamePlay screen
+- [x] Update View to render board when in GamePlay screen
+- [x] Test: Select "New Game", see ASCII board with pieces in starting position
 
 ## Slice 3: Add Turn Indicator and Basic Input Prompt
 
 **Goal:** User sees whose turn it is and a prompt for move input (input not yet functional).
 
-- [ ] Add turn indicator text to board display ("White to move" / "Black to move")
-- [ ] Add input prompt at bottom of screen ("Enter move: ")
-- [ ] Add input field state to model (text input, no SAN parsing yet)
-- [ ] Update View to show input prompt
-- [ ] Test: See turn indicator and input prompt (typing doesn't execute moves yet)
+- [x] Add turn indicator text to board display ("White to move" / "Black to move")
+- [x] Add input prompt at bottom of screen ("Enter move: ")
+- [x] Add input field state to model (text input, no SAN parsing yet)
+- [x] Update View to show input prompt
+- [x] Test: See turn indicator and input prompt (typing doesn't execute moves yet)
 
 ## Slice 4: Parse and Execute Simple Pawn Moves (Coordinate Notation)
 
 **Goal:** User can enter a pawn move in coordinate notation (`e2e4`) and see the board update.
 
-- [ ] Add board state (`*engine.Board`) to model, initialize with `engine.NewBoard()`
-- [ ] In Update function, handle Enter key to parse input as coordinate move
-- [ ] Use `engine.ParseMove()` to convert string to Move
-- [ ] Call `board.MakeMove()` to execute move
-- [ ] Update board display after move
-- [ ] Add error message display for invalid moves
-- [ ] Test: Enter `e2e4`, see pawn move on board; try invalid move, see error
+- [x] Add board state (`*engine.Board`) to model, initialize with `engine.NewBoard()`
+- [x] In Update function, handle Enter key to parse input as coordinate move
+- [x] Use `engine.ParseMove()` to convert string to Move
+- [x] Call `board.MakeMove()` to execute move
+- [x] Update board display after move
+- [x] Add error message display for invalid moves
+- [x] Test: Enter `e2e4`, see pawn move on board; try invalid move, see error
 
 ## Slice 5: Implement SAN Parser for Basic Pawn Moves
 
 **Goal:** User can enter pawn moves in SAN (`e4`) instead of coordinate notation.
 
-- [ ] Create `internal/ui/san.go` with `ParseSAN()` function skeleton
-- [ ] Implement SAN parsing for simple pawn moves (e.g., `e4`, `d5`)
-- [ ] Handle pawn captures with file disambiguation (e.g., `exd5`)
-- [ ] Update input handler to try SAN parsing first, fall back to coordinate notation
-- [ ] Add unit tests in `internal/ui/san_test.go` for pawn move parsing
-- [ ] Test: Enter `e4`, see pawn move; enter `e2e4`, also works
+- [x] Create `internal/ui/san.go` with `ParseSAN()` function skeleton
+- [x] Implement SAN parsing for simple pawn moves (e.g., `e4`, `d5`)
+- [x] Handle pawn captures with file disambiguation (e.g., `exd5`)
+- [x] Update input handler to try SAN parsing first, fall back to coordinate notation
+- [x] Add unit tests in `internal/ui/san_test.go` for pawn move parsing
+- [x] Test: Enter `e4`, see pawn move; enter `e2e4`, also works
 
 ## Slice 6: Extend SAN Parser for Piece Moves (No Disambiguation)
 

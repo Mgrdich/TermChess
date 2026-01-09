@@ -3,26 +3,28 @@ package main
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/Mgrdich/TermChess/internal/engine"
+	"github.com/Mgrdich/TermChess/internal/ui"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	board := engine.NewBoard()
+	// Initialize the Bubbletea model
+	model := ui.NewModel()
 
-	fmt.Println("TermChess - Terminal Chess Game")
-	fmt.Println("================================")
-	fmt.Println()
-	fmt.Println(board.String())
-	fmt.Println()
-	fmt.Printf("Active color: %s\n", colorName(board.ActiveColor))
-	fmt.Printf("Full move number: %d\n", board.FullMoveNum)
-	fmt.Println("Ready to play!")
-}
+	// Create the Bubbletea program with options:
+	// - WithAltScreen: Use alternate screen buffer for clean TUI experience
+	// - WithMouseCellMotion: Enable mouse support for future interactions
+	p := tea.NewProgram(
+		model,
+		tea.WithAltScreen(),       // Use alternate screen buffer
+		tea.WithMouseCellMotion(), // Future: mouse support
+	)
 
-func colorName(c engine.Color) string {
-	if c == engine.White {
-		return "White"
+	// Run the program
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
 	}
-	return "Black"
 }

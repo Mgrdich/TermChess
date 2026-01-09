@@ -1078,8 +1078,8 @@ func TestEnPassantSquare(t *testing.T) {
 	t.Run("white pawn double push sets correct en passant for all files", func(t *testing.T) {
 		for file := 0; file < 8; file++ {
 			board := NewBoard()
-			from := NewSquare(file, 1) // rank 2
-			to := NewSquare(file, 3)   // rank 4
+			from := NewSquare(file, 1)       // rank 2
+			to := NewSquare(file, 3)         // rank 4
 			expectedEP := NewSquare(file, 2) // rank 3
 
 			move := Move{From: from, To: to}
@@ -1096,8 +1096,8 @@ func TestEnPassantSquare(t *testing.T) {
 		for file := 0; file < 8; file++ {
 			board := NewBoard()
 			board.ActiveColor = Black
-			from := NewSquare(file, 6) // rank 7
-			to := NewSquare(file, 4)   // rank 5
+			from := NewSquare(file, 6)       // rank 7
+			to := NewSquare(file, 4)         // rank 5
 			expectedEP := NewSquare(file, 5) // rank 6
 
 			move := Move{From: from, To: to}
@@ -1806,8 +1806,8 @@ func TestEnPassantCaptureExecution(t *testing.T) {
 		// Black pawns can only en passant from rank 4
 		// Setup black pawn on wrong rank (d5 instead of d4)
 		board = &Board{ActiveColor: Black}
-		d5 = NewSquare(3, 4) // d5 (rank 5, not rank 4)
-		e4 = NewSquare(4, 3) // e4
+		d5 = NewSquare(3, 4)  // d5 (rank 5, not rank 4)
+		e4 = NewSquare(4, 3)  // e4
 		e3 := NewSquare(4, 2) // e3
 
 		board.Squares[d5] = NewPiece(Black, Pawn)
