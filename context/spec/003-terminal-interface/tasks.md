@@ -106,11 +106,11 @@
 
 **Goal:** White and black pieces are distinguished by color (if terminal supports it).
 
-- [ ] Use `lipgloss` to add color styles to piece symbols
-- [ ] White pieces: one color (e.g., white/bright)
-- [ ] Black pieces: another color (e.g., gray/dim)
-- [ ] Respect `config.UseColors` flag
-- [ ] Test: See colored pieces on board
+- [x] Use `lipgloss` to add color styles to piece symbols
+- [x] White pieces: one color (e.g., white/bright)
+- [x] Black pieces: another color (e.g., gray/dim)
+- [x] Respect `config.UseColors` flag
+- [x] Test: See colored pieces on board
 
 ## Slice 11: Add Game Type Selection Screen (PvP Only)
 

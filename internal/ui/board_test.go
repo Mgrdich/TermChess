@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
 
 func TestBoardRenderer_ASCII(t *testing.T) {
@@ -209,5 +211,208 @@ func TestBoardRenderer_ASCII_NoUnicodeSymbols(t *testing.T) {
 
 	if !strings.Contains(result, "R N B Q K B N R") {
 		t.Errorf("Expected to find ASCII white back rank pieces, got:\n%s", result)
+	}
+}
+
+// TestColorSymbol_WhitePiece tests that white pieces get colored when UseColors is true
+func TestColorSymbol_WhitePiece(t *testing.T) {
+	// Force color output in tests
+	lipgloss.SetColorProfile(termenv.ANSI256)
+
+	config := Config{
+		UseUnicode: false,
+		UseColors:  true,
+	}
+	renderer := NewBoardRenderer(config)
+
+	// Test white pawn gets colored
+	whitePawn := engine.NewPiece(engine.White, engine.Pawn)
+	result := renderer.pieceSymbol(whitePawn)
+
+	// Result should contain ANSI color codes
+	if !strings.Contains(result, "\x1b[") {
+		t.Errorf("Expected colored output to contain ANSI escape codes, got: %q", result)
+	}
+
+	// Should contain the piece symbol
+	if !strings.Contains(result, "P") {
+		t.Errorf("Expected to find 'P' in colored output, got: %s", result)
+	}
+}
+
+// TestColorSymbol_BlackPiece tests that black pieces get colored when UseColors is true
+func TestColorSymbol_BlackPiece(t *testing.T) {
+	// Force color output in tests
+	lipgloss.SetColorProfile(termenv.ANSI256)
+
+	config := Config{
+		UseUnicode: false,
+		UseColors:  true,
+	}
+	renderer := NewBoardRenderer(config)
+
+	// Test black pawn gets colored
+	blackPawn := engine.NewPiece(engine.Black, engine.Pawn)
+	result := renderer.pieceSymbol(blackPawn)
+
+	// Result should contain ANSI color codes
+	if !strings.Contains(result, "\x1b[") {
+		t.Errorf("Expected colored output to contain ANSI escape codes, got: %q", result)
+	}
+
+	// Should contain the piece symbol
+	if !strings.Contains(result, "p") {
+		t.Errorf("Expected to find 'p' in colored output, got: %s", result)
+	}
+}
+
+// TestColorSymbol_DifferentColors tests that white and black pieces have different colors
+func TestColorSymbol_DifferentColors(t *testing.T) {
+	// Force color output in tests
+	lipgloss.SetColorProfile(termenv.ANSI256)
+
+	config := Config{
+		UseUnicode: false,
+		UseColors:  true,
+	}
+	renderer := NewBoardRenderer(config)
+
+	whitePawn := engine.NewPiece(engine.White, engine.Pawn)
+	blackPawn := engine.NewPiece(engine.Black, engine.Pawn)
+
+	whiteResult := renderer.pieceSymbol(whitePawn)
+	blackResult := renderer.pieceSymbol(blackPawn)
+
+	// White and black should have different ANSI escape sequences
+	if whiteResult == blackResult {
+		t.Error("White and black pieces should have different color codes")
+	}
+
+	// Both should contain ANSI color codes
+	if !strings.Contains(whiteResult, "\x1b[") || !strings.Contains(blackResult, "\x1b[") {
+		t.Errorf("Both white and black pieces should contain ANSI escape codes when UseColors is true. White: %q, Black: %q", whiteResult, blackResult)
+	}
+}
+
+// TestColorSymbol_Disabled tests that colors are not applied when UseColors is false
+func TestColorSymbol_Disabled(t *testing.T) {
+	config := Config{
+		UseUnicode: false,
+		UseColors:  false, // Colors disabled
+	}
+	renderer := NewBoardRenderer(config)
+
+	whitePawn := engine.NewPiece(engine.White, engine.Pawn)
+	result := renderer.pieceSymbol(whitePawn)
+
+	// Should not contain ANSI color codes when colors are disabled
+	if strings.Contains(result, "\x1b[") {
+		t.Error("Should not contain ANSI escape codes when UseColors is false")
+	}
+
+	// Should just be "P" for white pawn in ASCII mode
+	if result != "P" {
+		t.Errorf("Expected 'P', got '%s'", result)
+	}
+}
+
+// TestColorSymbol_EmptySquare tests that empty squares are never colored
+func TestColorSymbol_EmptySquare(t *testing.T) {
+	config := Config{
+		UseUnicode: false,
+		UseColors:  true,
+	}
+	renderer := NewBoardRenderer(config)
+
+	emptyPiece := engine.Piece(engine.Empty)
+	result := renderer.pieceSymbol(emptyPiece)
+
+	// Empty squares should not be colored even when UseColors is true
+	if strings.Contains(result, "\x1b[") {
+		t.Error("Empty squares should not be colored")
+	}
+
+	if result != "." {
+		t.Errorf("Expected '.', got '%s'", result)
+	}
+}
+
+// TestColorSymbol_Unicode tests that colors work with Unicode pieces
+func TestColorSymbol_Unicode(t *testing.T) {
+	// Force color output in tests
+	lipgloss.SetColorProfile(termenv.ANSI256)
+
+	config := Config{
+		UseUnicode: true,
+		UseColors:  true,
+	}
+	renderer := NewBoardRenderer(config)
+
+	whiteKing := engine.NewPiece(engine.White, engine.King)
+	blackKing := engine.NewPiece(engine.Black, engine.King)
+
+	whiteResult := renderer.pieceSymbol(whiteKing)
+	blackResult := renderer.pieceSymbol(blackKing)
+
+	// Both should contain ANSI color codes
+	if !strings.Contains(whiteResult, "\x1b[") {
+		t.Errorf("White Unicode piece should be colored, got: %q", whiteResult)
+	}
+
+	if !strings.Contains(blackResult, "\x1b[") {
+		t.Errorf("Black Unicode piece should be colored, got: %q", blackResult)
+	}
+
+	// Should contain Unicode symbols
+	if !strings.Contains(whiteResult, "♔") {
+		t.Errorf("Expected to find '♔' in colored output, got: %s", whiteResult)
+	}
+
+	if !strings.Contains(blackResult, "♚") {
+		t.Errorf("Expected to find '♚' in colored output, got: %s", blackResult)
+	}
+
+	// Colors should be different
+	if whiteResult == blackResult {
+		t.Error("White and black Unicode pieces should have different colors")
+	}
+}
+
+// TestColorSymbol_AllPieceTypes tests that all piece types can be colored
+func TestColorSymbol_AllPieceTypes(t *testing.T) {
+	// Force color output in tests
+	lipgloss.SetColorProfile(termenv.ANSI256)
+
+	config := Config{
+		UseUnicode: false,
+		UseColors:  true,
+	}
+	renderer := NewBoardRenderer(config)
+
+	pieceTypes := []engine.PieceType{
+		engine.Pawn, engine.Knight, engine.Bishop,
+		engine.Rook, engine.Queen, engine.King,
+	}
+
+	for _, pt := range pieceTypes {
+		whitePiece := engine.NewPiece(engine.White, pt)
+		blackPiece := engine.NewPiece(engine.Black, pt)
+
+		whiteResult := renderer.pieceSymbol(whitePiece)
+		blackResult := renderer.pieceSymbol(blackPiece)
+
+		// Both should contain ANSI color codes
+		if !strings.Contains(whiteResult, "\x1b[") {
+			t.Errorf("White %v should be colored, got: %q", pt, whiteResult)
+		}
+
+		if !strings.Contains(blackResult, "\x1b[") {
+			t.Errorf("Black %v should be colored, got: %q", pt, blackResult)
+		}
+
+		// Colors should be different
+		if whiteResult == blackResult {
+			t.Errorf("White and black %v should have different colors", pt)
+		}
 	}
 }

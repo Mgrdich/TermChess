@@ -172,16 +172,17 @@ func (r *BoardRenderer) unicodeSymbol(p engine.Piece) string {
 }
 
 // colorSymbol applies color styling to a piece symbol using lipgloss.
-// White pieces are rendered in bright/white color.
-// Black pieces are rendered in dim/gray color.
+// White pieces are rendered in bright/white color (terminal color 15).
+// Black pieces are rendered in dim/gray color (terminal color 8).
+// Using terminal color codes (0-15) provides better compatibility across different terminals.
 func (r *BoardRenderer) colorSymbol(symbol string, p engine.Piece) string {
 	if p.Color() == engine.White {
-		// White pieces: bright white
-		style := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Bold(true)
+		// White pieces: bright white (terminal color 15) with bold
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Bold(true)
 		return style.Render(symbol)
 	} else {
-		// Black pieces: dim gray
-		style := lipgloss.NewStyle().Foreground(lipgloss.Color("#808080"))
+		// Black pieces: gray (terminal color 8)
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 		return style.Render(symbol)
 	}
 }
