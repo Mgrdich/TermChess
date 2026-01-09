@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -112,28 +114,53 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 }
 
 // handleGamePlayKeys handles keyboard input for the GamePlay screen.
-// Supports text input for entering chess moves.
+// Supports text input for entering chess moves in coordinate notation (e.g., "e2e4").
 // Regular characters are appended to input, backspace deletes, and enter submits.
 func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Clear error messages when user starts typing
-	m.errorMsg = ""
-
 	switch msg.Type {
 	case tea.KeyBackspace:
 		// Remove the last character from input
 		if len(m.input) > 0 {
 			m.input = m.input[:len(m.input)-1]
 		}
+		// Clear error messages when user modifies input
+		m.errorMsg = ""
 
 	case tea.KeyEnter:
-		// For now, just clear input and show a status message
-		// Move parsing and execution will be implemented in Slice 4
+		// Parse and execute the move if input is not empty
 		if m.input != "" {
-			m.statusMsg = "Move execution not yet implemented"
+			// Try SAN parsing first
+			move, err := ParseSAN(m.board, m.input)
+			if err != nil {
+				// Fall back to coordinate notation
+				move, err = engine.ParseMove(m.input)
+				if err != nil {
+					// Show parsing error to user
+					m.errorMsg = fmt.Sprintf("Invalid move: %v", err)
+					return m, nil
+				}
+			}
+
+			// Try to make the move on the board
+			err = m.board.MakeMove(move)
+			if err != nil {
+				// Show move execution error to user
+				m.errorMsg = err.Error()
+				return m, nil
+			}
+
+			// Move was successful - clear input and error messages
 			m.input = ""
+			m.errorMsg = ""
+			m.statusMsg = ""
+
+			// Add move to history
+			m.moveHistory = append(m.moveHistory, move)
 		}
 
 	case tea.KeyRunes:
+		// Clear error messages when user starts typing a new move
+		m.errorMsg = ""
 		// Append the typed character(s) to the input
 		// Only allow alphanumeric characters and basic symbols
 		m.input += string(msg.Runes)

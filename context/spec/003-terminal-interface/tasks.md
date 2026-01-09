@@ -38,24 +38,24 @@
 
 **Goal:** User can enter a pawn move in coordinate notation (`e2e4`) and see the board update.
 
-- [ ] Add board state (`*engine.Board`) to model, initialize with `engine.NewBoard()`
-- [ ] In Update function, handle Enter key to parse input as coordinate move
-- [ ] Use `engine.ParseMove()` to convert string to Move
-- [ ] Call `board.MakeMove()` to execute move
-- [ ] Update board display after move
-- [ ] Add error message display for invalid moves
-- [ ] Test: Enter `e2e4`, see pawn move on board; try invalid move, see error
+- [x] Add board state (`*engine.Board`) to model, initialize with `engine.NewBoard()`
+- [x] In Update function, handle Enter key to parse input as coordinate move
+- [x] Use `engine.ParseMove()` to convert string to Move
+- [x] Call `board.MakeMove()` to execute move
+- [x] Update board display after move
+- [x] Add error message display for invalid moves
+- [x] Test: Enter `e2e4`, see pawn move on board; try invalid move, see error
 
 ## Slice 5: Implement SAN Parser for Basic Pawn Moves
 
 **Goal:** User can enter pawn moves in SAN (`e4`) instead of coordinate notation.
 
-- [ ] Create `internal/ui/san.go` with `ParseSAN()` function skeleton
-- [ ] Implement SAN parsing for simple pawn moves (e.g., `e4`, `d5`)
-- [ ] Handle pawn captures with file disambiguation (e.g., `exd5`)
-- [ ] Update input handler to try SAN parsing first, fall back to coordinate notation
-- [ ] Add unit tests in `internal/ui/san_test.go` for pawn move parsing
-- [ ] Test: Enter `e4`, see pawn move; enter `e2e4`, also works
+- [x] Create `internal/ui/san.go` with `ParseSAN()` function skeleton
+- [x] Implement SAN parsing for simple pawn moves (e.g., `e4`, `d5`)
+- [x] Handle pawn captures with file disambiguation (e.g., `exd5`)
+- [x] Update input handler to try SAN parsing first, fall back to coordinate notation
+- [x] Add unit tests in `internal/ui/san_test.go` for pawn move parsing
+- [x] Test: Enter `e4`, see pawn move; enter `e2e4`, also works
 
 ## Slice 6: Extend SAN Parser for Piece Moves (No Disambiguation)
 
