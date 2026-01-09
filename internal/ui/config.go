@@ -16,7 +16,7 @@ type Config struct {
 // and user-friendliness.
 func DefaultConfig() Config {
 	return Config{
-		UseUnicode:      false, // ASCII for maximum compatibility
+		UseUnicode:      false, // ASCII for maximum compatibility (change to true to test Unicode)
 		ShowCoords:      true,  // Show a-h, 1-8 labels
 		UseColors:       true,  // Use colors if terminal supports
 		ShowMoveHistory: false, // Hidden by default

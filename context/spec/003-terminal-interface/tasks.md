@@ -96,11 +96,11 @@
 
 **Goal:** User can see board with Unicode chess symbols (♔♕♖♗♘♙) instead of ASCII.
 
-- [ ] Add Unicode piece symbol mapping in `board.go`
-- [ ] Update BoardRenderer to use Unicode symbols when `config.UseUnicode = true`
-- [ ] Toggle config in code to test (settings screen comes later)
-- [ ] Add unit tests for Unicode rendering
-- [ ] Test: Switch config flag, see board with Unicode pieces
+- [x] Add Unicode piece symbol mapping in `board.go`
+- [x] Update BoardRenderer to use Unicode symbols when `config.UseUnicode = true`
+- [x] Toggle config in code to test (settings screen comes later)
+- [x] Add unit tests for Unicode rendering
+- [x] Test: Switch config flag, see board with Unicode pieces
 
 ## Slice 10: Add Color Support for Pieces
 

@@ -68,24 +68,20 @@ func (r *BoardRenderer) Render(b *engine.Board) string {
 
 // pieceSymbol returns the symbol to use for the given piece.
 // For ASCII mode, returns uppercase for white pieces, lowercase for black pieces.
-// For Unicode mode, returns Unicode chess symbols (implemented in Slice 9).
+// For Unicode mode, returns Unicode chess symbols.
 func (r *BoardRenderer) pieceSymbol(p engine.Piece) string {
-	if p.IsEmpty() {
-		return "."
-	}
-
 	var symbol string
 
 	if r.config.UseUnicode {
-		// Unicode symbols - to be implemented in Slice 9
+		// Unicode symbols
 		symbol = r.unicodeSymbol(p)
 	} else {
 		// ASCII symbols
 		symbol = r.asciiSymbol(p)
 	}
 
-	// Apply colors if enabled
-	if r.config.UseColors {
+	// Apply colors if enabled (but not for empty squares)
+	if r.config.UseColors && !p.IsEmpty() {
 		return r.colorSymbol(symbol, p)
 	}
 
@@ -126,11 +122,53 @@ func (r *BoardRenderer) asciiSymbol(p engine.Piece) string {
 }
 
 // unicodeSymbol returns the Unicode chess symbol for the given piece.
-// This will be implemented in Slice 9. For now, it falls back to ASCII.
+// Uses standard Unicode chess piece symbols (U+2654 through U+265F).
+// Empty squares are represented by a middle dot (·).
 func (r *BoardRenderer) unicodeSymbol(p engine.Piece) string {
-	// TODO: Implement Unicode symbols in Slice 9
-	// For now, fall back to ASCII
-	return r.asciiSymbol(p)
+	pieceType := p.Type()
+
+	if pieceType == engine.Empty {
+		return "·" // Middle dot for empty squares
+	}
+
+	color := p.Color()
+
+	// White pieces: U+2654 to U+2659
+	if color == engine.White {
+		switch pieceType {
+		case engine.King:
+			return "♔" // U+2654
+		case engine.Queen:
+			return "♕" // U+2655
+		case engine.Rook:
+			return "♖" // U+2656
+		case engine.Bishop:
+			return "♗" // U+2657
+		case engine.Knight:
+			return "♘" // U+2658
+		case engine.Pawn:
+			return "♙" // U+2659
+		}
+	} else {
+		// Black pieces: U+265A to U+265F
+		switch pieceType {
+		case engine.King:
+			return "♚" // U+265A
+		case engine.Queen:
+			return "♛" // U+265B
+		case engine.Rook:
+			return "♜" // U+265C
+		case engine.Bishop:
+			return "♝" // U+265D
+		case engine.Knight:
+			return "♞" // U+265E
+		case engine.Pawn:
+			return "♟" // U+265F
+		}
+	}
+
+	// Fallback for unknown pieces
+	return "?"
 }
 
 // colorSymbol applies color styling to a piece symbol using lipgloss.
