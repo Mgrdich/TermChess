@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -66,7 +67,7 @@ func (m Model) View() string {
 	case ScreenGamePlay:
 		return m.renderGamePlay()
 	case ScreenGameOver:
-		return "Game Over - Coming Soon"
+		return m.renderGameOver()
 	case ScreenSettings:
 		return "Settings - Coming Soon"
 	default:
@@ -178,6 +179,80 @@ func (m Model) renderGamePlay() string {
 		statusText := statusStyle.Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
+
+	return b.String()
+}
+
+// getGameResultMessage returns a human-readable message describing the game result.
+// It analyzes the game status and winner to generate an appropriate message.
+func getGameResultMessage(board *engine.Board) string {
+	status := board.Status()
+
+	switch status {
+	case engine.Checkmate:
+		winner, _ := board.Winner()
+		if winner == engine.White {
+			return "Checkmate! White wins"
+		}
+		return "Checkmate! Black wins"
+
+	case engine.Stalemate:
+		return "Stalemate - Draw"
+
+	case engine.DrawThreefoldRepetition, engine.DrawFivefoldRepetition:
+		return "Draw by repetition"
+
+	case engine.DrawFiftyMoveRule, engine.DrawSeventyFiveMoveRule:
+		return "Draw by fifty-move rule"
+
+	case engine.DrawInsufficientMaterial:
+		return "Draw by insufficient material"
+
+	default:
+		return "Game Over"
+	}
+}
+
+// renderGameOver renders the GameOver screen showing the game result,
+// final board position, move count, and options to continue.
+func (m Model) renderGameOver() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render game result message
+	resultMsg := getGameResultMessage(m.board)
+	resultStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFD700")).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+	b.WriteString(resultStyle.Render(resultMsg))
+	b.WriteString("\n\n")
+
+	// Render the final board position
+	renderer := NewBoardRenderer(m.config)
+	boardStr := renderer.Render(m.board)
+	b.WriteString(boardStr)
+
+	// Render move count
+	b.WriteString("\n\n")
+	moveCountMsg := fmt.Sprintf("Game ended after %d moves", m.board.FullMoveNum)
+	moveCountStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFDF5")).
+		Align(lipgloss.Center)
+	b.WriteString(moveCountStyle.Render(moveCountMsg))
+
+	// Render options
+	b.WriteString("\n\n")
+	optionsText := "Press 'n' for New Game  |  Press 'm' for Main Menu  |  Press 'q' to Quit"
+	optionsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Align(lipgloss.Center)
+	b.WriteString(optionsStyle.Render(optionsText))
 
 	return b.String()
 }

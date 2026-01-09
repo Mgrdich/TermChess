@@ -83,14 +83,14 @@
 
 **Goal:** When game ends, user sees game over screen with result and move count.
 
-- [ ] Add GameOver screen state to model
-- [ ] After each move, check `board.Status()` for game end conditions
-- [ ] If game over, transition to GameOver screen
-- [ ] Display result message ("Checkmate! White wins", "Stalemate - Draw")
-- [ ] Display final board position
-- [ ] Display move count
-- [ ] Add option to return to main menu or start new game
-- [ ] Test: Play Scholar's Mate, see game over screen
+- [x] Add GameOver screen state to model
+- [x] After each move, check `board.Status()` for game end conditions
+- [x] If game over, transition to GameOver screen
+- [x] Display result message ("Checkmate! White wins", "Stalemate - Draw")
+- [x] Display final board position
+- [x] Display move count
+- [x] Add option to return to main menu or start new game
+- [x] Test: Play Scholar's Mate, see game over screen
 
 ## Slice 9: Add Unicode Board Rendering Option
 
