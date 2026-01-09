@@ -464,16 +464,6 @@ func TestParseSAN_InvalidPawnMoves(t *testing.T) {
 			san:  "+",
 		},
 		{
-			name: "piece move - not supported",
-			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-			san:  "Nf3",
-		},
-		{
-			name: "castling - not supported",
-			fen:  "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1",
-			san:  "O-O",
-		},
-		{
 			name: "invalid square format - too long",
 			fen:  "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 			san:  "e44",
@@ -543,5 +533,578 @@ func TestParseSAN_WrongTurn(t *testing.T) {
 				t.Error("expected error for wrong turn, got nil")
 			}
 		})
+	}
+}
+
+// TestParseSAN_KnightMoves tests parsing of knight moves.
+func TestParseSAN_KnightMoves(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name:     "white Nf3 from start",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Nf3",
+			wantMove: "g1f3",
+			wantErr:  false,
+		},
+		{
+			name:     "white Nc3 from start",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Nc3",
+			wantMove: "b1c3",
+			wantErr:  false,
+		},
+		{
+			name:     "white Nh3 from start",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Nh3",
+			wantMove: "g1h3",
+			wantErr:  false,
+		},
+		{
+			name:     "white Na3 from start",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Na3",
+			wantMove: "b1a3",
+			wantErr:  false,
+		},
+		{
+			name:     "black Nf6 after e4",
+			fen:      "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+			san:      "Nf6",
+			wantMove: "g8f6",
+			wantErr:  false,
+		},
+		{
+			name:     "black Nc6 after e4",
+			fen:      "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+			san:      "Nc6",
+			wantMove: "b8c6",
+			wantErr:  false,
+		},
+		{
+			name:     "knight move with check symbol stripped",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Nf3+",
+			wantMove: "g1f3",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid knight move - square blocked",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Ne2",
+			wantMove: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_BishopMoves tests parsing of bishop moves.
+func TestParseSAN_BishopMoves(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name:     "white Bc4 after e4",
+			fen:      "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e3 0 1",
+			san:      "Bc4",
+			wantMove: "f1c4",
+			wantErr:  false,
+		},
+		{
+			name:     "white Bb5 after e4 Nc6 Nf3",
+			fen:      "r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3",
+			san:      "Bb5",
+			wantMove: "f1b5",
+			wantErr:  false,
+		},
+		{
+			name:     "white Be2 after e4",
+			fen:      "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e3 0 1",
+			san:      "Be2",
+			wantMove: "f1e2",
+			wantErr:  false,
+		},
+		{
+			name:     "black Bc5 after e4 e5 Nf3",
+			fen:      "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 2",
+			san:      "Bc5",
+			wantMove: "f8c5",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid bishop move - blocked by pawn",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Bc4",
+			wantMove: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_RookMoves tests parsing of rook moves.
+func TestParseSAN_RookMoves(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name:     "white Ra3 - rook moves from a1",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/1PPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Ra3",
+			wantMove: "a1a3",
+			wantErr:  false,
+		},
+		{
+			name:     "white Rh3 - rook moves from h1",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP1/RNBQKBNR w KQkq - 0 1",
+			san:      "Rh3",
+			wantMove: "h1h3",
+			wantErr:  false,
+		},
+		{
+			name:     "white Re1 - rook in center",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/4R3/PPPP1PPP/RNBQ1KN1 w kq - 0 1",
+			san:      "Re1",
+			wantMove: "e3e1",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid rook move - blocked",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Ra5",
+			wantMove: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_QueenMoves tests parsing of queen moves.
+func TestParseSAN_QueenMoves(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name:     "white Qh5 - scholar's mate setup",
+			fen:      "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+			san:      "Qh5",
+			wantMove: "d1h5",
+			wantErr:  false,
+		},
+		{
+			name:     "white Qf3 - queen to f3",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Qf3",
+			wantMove: "d1f3",
+			wantErr:  false,
+		},
+		{
+			name:     "black Qh4 - attacking move",
+			fen:      "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 2",
+			san:      "Qh4",
+			wantMove: "d8h4",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid queen move - blocked",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Qh5",
+			wantMove: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_KingMoves tests parsing of king moves.
+func TestParseSAN_KingMoves(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name:     "white Ke2 - king forward",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Ke2",
+			wantMove: "e1e2",
+			wantErr:  false,
+		},
+		{
+			name:     "white Kf1 - king to f1",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK1NR w KQkq - 0 1",
+			san:      "Kf1",
+			wantMove: "e1f1",
+			wantErr:  false,
+		},
+		{
+			name:     "black Ke7 - king forward",
+			fen:      "rnbqkbnr/pppp1ppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1",
+			san:      "Ke7",
+			wantMove: "e8e7",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid king move - too far",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "Ke3",
+			wantMove: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_PieceCaptures tests parsing of piece captures.
+func TestParseSAN_PieceCaptures(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name:     "white Nxe5 - knight captures",
+			fen:      "rnbqkbnr/pppp1ppp/8/4p3/8/5N2/PPPPPPPP/RNBQKB1R w KQkq e6 0 2",
+			san:      "Nxe5",
+			wantMove: "f3e5",
+			wantErr:  false,
+		},
+		{
+			name:     "white Bxf7 - bishop captures (check)",
+			fen:      "rnbqkbnr/pppp1ppp/8/4p3/2B1P3/8/PPPP1PPP/RNBQK1NR w KQkq - 0 3",
+			san:      "Bxf7+",
+			wantMove: "c4f7",
+			wantErr:  false,
+		},
+		{
+			name:     "black Nxe4 - knight captures",
+			fen:      "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 3",
+			san:      "Nxe4",
+			wantMove: "f6e4",
+			wantErr:  false,
+		},
+		{
+			name:     "white Rxe5 - rook captures",
+			fen:      "rnbqkbnr/pppp1ppp/8/4p3/8/4R3/PPPP1PPP/RNBQKBN1 w Qkq - 0 2",
+			san:      "Rxe5",
+			wantMove: "e3e5",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_Castling tests parsing of castling moves.
+func TestParseSAN_Castling(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name:     "white O-O kingside castling",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R w KQkq - 0 1",
+			san:      "O-O",
+			wantMove: "e1g1",
+			wantErr:  false,
+		},
+		{
+			name:     "white O-O-O queenside castling",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3KBNR w KQkq - 0 1",
+			san:      "O-O-O",
+			wantMove: "e1c1",
+			wantErr:  false,
+		},
+		{
+			name:     "black O-O kingside castling",
+			fen:      "rnbqk2r/pppppppp/5n2/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 0 1",
+			san:      "O-O",
+			wantMove: "e8g8",
+			wantErr:  false,
+		},
+		{
+			name:     "black O-O-O queenside castling",
+			fen:      "r3kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1",
+			san:      "O-O-O",
+			wantMove: "e8c8",
+			wantErr:  false,
+		},
+		{
+			name:     "white 0-0 with zeros",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R w KQkq - 0 1",
+			san:      "0-0",
+			wantMove: "e1g1",
+			wantErr:  false,
+		},
+		{
+			name:     "white 0-0-0 with zeros",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3KBNR w KQkq - 0 1",
+			san:      "0-0-0",
+			wantMove: "e1c1",
+			wantErr:  false,
+		},
+		{
+			name:     "castling with check symbol",
+			fen:      "rnbqk2r/pppp1ppp/5n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+			san:      "O-O+",
+			wantMove: "e1g1",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid castling - pieces in way",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+			san:      "O-O",
+			wantMove: "",
+			wantErr:  true,
+		},
+		{
+			name:     "invalid castling - no rights",
+			fen:      "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R w kq - 0 1",
+			san:      "O-O",
+			wantMove: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_FullGameSequence tests a sequence of moves for a real game.
+func TestParseSAN_FullGameSequence(t *testing.T) {
+	board := engine.NewBoard()
+
+	// Test: 1. e4 e5 2. Nf3 Nc6 3. Bc4
+	moves := []struct {
+		san      string
+		wantMove string
+	}{
+		{"e4", "e2e4"},
+		{"e5", "e7e5"},
+		{"Nf3", "g1f3"},
+		{"Nc6", "b8c6"},
+		{"Bc4", "f1c4"},
+	}
+
+	for i, m := range moves {
+		move, err := ParseSAN(board, m.san)
+		if err != nil {
+			t.Fatalf("move %d (%s) failed: %v", i+1, m.san, err)
+		}
+
+		if move.String() != m.wantMove {
+			t.Errorf("move %d: expected %s, got %s", i+1, m.wantMove, move.String())
+		}
+
+		// Apply the move to the board
+		err = board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("failed to apply move %d (%s): %v", i+1, m.san, err)
+		}
 	}
 }

@@ -61,12 +61,12 @@
 
 **Goal:** User can move knights, bishops, rooks, queens, kings using SAN (e.g., `Nf3`, `Bc4`).
 
-- [ ] Extend `ParseSAN()` to handle piece moves (`Nf3`, `Bc4`, `Qh5`, `Kf1`)
-- [ ] Handle captures (`Bxc5`, `Nxe5`)
-- [ ] Handle castling (`O-O`, `O-O-O`)
-- [ ] Handle check/checkmate symbols by stripping them (`+`, `#`)
-- [ ] Add unit tests for piece moves, captures, castling
-- [ ] Test: Play `1. e4 e5 2. Nf3 Nc6 3. Bc4` - all moves work
+- [x] Extend `ParseSAN()` to handle piece moves (`Nf3`, `Bc4`, `Qh5`, `Kf1`)
+- [x] Handle captures (`Bxc5`, `Nxe5`)
+- [x] Handle castling (`O-O`, `O-O-O`)
+- [x] Handle check/checkmate symbols by stripping them (`+`, `#`)
+- [x] Add unit tests for piece moves, captures, castling
+- [x] Test: Play `1. e4 e5 2. Nf3 Nc6 3. Bc4` - all moves work
 
 ## Slice 7: Handle SAN Disambiguation and Pawn Promotion
 
