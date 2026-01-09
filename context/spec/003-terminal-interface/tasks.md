@@ -28,11 +28,11 @@
 
 **Goal:** User sees whose turn it is and a prompt for move input (input not yet functional).
 
-- [ ] Add turn indicator text to board display ("White to move" / "Black to move")
-- [ ] Add input prompt at bottom of screen ("Enter move: ")
-- [ ] Add input field state to model (text input, no SAN parsing yet)
-- [ ] Update View to show input prompt
-- [ ] Test: See turn indicator and input prompt (typing doesn't execute moves yet)
+- [x] Add turn indicator text to board display ("White to move" / "Black to move")
+- [x] Add input prompt at bottom of screen ("Enter move: ")
+- [x] Add input field state to model (text input, no SAN parsing yet)
+- [x] Update View to show input prompt
+- [x] Test: See turn indicator and input prompt (typing doesn't execute moves yet)
 
 ## Slice 4: Parse and Execute Simple Pawn Moves (Coordinate Notation)
 

@@ -124,8 +124,7 @@ func (m Model) renderMainMenu() string {
 }
 
 // renderGamePlay renders the GamePlay screen showing the chess board.
-// For Slice 2, this displays just the board. Turn indicators and move history
-// will be added in later slices.
+// Displays the title, board, turn indicator, input prompt, help text, and messages.
 func (m Model) renderGamePlay() string {
 	var b strings.Builder
 
@@ -138,6 +137,28 @@ func (m Model) renderGamePlay() string {
 	renderer := NewBoardRenderer(m.config)
 	boardStr := renderer.Render(m.board)
 	b.WriteString(boardStr)
+
+	// Render turn indicator
+	b.WriteString("\n\n")
+	turnText := "White to move"
+	if m.board.ActiveColor == 1 { // Black
+		turnText = "Black to move"
+	}
+	turnIndicator := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#7D56F4")).
+		Render(turnText)
+	b.WriteString(turnIndicator)
+
+	// Render input prompt
+	b.WriteString("\n\n")
+	inputPrompt := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFDF5")).
+		Render("Enter move: ")
+	inputText := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Render(m.input)
+	b.WriteString(inputPrompt + inputText)
 
 	// Add help text
 	b.WriteString("\n\n")

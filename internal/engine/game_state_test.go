@@ -177,7 +177,6 @@ func TestCheckmatePositions(t *testing.T) {
 		}
 	})
 
-
 	// Two Rooks Mate (Ladder Mate)
 	t.Run("Two Rooks Mate", func(t *testing.T) {
 		board := NewBoard()
@@ -319,7 +318,6 @@ func TestStalematePositions(t *testing.T) {
 		}
 	})
 
-
 	// Famous stalemate position: Philidor's position variant
 	t.Run("Queen vs King stalemate", func(t *testing.T) {
 		board := NewBoard()
@@ -340,7 +338,6 @@ func TestStalematePositions(t *testing.T) {
 			t.Errorf("Queen vs King stalemate: expected Stalemate, got %v", status)
 		}
 	})
-
 
 	// Edge case: King trapped by Rooks
 	t.Run("King trapped by rooks stalemate", func(t *testing.T) {
@@ -592,7 +589,7 @@ func TestStatusEdgeCases(t *testing.T) {
 			squareFromNotation("a1"): NewPiece(White, King),
 			squareFromNotation("h7"): NewPiece(White, Rook), // Delivers check
 			squareFromNotation("h8"): NewPiece(Black, King),
-			squareFromNotation("g7"): NewPiece(Black, Pawn), // Blocks g7
+			squareFromNotation("g7"): NewPiece(Black, Pawn),   // Blocks g7
 			squareFromNotation("f6"): NewPiece(Black, Knight), // Can capture rook on h7
 		}
 		setupPosition(board, pieces, Black)

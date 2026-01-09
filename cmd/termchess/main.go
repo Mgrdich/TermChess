@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/Mgrdich/TermChess/internal/ui"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {

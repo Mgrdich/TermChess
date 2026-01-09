@@ -38,6 +38,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.screen {
 	case ScreenMainMenu:
 		return m.handleMainMenuKeys(msg)
+	case ScreenGamePlay:
+		return m.handleGamePlayKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -96,12 +98,45 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		// Clear any previous status messages
 		m.statusMsg = ""
 		m.errorMsg = ""
+		// Clear any previous input
+		m.input = ""
 
 	case "Load Game":
 		m.statusMsg = "Load Game selected (not yet implemented)"
 
 	case "Settings":
 		m.statusMsg = "Settings selected (not yet implemented)"
+	}
+
+	return m, nil
+}
+
+// handleGamePlayKeys handles keyboard input for the GamePlay screen.
+// Supports text input for entering chess moves.
+// Regular characters are appended to input, backspace deletes, and enter submits.
+func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Clear error messages when user starts typing
+	m.errorMsg = ""
+
+	switch msg.Type {
+	case tea.KeyBackspace:
+		// Remove the last character from input
+		if len(m.input) > 0 {
+			m.input = m.input[:len(m.input)-1]
+		}
+
+	case tea.KeyEnter:
+		// For now, just clear input and show a status message
+		// Move parsing and execution will be implemented in Slice 4
+		if m.input != "" {
+			m.statusMsg = "Move execution not yet implemented"
+			m.input = ""
+		}
+
+	case tea.KeyRunes:
+		// Append the typed character(s) to the input
+		// Only allow alphanumeric characters and basic symbols
+		m.input += string(msg.Runes)
 	}
 
 	return m, nil

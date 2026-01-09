@@ -454,19 +454,19 @@ func TestPieceZobristIndex(t *testing.T) {
 		piece    Piece
 		expected int
 	}{
-		{Piece(Empty), -1},                     // Empty square
-		{NewPiece(White, Pawn), 0},             // White Pawn
-		{NewPiece(White, Knight), 1},           // White Knight
-		{NewPiece(White, Bishop), 2},           // White Bishop
-		{NewPiece(White, Rook), 3},             // White Rook
-		{NewPiece(White, Queen), 4},            // White Queen
-		{NewPiece(White, King), 5},             // White King
-		{NewPiece(Black, Pawn), 6},             // Black Pawn
-		{NewPiece(Black, Knight), 7},           // Black Knight
-		{NewPiece(Black, Bishop), 8},           // Black Bishop
-		{NewPiece(Black, Rook), 9},             // Black Rook
-		{NewPiece(Black, Queen), 10},           // Black Queen
-		{NewPiece(Black, King), 11},            // Black King
+		{Piece(Empty), -1},           // Empty square
+		{NewPiece(White, Pawn), 0},   // White Pawn
+		{NewPiece(White, Knight), 1}, // White Knight
+		{NewPiece(White, Bishop), 2}, // White Bishop
+		{NewPiece(White, Rook), 3},   // White Rook
+		{NewPiece(White, Queen), 4},  // White Queen
+		{NewPiece(White, King), 5},   // White King
+		{NewPiece(Black, Pawn), 6},   // Black Pawn
+		{NewPiece(Black, Knight), 7}, // Black Knight
+		{NewPiece(Black, Bishop), 8}, // Black Bishop
+		{NewPiece(Black, Rook), 9},   // Black Rook
+		{NewPiece(Black, Queen), 10}, // Black Queen
+		{NewPiece(Black, King), 11},  // Black King
 	}
 
 	for _, tc := range testCases {

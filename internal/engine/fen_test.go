@@ -805,9 +805,9 @@ func TestParseFENValidation(t *testing.T) {
 			errContains: "invalid piece character",
 		},
 		{
-			name:        "invalid - invalid piece character (lowercase w in active color position)",
-			fen:         "rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
-			wantErr:     false, // This is valid
+			name:    "invalid - invalid piece character (lowercase w in active color position)",
+			fen:     "rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1",
+			wantErr: false, // This is valid
 		},
 		{
 			name:        "invalid - digit 9 in piece placement",
