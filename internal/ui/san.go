@@ -12,7 +12,8 @@ import (
 // Supports:
 // - Pawn moves: "e4", "d5", "exd5", "e8=Q"
 // - Piece moves: "Nf3", "Bc4", "Qh5", "Kf1"
-// - Captures: "Bxc5", "Nxe5"
+// - Disambiguation: "Nbd2" (file), "N1f3" (rank), "Nb1d2" (both)
+// - Captures: "Bxc5", "Nxe5", "Nbxd4" (with disambiguation)
 // - Castling: "O-O", "O-O-O"
 func ParseSAN(b *engine.Board, san string) (engine.Move, error) {
 	if san == "" {

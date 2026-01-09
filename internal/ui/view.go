@@ -202,8 +202,11 @@ func getGameResultMessage(board *engine.Board) string {
 	case engine.DrawThreefoldRepetition, engine.DrawFivefoldRepetition:
 		return "Draw by repetition"
 
-	case engine.DrawFiftyMoveRule, engine.DrawSeventyFiveMoveRule:
+	case engine.DrawFiftyMoveRule:
 		return "Draw by fifty-move rule"
+
+	case engine.DrawSeventyFiveMoveRule:
+		return "Draw by seventy-five-move rule"
 
 	case engine.DrawInsufficientMaterial:
 		return "Draw by insufficient material"
