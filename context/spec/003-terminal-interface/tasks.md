@@ -6,23 +6,23 @@
 
 - [x] Add Bubbletea dependencies (`bubbletea`, `lipgloss`, `bubbles`, `toml`) to `go.mod`
 - [x] Create `internal/ui/` package directory structure
-- [ ] Create `internal/ui/model.go` with basic Model struct (screen state, menu options)
-- [ ] Create `internal/ui/view.go` with View function that renders main menu
-- [ ] Create `internal/ui/update.go` with Update function for keyboard navigation
-- [ ] Update `cmd/termchess/main.go` to initialize Bubbletea program with alternate screen
-- [ ] Test: Run app, navigate menu with arrow keys, quit with 'q' or Ctrl+C
+- [x] Create `internal/ui/model.go` with basic Model struct (screen state, menu options)
+- [x] Create `internal/ui/view.go` with View function that renders main menu
+- [x] Create `internal/ui/update.go` with Update function for keyboard navigation
+- [x] Update `cmd/termchess/main.go` to initialize Bubbletea program with alternate screen
+- [x] Test: Run app, navigate menu with arrow keys, quit with 'q' or Ctrl+C
 
 ## Slice 2: Display Static Board in ASCII
 
 **Goal:** User can select "New Game" and see a chess board (no moves yet).
 
-- [ ] Create `internal/ui/config.go` with Config struct (UseUnicode, ShowCoords, UseColors, ShowMoveHistory)
-- [ ] Create `internal/ui/board.go` with BoardRenderer struct
-- [ ] Implement ASCII board rendering for starting position (with coordinates)
-- [ ] Add GamePlay screen state to model
-- [ ] Add screen transition: MainMenu → "New Game" → GamePlay screen
-- [ ] Update View to render board when in GamePlay screen
-- [ ] Test: Select "New Game", see ASCII board with pieces in starting position
+- [x] Create `internal/ui/config.go` with Config struct (UseUnicode, ShowCoords, UseColors, ShowMoveHistory)
+- [x] Create `internal/ui/board.go` with BoardRenderer struct
+- [x] Implement ASCII board rendering for starting position (with coordinates)
+- [x] Add GamePlay screen state to model
+- [x] Add screen transition: MainMenu → "New Game" → GamePlay screen
+- [x] Update View to render board when in GamePlay screen
+- [x] Test: Select "New Game", see ASCII board with pieces in starting position
 
 ## Slice 3: Add Turn Indicator and Basic Input Prompt
 
