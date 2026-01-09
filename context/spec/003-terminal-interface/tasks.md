@@ -72,12 +72,12 @@
 
 **Goal:** User can enter disambiguated moves (`Nbd2`, `N1f3`) and pawn promotions (`e8=Q`).
 
-- [ ] Extend `ParseSAN()` to handle file disambiguation (`Nbd2`, `Rfe1`)
-- [ ] Handle rank disambiguation (`N1d2`, `R1a3`)
-- [ ] Handle both file+rank disambiguation (`Nb1d2`)
-- [ ] Handle pawn promotion (`e8=Q`, `a1=N`, `h8=R`)
-- [ ] Add unit tests for all disambiguation cases and promotions
-- [ ] Test: Play game with disambiguation; promote a pawn to queen
+- [x] Extend `ParseSAN()` to handle file disambiguation (`Nbd2`, `Rfe1`)
+- [x] Handle rank disambiguation (`N1d2`, `R1a3`)
+- [x] Handle both file+rank disambiguation (`Nb1d2`)
+- [x] Handle pawn promotion (`e8=Q`, `a1=N`, `h8=R`)
+- [x] Add unit tests for all disambiguation cases and promotions
+- [x] Test: Play game with disambiguation; promote a pawn to queen
 
 ## Slice 8: Detect and Display Game Over (Checkmate/Stalemate)
 

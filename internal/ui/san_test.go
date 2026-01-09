@@ -1108,3 +1108,405 @@ func TestParseSAN_FullGameSequence(t *testing.T) {
 		}
 	}
 }
+
+// TestParseSAN_FileDisambiguation tests parsing of moves with file disambiguation.
+func TestParseSAN_FileDisambiguation(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name: "Nbd2 - knight from b-file",
+			// Two knights can reach d2: one on b1, one on f3 (d2 is empty)
+			fen:      "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 1",
+			san:      "Nbd2",
+			wantMove: "b1d2",
+			wantErr:  false,
+		},
+		{
+			name: "Nfd2 - knight from f-file",
+			// Two knights can reach d2: one on b1, one on f3 (d2 is empty)
+			fen:      "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 1",
+			san:      "Nfd2",
+			wantMove: "f3d2",
+			wantErr:  false,
+		},
+		{
+			name: "Rfe1 - rook from f-file",
+			// Two rooks on a1 and f1 can reach e1 (king on g1)
+			fen:      "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R4RK1 w kq - 0 1",
+			san:      "Rfe1",
+			wantMove: "f1e1",
+			wantErr:  false,
+		},
+		{
+			name: "Rae5 - rook from a-file",
+			// Rooks on a5 and h5 can both reach e5
+			fen:      "4k3/8/8/R6R/8/8/8/4K3 w - - 0 1",
+			san:      "Rae5",
+			wantMove: "a5e5",
+			wantErr:  false,
+		},
+		{
+			name: "Qae5 - queen from a-file",
+			// Queens on a1 and h8 can both reach e5
+			fen:      "4k2Q/8/8/8/8/8/8/Q2K4 w - - 0 1",
+			san:      "Qae5",
+			wantMove: "a1e5",
+			wantErr:  false,
+		},
+		{
+			name: "Qhe5 - queen from h-file",
+			// Queens on a1 and h8 can both reach e5
+			fen:      "4k2Q/8/8/8/8/8/8/Q2K4 w - - 0 1",
+			san:      "Qhe5",
+			wantMove: "h8e5",
+			wantErr:  false,
+		},
+		{
+			name: "Rhe5 - rook from h-file",
+			// Rooks on a5 and h5 can both reach e5
+			fen:      "4k3/8/8/R6R/8/8/8/4K3 w - - 0 1",
+			san:      "Rhe5",
+			wantMove: "h5e5",
+			wantErr:  false,
+		},
+		{
+			name: "ambiguous without disambiguation",
+			// Two knights can reach d2 but no disambiguation provided
+			fen:      "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 1",
+			san:      "Nd2",
+			wantMove: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_RankDisambiguation tests parsing of moves with rank disambiguation.
+func TestParseSAN_RankDisambiguation(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name: "N1c3 - knight from rank 1",
+			// Knights on b1 and d4 can both reach c3
+			fen:      "rnbqkb1r/pppppppp/8/8/3N4/8/PPPPPPPP/RNBQKB1R w KQkq - 0 1",
+			san:      "N1c3",
+			wantMove: "b1c3",
+			wantErr:  false,
+		},
+		{
+			name: "N5c3 - knight from rank 5",
+			// Knights on b1 and d5 can both reach c3 (c3 is empty)
+			fen:      "rnbqkb1r/pppppppp/8/3N4/8/8/PP1PPPPP/RNBQKB1R w KQkq - 0 1",
+			san:      "N5c3",
+			wantMove: "d5c3",
+			wantErr:  false,
+		},
+		{
+			name: "R1a3 - rook from rank 1",
+			// Rooks on a1 and a5 can both reach a3
+			fen:      "4k3/8/8/r7/8/8/8/R3K3 w - - 0 1",
+			san:      "R1a3",
+			wantMove: "a1a3",
+			wantErr:  false,
+		},
+		{
+			name: "R5a3 - rook from rank 5",
+			// Rooks on a1 and a5 can both reach a3
+			fen:      "4k3/8/8/r7/8/8/8/R3K3 b - - 0 1",
+			san:      "R5a3",
+			wantMove: "a5a3",
+			wantErr:  false,
+		},
+		{
+			name: "Q1d4 - queen from rank 1",
+			// Queens on d1 and d8 can both reach d4
+			fen:      "3Qk3/8/8/8/8/8/8/3QK3 w - - 0 1",
+			san:      "Q1d4",
+			wantMove: "d1d4",
+			wantErr:  false,
+		},
+		{
+			name: "Q4h4 - queen from rank 4",
+			// Queens on d1 and d4 can both reach h4
+			fen:      "4k3/8/8/8/3Q4/8/8/3QK3 w - - 0 1",
+			san:      "Q4h4",
+			wantMove: "d4h4",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_FileAndRankDisambiguation tests parsing of moves with both file and rank disambiguation.
+func TestParseSAN_FileAndRankDisambiguation(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name: "Nb1d2 - knight from b1",
+			// Multiple knights can reach d2: b1, f3 (d2 is empty)
+			fen:      "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 1",
+			san:      "Nb1d2",
+			wantMove: "b1d2",
+			wantErr:  false,
+		},
+		{
+			name: "Nf3d2 - knight from f3",
+			// Multiple knights can reach d2: b1, f3 (d2 is empty)
+			fen:      "rnbqkb1r/pppppppp/5n2/8/8/5N2/PPP1PPPP/RNBQKB1R w KQkq - 0 1",
+			san:      "Nf3d2",
+			wantMove: "f3d2",
+			wantErr:  false,
+		},
+		{
+			name: "Ra1a3 - rook from a1 to a3",
+			// Rooks on a1, a8, h1 where a1 and h1 can reach a3
+			fen:      "r3k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+			san:      "Ra1a3",
+			wantMove: "a1a3",
+			wantErr:  false,
+		},
+		{
+			name: "Rh1h3 - rook from h1 to h3",
+			// Rooks on a1, h1, h8 where h1 and h8 can reach h3
+			fen:      "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+			san:      "Rh1h3",
+			wantMove: "h1h3",
+			wantErr:  false,
+		},
+		{
+			name: "Qd1d4 - queen from d1 to d4",
+			// Multiple queens on d1, h4
+			fen:      "4k3/8/8/8/7Q/8/8/3QK3 w - - 0 1",
+			san:      "Qd1d4",
+			wantMove: "d1d4",
+			wantErr:  false,
+		},
+		{
+			name: "Qh4d4 - queen from h4 to d4",
+			// Multiple queens on d1, h4
+			fen:      "4k3/8/8/8/7Q/8/8/3QK3 w - - 0 1",
+			san:      "Qh4d4",
+			wantMove: "h4d4",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_DisambiguationWithCaptures tests disambiguation combined with captures.
+func TestParseSAN_DisambiguationWithCaptures(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		san      string
+		wantMove string
+		wantErr  bool
+	}{
+		{
+			name: "Nbxd4 - knight from b-file captures on d4",
+			// Knights on b3 and f3 can both capture on d4
+			fen:      "rnbqkb1r/ppp1pppp/8/3p4/8/1N3N2/PPPPPPPP/R1BQKB1R w KQkq - 0 1",
+			san:      "Nbxd4",
+			wantMove: "b3d4",
+			wantErr:  false,
+		},
+		{
+			name: "Nfxd4 - knight from f-file captures on d4",
+			// Knights on b3 and f3 can both capture on d4
+			fen:      "rnbqkb1r/ppp1pppp/8/3p4/8/1N3N2/PPPPPPPP/R1BQKB1R w KQkq - 0 1",
+			san:      "Nfxd4",
+			wantMove: "f3d4",
+			wantErr:  false,
+		},
+		{
+			name: "R1xe5 - rook from rank 1 captures on e5",
+			// Rooks on e1 and e8 can both capture on e5
+			fen:      "3kr3/8/8/4p3/8/8/8/3KR3 w - - 0 1",
+			san:      "R1xe5",
+			wantMove: "e1e5",
+			wantErr:  false,
+		},
+		{
+			name: "Raxe5 - rook from a-file captures on e5",
+			// Rooks on a5 and h5 can both capture on e5 (black pawns on e5)
+			fen:      "4k3/8/8/r3P2r/8/8/8/4K3 b - - 0 1",
+			san:      "Raxe5",
+			wantMove: "a5e5",
+			wantErr:  false,
+		},
+		{
+			name: "Qa1xd4 - full disambiguation with capture",
+			// Queens on a1 and a8 can both capture on d4
+			fen:      "Q3k3/8/8/8/3p4/8/8/Q3K3 w - - 0 1",
+			san:      "Qa1xd4",
+			wantMove: "a1d4",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("failed to parse FEN: %v", err)
+			}
+
+			move, err := ParseSAN(board, tt.san)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if move.String() != tt.wantMove {
+				t.Errorf("expected %s, got %s", tt.wantMove, move.String())
+			}
+		})
+	}
+}
+
+// TestParseSAN_GameWithDisambiguation tests a game sequence that requires disambiguation.
+func TestParseSAN_GameWithDisambiguation(t *testing.T) {
+	board := engine.NewBoard()
+
+	// Play a game that creates ambiguous positions
+	moves := []struct {
+		san      string
+		wantMove string
+	}{
+		{"Nf3", "g1f3"},
+		{"Nf6", "g8f6"},
+		{"Nc3", "b1c3"},
+		{"Nc6", "b8c6"},
+		{"e4", "e2e4"},
+		{"e5", "e7e5"},
+		{"Bb5", "f1b5"},
+		{"Bb4", "f8b4"},
+		{"O-O", "e1g1"},
+		{"O-O", "e8g8"},
+		{"d3", "d2d3"},
+		{"d6", "d7d6"},
+		{"Bg5", "c1g5"},
+		{"Bg4", "c8g4"},
+		{"Nd5", "c3d5"}, // This requires disambiguation eventually
+		{"Nxd5", "f6d5"},
+		{"exd5", "e4d5"},
+	}
+
+	for i, m := range moves {
+		move, err := ParseSAN(board, m.san)
+		if err != nil {
+			t.Fatalf("move %d (%s) failed: %v", i+1, m.san, err)
+		}
+
+		if move.String() != m.wantMove {
+			t.Errorf("move %d (%s): expected %s, got %s", i+1, m.san, m.wantMove, move.String())
+		}
+
+		// Apply the move to the board
+		err = board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("failed to apply move %d (%s): %v", i+1, m.san, err)
+		}
+	}
+}

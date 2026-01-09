@@ -214,6 +214,9 @@ func parseFile(r rune) (int, error) {
 // - "Qh5" - queen to h5
 // - "Bxc5" - bishop captures on c5
 // - "Nxe5" - knight captures on e5
+// - "Nbd2" - knight from b-file to d2 (file disambiguation)
+// - "N1d2" - knight from rank 1 to d2 (rank disambiguation)
+// - "Nb1d2" - knight from b1 to d2 (file+rank disambiguation)
 func parsePieceMove(b *engine.Board, san string) (engine.Move, error) {
 	if len(san) < 2 {
 		return engine.Move{}, fmt.Errorf("invalid piece move format: %s", san)
@@ -228,12 +231,43 @@ func parsePieceMove(b *engine.Board, san string) (engine.Move, error) {
 	// Remove piece type from the string
 	moveStr := san[1:]
 
-	// Check for capture marker
-	isCapture := strings.Contains(moveStr, "x")
-	if isCapture {
-		// Remove the 'x'
-		moveStr = strings.Replace(moveStr, "x", "", 1)
+	// Parse disambiguation (optional file and/or rank)
+	fromFile := -1
+	fromRank := -1
+
+	// First, check for and remove the capture marker 'x'
+	// We need to do this early to know where the destination square starts
+	captureIdx := strings.Index(moveStr, "x")
+	var disambiguationPart string
+	var remainingPart string
+
+	if captureIdx >= 0 {
+		// There's a capture marker
+		disambiguationPart = moveStr[:captureIdx]
+		remainingPart = moveStr[captureIdx+1:] // Skip the 'x'
+	} else {
+		// No capture marker, but we need to figure out what's disambiguation vs destination
+		// The destination square is always the last 2 characters
+		if len(moveStr) > 2 {
+			disambiguationPart = moveStr[:len(moveStr)-2]
+			remainingPart = moveStr[len(moveStr)-2:]
+		} else {
+			disambiguationPart = ""
+			remainingPart = moveStr
+		}
 	}
+
+	// Parse the disambiguation part
+	for i := 0; i < len(disambiguationPart); i++ {
+		ch := disambiguationPart[i]
+		if ch >= 'a' && ch <= 'h' {
+			fromFile = int(ch - 'a')
+		} else if ch >= '1' && ch <= '8' {
+			fromRank = int(ch - '1')
+		}
+	}
+
+	moveStr = remainingPart
 
 	// The remaining string should be the destination square (e.g., "f3")
 	if len(moveStr) != 2 {
@@ -251,6 +285,8 @@ func parsePieceMove(b *engine.Board, san string) (engine.Move, error) {
 	// Filter for moves that match:
 	// - Piece type
 	// - Destination square
+	// - File disambiguation (if specified)
+	// - Rank disambiguation (if specified)
 	var candidates []engine.Move
 	for _, move := range legalMoves {
 		piece := b.PieceAt(move.From)
@@ -265,6 +301,16 @@ func parsePieceMove(b *engine.Board, san string) (engine.Move, error) {
 			continue
 		}
 
+		// Check file disambiguation
+		if fromFile >= 0 && move.From.File() != fromFile {
+			continue
+		}
+
+		// Check rank disambiguation
+		if fromRank >= 0 && move.From.Rank() != fromRank {
+			continue
+		}
+
 		candidates = append(candidates, move)
 	}
 
@@ -273,8 +319,10 @@ func parsePieceMove(b *engine.Board, san string) (engine.Move, error) {
 		return engine.Move{}, fmt.Errorf("no legal move matches: %s", san)
 	}
 
-	// For now, if multiple candidates exist, just return the first one
-	// (disambiguation will be handled in Slice 7)
+	if len(candidates) > 1 {
+		return engine.Move{}, fmt.Errorf("move is still ambiguous: %s (multiple candidates)", san)
+	}
+
 	return candidates[0], nil
 }
 
