@@ -61,56 +61,56 @@
 
 **Goal:** User can move knights, bishops, rooks, queens, kings using SAN (e.g., `Nf3`, `Bc4`).
 
-- [ ] Extend `ParseSAN()` to handle piece moves (`Nf3`, `Bc4`, `Qh5`, `Kf1`)
-- [ ] Handle captures (`Bxc5`, `Nxe5`)
-- [ ] Handle castling (`O-O`, `O-O-O`)
-- [ ] Handle check/checkmate symbols by stripping them (`+`, `#`)
-- [ ] Add unit tests for piece moves, captures, castling
-- [ ] Test: Play `1. e4 e5 2. Nf3 Nc6 3. Bc4` - all moves work
+- [x] Extend `ParseSAN()` to handle piece moves (`Nf3`, `Bc4`, `Qh5`, `Kf1`)
+- [x] Handle captures (`Bxc5`, `Nxe5`)
+- [x] Handle castling (`O-O`, `O-O-O`)
+- [x] Handle check/checkmate symbols by stripping them (`+`, `#`)
+- [x] Add unit tests for piece moves, captures, castling
+- [x] Test: Play `1. e4 e5 2. Nf3 Nc6 3. Bc4` - all moves work
 
 ## Slice 7: Handle SAN Disambiguation and Pawn Promotion
 
 **Goal:** User can enter disambiguated moves (`Nbd2`, `N1f3`) and pawn promotions (`e8=Q`).
 
-- [ ] Extend `ParseSAN()` to handle file disambiguation (`Nbd2`, `Rfe1`)
-- [ ] Handle rank disambiguation (`N1d2`, `R1a3`)
-- [ ] Handle both file+rank disambiguation (`Nb1d2`)
-- [ ] Handle pawn promotion (`e8=Q`, `a1=N`, `h8=R`)
-- [ ] Add unit tests for all disambiguation cases and promotions
-- [ ] Test: Play game with disambiguation; promote a pawn to queen
+- [x] Extend `ParseSAN()` to handle file disambiguation (`Nbd2`, `Rfe1`)
+- [x] Handle rank disambiguation (`N1d2`, `R1a3`)
+- [x] Handle both file+rank disambiguation (`Nb1d2`)
+- [x] Handle pawn promotion (`e8=Q`, `a1=N`, `h8=R`)
+- [x] Add unit tests for all disambiguation cases and promotions
+- [x] Test: Play game with disambiguation; promote a pawn to queen
 
 ## Slice 8: Detect and Display Game Over (Checkmate/Stalemate)
 
 **Goal:** When game ends, user sees game over screen with result and move count.
 
-- [ ] Add GameOver screen state to model
-- [ ] After each move, check `board.Status()` for game end conditions
-- [ ] If game over, transition to GameOver screen
-- [ ] Display result message ("Checkmate! White wins", "Stalemate - Draw")
-- [ ] Display final board position
-- [ ] Display move count
-- [ ] Add option to return to main menu or start new game
-- [ ] Test: Play Scholar's Mate, see game over screen
+- [x] Add GameOver screen state to model
+- [x] After each move, check `board.Status()` for game end conditions
+- [x] If game over, transition to GameOver screen
+- [x] Display result message ("Checkmate! White wins", "Stalemate - Draw")
+- [x] Display final board position
+- [x] Display move count
+- [x] Add option to return to main menu or start new game
+- [x] Test: Play Scholar's Mate, see game over screen
 
 ## Slice 9: Add Unicode Board Rendering Option
 
 **Goal:** User can see board with Unicode chess symbols (♔♕♖♗♘♙) instead of ASCII.
 
-- [ ] Add Unicode piece symbol mapping in `board.go`
-- [ ] Update BoardRenderer to use Unicode symbols when `config.UseUnicode = true`
-- [ ] Toggle config in code to test (settings screen comes later)
-- [ ] Add unit tests for Unicode rendering
-- [ ] Test: Switch config flag, see board with Unicode pieces
+- [x] Add Unicode piece symbol mapping in `board.go`
+- [x] Update BoardRenderer to use Unicode symbols when `config.UseUnicode = true`
+- [x] Toggle config in code to test (settings screen comes later)
+- [x] Add unit tests for Unicode rendering
+- [x] Test: Switch config flag, see board with Unicode pieces
 
 ## Slice 10: Add Color Support for Pieces
 
 **Goal:** White and black pieces are distinguished by color (if terminal supports it).
 
-- [ ] Use `lipgloss` to add color styles to piece symbols
-- [ ] White pieces: one color (e.g., white/bright)
-- [ ] Black pieces: another color (e.g., gray/dim)
-- [ ] Respect `config.UseColors` flag
-- [ ] Test: See colored pieces on board
+- [x] Use `lipgloss` to add color styles to piece symbols
+- [x] White pieces: one color (e.g., white/bright)
+- [x] Black pieces: another color (e.g., gray/dim)
+- [x] Respect `config.UseColors` flag
+- [x] Test: See colored pieces on board
 
 ## Slice 11: Add Game Type Selection Screen (PvP Only)
 

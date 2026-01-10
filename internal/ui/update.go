@@ -42,6 +42,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleMainMenuKeys(msg)
 	case ScreenGamePlay:
 		return m.handleGamePlayKeys(msg)
+	case ScreenGameOver:
+		return m.handleGameOverKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -156,6 +158,11 @@ func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 			// Add move to history
 			m.moveHistory = append(m.moveHistory, move)
+
+			// Check if the game is over after this move
+			if m.board.IsGameOver() {
+				m.screen = ScreenGameOver
+			}
 		}
 
 	case tea.KeyRunes:
@@ -164,6 +171,36 @@ func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Append the typed character(s) to the input
 		// Only allow alphanumeric characters and basic symbols
 		m.input += string(msg.Runes)
+	}
+
+	return m, nil
+}
+
+// handleGameOverKeys handles keyboard input for the GameOver screen.
+// Supports 'n' for new game, 'm' for main menu, and 'q' for quit.
+func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "n", "N":
+		// Start a new game
+		m.board = engine.NewBoard()
+		m.moveHistory = []engine.Move{}
+		m.screen = ScreenGamePlay
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = ""
+
+	case "m", "M":
+		// Return to main menu
+		m.screen = ScreenMainMenu
+		m.board = nil
+		m.moveHistory = []engine.Move{}
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = ""
+
+	case "q", "Q":
+		// Quit the application
+		return m, tea.Quit
 	}
 
 	return m, nil
