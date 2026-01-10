@@ -40,6 +40,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.screen {
 	case ScreenMainMenu:
 		return m.handleMainMenuKeys(msg)
+	case ScreenGameTypeSelect:
+		return m.handleGameTypeSelectKeys(msg)
 	case ScreenGamePlay:
 		return m.handleGamePlayKeys(msg)
 	case ScreenGameOver:
@@ -95,10 +97,11 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "New Game":
-		// Create a new board with the standard starting position
-		m.board = engine.NewBoard()
-		// Switch to the GamePlay screen
-		m.screen = ScreenGamePlay
+		// Transition to the GameTypeSelect screen
+		m.screen = ScreenGameTypeSelect
+		// Initialize the game type selection menu
+		m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
+		m.menuSelection = 0
 		// Clear any previous status messages
 		m.statusMsg = ""
 		m.errorMsg = ""
@@ -110,6 +113,74 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 
 	case "Settings":
 		m.statusMsg = "Settings selected (not yet implemented)"
+	}
+
+	return m, nil
+}
+
+// handleGameTypeSelectKeys handles keyboard input for the GameTypeSelect screen.
+// Supports arrow keys and vi-style navigation (j/k), Enter to select,
+// and wraps around at top and bottom of the menu.
+func (m Model) handleGameTypeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Clear any previous error or status messages when user takes action
+	m.errorMsg = ""
+	m.statusMsg = ""
+
+	switch msg.String() {
+	case "up", "k":
+		// Move selection up
+		if m.menuSelection > 0 {
+			m.menuSelection--
+		} else {
+			// Wrap to bottom of menu
+			m.menuSelection = len(m.menuOptions) - 1
+		}
+
+	case "down", "j":
+		// Move selection down
+		if m.menuSelection < len(m.menuOptions)-1 {
+			m.menuSelection++
+		} else {
+			// Wrap to top of menu
+			m.menuSelection = 0
+		}
+
+	case "enter":
+		return m.handleGameTypeSelection()
+	}
+
+	return m, nil
+}
+
+// handleGameTypeSelection executes the action for the currently selected game type.
+// If "Player vs Player" is selected, starts a new PvP game.
+// If "Player vs Bot" is selected, shows a "Coming soon" message and returns to main menu.
+func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
+	selected := m.menuOptions[m.menuSelection]
+
+	switch selected {
+	case "Player vs Player":
+		// Set game type to PvP
+		m.gameType = GameTypePvP
+		// Create a new board with the standard starting position
+		m.board = engine.NewBoard()
+		// Switch to the GamePlay screen
+		m.screen = ScreenGamePlay
+		// Clear any previous status messages
+		m.statusMsg = ""
+		m.errorMsg = ""
+		// Clear any previous input
+		m.input = ""
+
+	case "Player vs Bot":
+		// Set game type to PvBot (for future use)
+		m.gameType = GameTypePvBot
+		// Show "Coming soon" message and return to main menu
+		m.statusMsg = "Player vs Bot mode is coming soon!"
+		m.screen = ScreenMainMenu
+		// Reset menu options to main menu
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
 	}
 
 	return m, nil

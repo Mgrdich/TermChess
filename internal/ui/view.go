@@ -59,7 +59,7 @@ func (m Model) View() string {
 	case ScreenMainMenu:
 		return m.renderMainMenu()
 	case ScreenGameTypeSelect:
-		return "Game Type Selection - Coming Soon"
+		return m.renderGameTypeSelect()
 	case ScreenBotSelect:
 		return "Bot Selection - Coming Soon"
 	case ScreenFENInput:
@@ -84,6 +84,64 @@ func (m Model) renderMainMenu() string {
 	title := titleStyle.Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
+
+	// Render menu options with cursor indicator for selected item
+	for i, option := range m.menuOptions {
+		cursor := "  " // Two spaces for non-selected items
+		optionText := option
+
+		if i == m.menuSelection {
+			// Highlight the selected item
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(option)
+		} else {
+			// Regular menu item styling
+			optionText = menuItemStyle.Render(option)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Render help text
+	b.WriteString("\n")
+	helpText := helpStyle.Render("Use arrow keys to navigate, Enter to select, q to quit")
+	b.WriteString(helpText)
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// renderGameTypeSelect renders the GameTypeSelect screen with title, game type options,
+// cursor indicator, help text, and any error or status messages.
+func (m Model) renderGameTypeSelect() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Game Type:")
+	b.WriteString(header)
+	b.WriteString("\n")
 
 	// Render menu options with cursor indicator for selected item
 	for i, option := range m.menuOptions {

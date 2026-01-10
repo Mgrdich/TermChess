@@ -116,13 +116,13 @@
 
 **Goal:** After "New Game", user chooses game type (PvP or PvBot), then game starts.
 
-- [ ] Create GameTypeSelect screen state
-- [ ] Add transition: MainMenu → "New Game" → GameTypeSelect → GamePlay
-- [ ] Display options: "Player vs Player", "Player vs Bot"
-- [ ] Add keyboard navigation for selection
-- [ ] Store selected game type in model
-- [ ] If "PvBot" selected, show "Coming soon" message and return to menu
-- [ ] Test: Select PvP, game starts; select PvBot, see "Coming soon"
+- [x] Create GameTypeSelect screen state
+- [x] Add transition: MainMenu → "New Game" → GameTypeSelect → GamePlay
+- [x] Display options: "Player vs Player", "Player vs Bot"
+- [x] Add keyboard navigation for selection
+- [x] Store selected game type in model
+- [x] If "PvBot" selected, show "Coming soon" message and return to menu
+- [x] Test: Select PvP, game starts; select PvBot, see "Coming soon"
 
 ## Slice 12: Implement Configuration File Persistence
 
