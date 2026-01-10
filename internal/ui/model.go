@@ -85,7 +85,8 @@ type Model struct {
 }
 
 // NewModel creates and initializes a new Model with default values.
-// The model starts at the main menu screen with default configuration.
+// The model starts at the main menu screen with configuration loaded from file.
+// If no config file exists, default values are used.
 func NewModel() Model {
 	return Model{
 		// Initialize with nil board (created when starting a new game)
@@ -95,8 +96,8 @@ func NewModel() Model {
 		// Start at the main menu
 		screen: ScreenMainMenu,
 
-		// Default display configuration
-		config: DefaultConfig(),
+		// Load configuration from ~/.termchess/config.toml (or use defaults if not found)
+		config: LoadConfig(),
 
 		// Initialize input state
 		input:     "",

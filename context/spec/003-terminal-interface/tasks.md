@@ -128,12 +128,12 @@
 
 **Goal:** User preferences (display settings) are saved to `~/.termchess/config.toml` and loaded on startup.
 
-- [ ] Create `internal/ui/persistence.go` (or extend `config.go`)
-- [ ] Implement `LoadConfig()` to read `~/.termchess/config.toml`
-- [ ] Implement `SaveConfig()` to write config to file
-- [ ] Create `~/.termchess/` directory if it doesn't exist
-- [ ] Load config on app startup, use defaults if file missing
-- [ ] Test: Modify config in code, restart app, see config persisted
+- [x] Create `internal/ui/persistence.go` (or extend `config.go`)
+- [x] Implement `LoadConfig()` to read `~/.termchess/config.toml`
+- [x] Implement `SaveConfig()` to write config to file
+- [x] Create `~/.termchess/` directory if it doesn't exist
+- [x] Load config on app startup, use defaults if file missing
+- [x] Test: Modify config in code, restart app, see config persisted
 
 ## Slice 13: Add Settings Screen to Change Display Options
 
