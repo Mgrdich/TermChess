@@ -25,6 +25,8 @@ const (
 	ScreenSettings
 	// ScreenSavePrompt is displayed when the user tries to exit during an active game
 	ScreenSavePrompt
+	// ScreenResumePrompt is displayed on startup when a saved game exists
+	ScreenResumePrompt
 )
 
 // GameType represents the type of chess game being played.
@@ -97,17 +99,27 @@ type Model struct {
 // NewModel creates and initializes a new Model with default values.
 // The model starts at the main menu screen with configuration loaded from file.
 // If no config file exists, default values are used.
+// If a saved game exists, the model starts at the resume prompt screen.
 func NewModel() Model {
+	// Load configuration from ~/.termchess/config.toml (or use defaults if not found)
+	config := LoadConfig()
+
+	// Determine initial screen based on whether a saved game exists
+	initialScreen := ScreenMainMenu
+	if SaveGameExists() {
+		initialScreen = ScreenResumePrompt
+	}
+
 	return Model{
 		// Initialize with nil board (created when starting a new game)
 		board:       nil,
 		moveHistory: []engine.Move{},
 
-		// Start at the main menu
-		screen: ScreenMainMenu,
+		// Start at the resume prompt if saved game exists, otherwise main menu
+		screen: initialScreen,
 
 		// Load configuration from ~/.termchess/config.toml (or use defaults if not found)
-		config: LoadConfig(),
+		config: config,
 
 		// Initialize input state
 		input:     "",

@@ -71,6 +71,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSettingsKeys(msg)
 	case ScreenSavePrompt:
 		return m.handleSavePromptKeys(msg)
+	case ScreenResumePrompt:
+		return m.handleResumePromptKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -269,6 +271,11 @@ func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 			// Check if the game is over after this move
 			if m.board.IsGameOver() {
+				// Delete saved game when game ends normally
+				if err := DeleteSaveGame(); err != nil {
+					// Log error but don't interrupt game over flow
+					// The error is not critical, so we just continue
+				}
 				m.screen = ScreenGameOver
 			}
 		}
@@ -290,6 +297,8 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "n", "N":
 		// Start a new game
+		// Delete any existing savegame since we're starting fresh
+		DeleteSaveGame()
 		m.board = engine.NewBoard()
 		m.moveHistory = []engine.Move{}
 		m.screen = ScreenGamePlay
@@ -427,5 +436,41 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	return m, nil
+}
+
+// handleResumePromptKeys handles keyboard input for the ResumePrompt screen.
+// Supports 'y' to resume the saved game, 'n' to go to main menu without resuming.
+func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y":
+		// Load saved game
+		board, err := LoadGame()
+		if err != nil {
+			// Handle error - show main menu with error message
+			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
+			m.screen = ScreenMainMenu
+			m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+			m.menuSelection = 0
+			return m, nil
+		}
+
+		// Start gameplay with loaded board
+		m.board = board
+		m.screen = ScreenGamePlay
+		m.errorMsg = ""
+		m.statusMsg = "Game resumed"
+		m.input = ""
+		return m, nil
+
+	case "n", "N":
+		// Don't resume, go to main menu
+		m.screen = ScreenMainMenu
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
+		m.errorMsg = ""
+		m.statusMsg = ""
+		return m, nil
+	}
 	return m, nil
 }

@@ -165,12 +165,12 @@
 
 **Goal:** When user launches app with saved game, they're prompted to resume.
 
-- [ ] On app startup, check for `~/.termchess/savegame.fen`
-- [ ] If exists, show prompt: "Resume last game? (y/n)"
-- [ ] If yes, load FEN using `engine.FromFEN()`, start GamePlay screen
-- [ ] If no, show main menu
-- [ ] When game ends normally, delete `savegame.fen`
-- [ ] Test: Save game, restart app, choose resume, see board state restored
+- [x] On app startup, check for `~/.termchess/savegame.fen`
+- [x] If exists, show prompt: "Resume last game? (y/n)"
+- [x] If yes, load FEN using `engine.FromFEN()`, start GamePlay screen
+- [x] If no, show main menu
+- [x] When game ends normally, delete `savegame.fen`
+- [x] Test: Save game, restart app, choose resume, see board state restored
 
 ## Slice 16: Add "Load Game" Menu Option for FEN Input
 

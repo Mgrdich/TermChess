@@ -81,6 +81,8 @@ func (m Model) View() string {
 		return m.renderSettings()
 	case ScreenSavePrompt:
 		return m.renderSavePrompt()
+	case ScreenResumePrompt:
+		return m.renderResumePrompt()
 	default:
 		return "Unknown screen"
 	}
@@ -460,6 +462,50 @@ func (m Model) renderSavePrompt() string {
 
 	// Render help text
 	helpText := renderHelpText("y: save and exit | n: exit without saving | ESC: cancel", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// renderResumePrompt renders the resume prompt screen when a saved game exists on startup.
+// It asks the user if they want to resume the saved game or go to the main menu.
+func (m Model) renderResumePrompt() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render the resume prompt message
+	promptStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFD700")).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+	promptMsg := "A saved game was found. Resume last game?"
+	b.WriteString(promptStyle.Render(promptMsg))
+	b.WriteString("\n\n")
+
+	// Render options
+	optionsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Align(lipgloss.Center)
+	optionsText := "y: Yes  |  n: No"
+	b.WriteString(optionsStyle.Render(optionsText))
+
+	// Render help text
+	helpText := renderHelpText("y: resume game | n: go to main menu", m.config)
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
