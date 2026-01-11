@@ -77,6 +77,10 @@ type Model struct {
 	// menuOptions holds the list of options available in the current menu
 	menuOptions []string
 
+	// Settings state
+	// settingsSelection tracks the currently selected setting option index
+	settingsSelection int
+
 	// Game metadata
 	// gameType indicates whether this is PvP or PvBot
 	gameType GameType
@@ -107,6 +111,9 @@ func NewModel() Model {
 		// Initialize main menu
 		menuSelection: 0,
 		menuOptions:   []string{"New Game", "Load Game", "Settings", "Exit"},
+
+		// Initialize settings
+		settingsSelection: 0,
 
 		// Default game metadata
 		gameType:      GameTypePvP,

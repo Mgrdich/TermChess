@@ -31,9 +31,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // to the current screen's handler.
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Handle global quit keys (work from any screen)
+	// Exception: 'q' on Settings screen returns to menu instead of quitting
 	switch msg.String() {
-	case "ctrl+c", "q":
+	case "ctrl+c":
 		return m, tea.Quit
+	case "q":
+		// 'q' on Settings screen returns to menu, otherwise quits
+		if m.screen != ScreenSettings {
+			return m, tea.Quit
+		}
 	}
 
 	// Handle screen-specific keys based on current screen
@@ -46,6 +52,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleGamePlayKeys(msg)
 	case ScreenGameOver:
 		return m.handleGameOverKeys(msg)
+	case ScreenSettings:
+		return m.handleSettingsKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -112,7 +120,13 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.statusMsg = "Load Game selected (not yet implemented)"
 
 	case "Settings":
-		m.statusMsg = "Settings selected (not yet implemented)"
+		// Transition to the Settings screen
+		m.screen = ScreenSettings
+		// Reset settings selection to first option
+		m.settingsSelection = 0
+		// Clear any previous status messages
+		m.statusMsg = ""
+		m.errorMsg = ""
 	}
 
 	return m, nil
@@ -272,6 +286,68 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "Q":
 		// Quit the application
 		return m, tea.Quit
+	}
+
+	return m, nil
+}
+
+// handleSettingsKeys handles keyboard input for the Settings screen.
+// Supports arrow keys and vi-style navigation (j/k), Enter to toggle options,
+// ESC/q/b/backspace to return to main menu, and wraps around at top and bottom.
+func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Clear any previous error or status messages when user takes action
+	m.errorMsg = ""
+	m.statusMsg = ""
+
+	// Number of settings options
+	numOptions := 4 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory
+
+	switch msg.String() {
+	case "up", "k":
+		// Move selection up
+		if m.settingsSelection > 0 {
+			m.settingsSelection--
+		} else {
+			// Wrap to bottom of menu
+			m.settingsSelection = numOptions - 1
+		}
+
+	case "down", "j":
+		// Move selection down
+		if m.settingsSelection < numOptions-1 {
+			m.settingsSelection++
+		} else {
+			// Wrap to top of menu
+			m.settingsSelection = 0
+		}
+
+	case "enter":
+		// Toggle the selected option
+		switch m.settingsSelection {
+		case 0: // Use Unicode Pieces
+			m.config.UseUnicode = !m.config.UseUnicode
+		case 1: // Show Coordinates
+			m.config.ShowCoords = !m.config.ShowCoords
+		case 2: // Use Colors
+			m.config.UseColors = !m.config.UseColors
+		case 3: // Show Move History
+			m.config.ShowMoveHistory = !m.config.ShowMoveHistory
+		}
+
+		// Save the configuration immediately after toggling
+		if err := SaveConfig(m.config); err != nil {
+			m.errorMsg = fmt.Sprintf("Failed to save config: %v", err)
+		} else {
+			m.statusMsg = "Setting saved successfully"
+		}
+
+	case "esc", "q", "b", "backspace":
+		// Return to main menu
+		m.screen = ScreenMainMenu
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
+		m.errorMsg = ""
+		m.statusMsg = ""
 	}
 
 	return m, nil

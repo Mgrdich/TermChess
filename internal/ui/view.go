@@ -69,7 +69,7 @@ func (m Model) View() string {
 	case ScreenGameOver:
 		return m.renderGameOver()
 	case ScreenSettings:
-		return "Settings - Coming Soon"
+		return m.renderSettings()
 	default:
 		return "Unknown screen"
 	}
@@ -314,6 +314,84 @@ func (m Model) renderGameOver() string {
 		Foreground(lipgloss.Color("#7D56F4")).
 		Align(lipgloss.Center)
 	b.WriteString(optionsStyle.Render(optionsText))
+
+	return b.String()
+}
+
+// renderSettings renders the Settings screen showing display configuration options.
+// Each option displays its current value and can be toggled by the user.
+func (m Model) renderSettings() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Settings")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Define settings options with their current values
+	// The order here determines the settingsSelection index
+	settingsOptions := []struct {
+		label   string
+		enabled bool
+	}{
+		{"Use Unicode Pieces", m.config.UseUnicode},
+		{"Show Coordinates", m.config.ShowCoords},
+		{"Use Colors", m.config.UseColors},
+		{"Show Move History", m.config.ShowMoveHistory},
+	}
+
+	// Render each setting option with its current state
+	for i, option := range settingsOptions {
+		cursor := "  " // Two spaces for non-selected items
+
+		// Determine checkbox state
+		checkbox := "[ ]"
+		if option.enabled {
+			checkbox = "[X]"
+		}
+
+		// Build the option text
+		optionText := fmt.Sprintf("%s %s", option.label, checkbox)
+
+		if i == m.settingsSelection {
+			// Highlight the selected item
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(optionText)
+		} else {
+			// Regular menu item styling
+			optionText = menuItemStyle.Render(optionText)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Render help text
+	b.WriteString("\n")
+	helpText := helpStyle.Render("Use arrow keys to navigate, Enter to toggle, ESC/q to return to menu")
+	b.WriteString(helpText)
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
 
 	return b.String()
 }

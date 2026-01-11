@@ -139,13 +139,13 @@
 
 **Goal:** User can navigate to Settings, change display options, and see them applied immediately.
 
-- [ ] Create Settings screen state
-- [ ] Add transition: MainMenu → "Settings" → Settings screen
-- [ ] Display toggleable options: Unicode, Coordinates, Colors, Move History
-- [ ] Allow keyboard navigation to toggle options
-- [ ] Call `SaveConfig()` when option changes
-- [ ] Apply config changes immediately to next board render
-- [ ] Test: Change Unicode to true, see Unicode pieces; toggle coordinates off, labels disappear
+- [x] Create Settings screen state
+- [x] Add transition: MainMenu → "Settings" → Settings screen
+- [x] Display toggleable options: Unicode, Coordinates, Colors, Move History
+- [x] Allow keyboard navigation to toggle options
+- [x] Call `SaveConfig()` when option changes
+- [x] Apply config changes immediately to next board render
+- [x] Test: Change Unicode to true, see Unicode pieces; toggle coordinates off, labels disappear
 
 ## Slice 14: Implement Save Game on Exit
 
