@@ -70,6 +70,8 @@ type Model struct {
 	// Input state
 	// input holds the current user input text
 	input string
+	// fenInput holds the FEN string input for loading games
+	fenInput string
 	// errorMsg holds any error message to display to the user
 	errorMsg string
 	// statusMsg holds status information to display to the user

@@ -72,7 +72,7 @@ func (m Model) View() string {
 	case ScreenBotSelect:
 		return "Bot Selection - Coming Soon"
 	case ScreenFENInput:
-		return "FEN Input - Coming Soon"
+		return m.renderFENInput()
 	case ScreenGamePlay:
 		return m.renderGamePlay()
 	case ScreenGameOver:
@@ -512,6 +512,60 @@ func (m Model) renderResumePrompt() string {
 	}
 
 	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// renderFENInput renders the FEN input screen where users can load a chess position from FEN notation.
+// Displays input field, instructions, example FEN, help text, and any error messages.
+func (m Model) renderFENInput() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Load Game from FEN")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Instructions
+	instructions := "Enter a FEN string to load a chess position:\n\n"
+	b.WriteString(instructions)
+
+	// Input field with cursor
+	inputStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Bold(true)
+	inputLine := inputStyle.Render(m.fenInput + "█")
+	b.WriteString(inputLine)
+	b.WriteString("\n\n")
+
+	// Example
+	exampleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#626262"))
+	example := exampleStyle.Render("Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	b.WriteString(example)
+	b.WriteString("\n\n")
+
+	// Help text
+	helpText := renderHelpText("Enter: load position | ESC: back to menu", m.config)
+	if helpText != "" {
+		b.WriteString(helpText)
+	}
+
+	// Error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
 		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))

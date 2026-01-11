@@ -176,13 +176,13 @@
 
 **Goal:** User can select "Load Game" from main menu and enter a FEN string to load a position.
 
-- [ ] Create FENInput screen state
-- [ ] Add transition: MainMenu → "Load Game" → FENInput screen
-- [ ] Display text input for FEN string
-- [ ] Parse FEN using `engine.FromFEN()` on Enter
-- [ ] If valid, load board and start GamePlay
-- [ ] If invalid, show error message
-- [ ] Test: Enter valid FEN, see position loaded; enter invalid FEN, see error
+- [x] Create FENInput screen state
+- [x] Add transition: MainMenu → "Load Game" → FENInput screen
+- [x] Display text input for FEN string
+- [x] Parse FEN using `engine.FromFEN()` on Enter
+- [x] If valid, load board and start GamePlay
+- [x] If invalid, show error message
+- [x] Test: Enter valid FEN, see position loaded; enter invalid FEN, see error
 
 ## Slice 17: Add Move History Display (Optional, Configurable)
 

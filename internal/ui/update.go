@@ -47,6 +47,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.screen == ScreenSettings {
 			break
 		}
+		// 'q' on FEN Input screen is part of the input (not quit)
+		if m.screen == ScreenFENInput {
+			break
+		}
 		// 'q' during gameplay shows save prompt
 		if m.screen == ScreenGamePlay && m.board != nil {
 			m.screen = ScreenSavePrompt
@@ -63,6 +67,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleMainMenuKeys(msg)
 	case ScreenGameTypeSelect:
 		return m.handleGameTypeSelectKeys(msg)
+	case ScreenFENInput:
+		return m.handleFENInputKeys(msg)
 	case ScreenGamePlay:
 		return m.handleGamePlayKeys(msg)
 	case ScreenGameOver:
@@ -136,7 +142,11 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.input = ""
 
 	case "Load Game":
-		m.statusMsg = "Load Game selected (not yet implemented)"
+		// Transition to FEN input screen
+		m.screen = ScreenFENInput
+		m.fenInput = "" // Clear any previous input
+		m.errorMsg = ""
+		m.statusMsg = ""
 
 	case "Settings":
 		// Transition to the Settings screen
@@ -472,5 +482,58 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.statusMsg = ""
 		return m, nil
 	}
+	return m, nil
+}
+
+// handleFENInputKeys handles keyboard input for the FEN Input screen.
+// Supports text input for entering FEN strings, Enter to parse and load, ESC to return to menu,
+// backspace to delete characters, and ctrl+u to clear the entire input.
+func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter:
+		// Try to parse the FEN string
+		if m.fenInput == "" {
+			m.errorMsg = "Please enter a FEN string"
+			return m, nil
+		}
+
+		board, err := engine.FromFEN(m.fenInput)
+		if err != nil {
+			m.errorMsg = fmt.Sprintf("Invalid FEN: %v", err)
+			return m, nil
+		}
+
+		// Load succeeded, start gameplay with the loaded position
+		m.board = board
+		m.screen = ScreenGamePlay
+		m.fenInput = "" // Clear input
+		m.errorMsg = ""
+		m.statusMsg = "Position loaded from FEN"
+		return m, nil
+
+	case tea.KeyEsc:
+		// Return to main menu
+		m.screen = ScreenMainMenu
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
+		m.fenInput = "" // Clear input
+		m.errorMsg = ""
+		return m, nil
+
+	case tea.KeyBackspace:
+		// Remove last character
+		if len(m.fenInput) > 0 {
+			m.fenInput = m.fenInput[:len(m.fenInput)-1]
+		}
+
+	case tea.KeyCtrlU:
+		// Clear entire input (Unix convention)
+		m.fenInput = ""
+
+	case tea.KeyRunes:
+		// Add character(s) to input
+		m.fenInput += string(msg.Runes)
+	}
+
 	return m, nil
 }
