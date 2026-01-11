@@ -34,20 +34,20 @@ func TestSettingsNavigation(t *testing.T) {
 		t.Errorf("Expected settingsSelection to be 1, got %d", m.settingsSelection)
 	}
 
-	// Test wrapping at bottom (should go from 3 to 0)
-	m.settingsSelection = 3
+	// Test wrapping at bottom (should go from 4 to 0)
+	m.settingsSelection = 4
 	model, _ = m.handleSettingsKeys(tea.KeyMsg{Type: tea.KeyDown})
 	m = model.(Model)
 	if m.settingsSelection != 0 {
 		t.Errorf("Expected settingsSelection to wrap to 0, got %d", m.settingsSelection)
 	}
 
-	// Test wrapping at top (should go from 0 to 3)
+	// Test wrapping at top (should go from 0 to 4)
 	m.settingsSelection = 0
 	model, _ = m.handleSettingsKeys(tea.KeyMsg{Type: tea.KeyUp})
 	m = model.(Model)
-	if m.settingsSelection != 3 {
-		t.Errorf("Expected settingsSelection to wrap to 3, got %d", m.settingsSelection)
+	if m.settingsSelection != 4 {
+		t.Errorf("Expected settingsSelection to wrap to 4, got %d", m.settingsSelection)
 	}
 }
 
@@ -96,6 +96,15 @@ func TestSettingsToggle(t *testing.T) {
 	m = model.(Model)
 	if m.config.ShowMoveHistory == initialValue {
 		t.Errorf("Expected ShowMoveHistory to toggle from %v to %v", initialValue, !initialValue)
+	}
+
+	// Test toggling ShowHelpText (option 4)
+	m.settingsSelection = 4
+	initialValue = m.config.ShowHelpText
+	model, _ = m.handleSettingsKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = model.(Model)
+	if m.config.ShowHelpText == initialValue {
+		t.Errorf("Expected ShowHelpText to toggle from %v to %v", initialValue, !initialValue)
 	}
 }
 
@@ -160,7 +169,7 @@ func TestSettingsRender(t *testing.T) {
 	}
 
 	// Check that output contains expected strings
-	expectedStrings := []string{"Settings", "Use Unicode Pieces", "Show Coordinates", "Use Colors", "Show Move History"}
+	expectedStrings := []string{"Settings", "Use Unicode Pieces", "Show Coordinates", "Use Colors", "Show Move History", "Show Help Text"}
 	for _, expected := range expectedStrings {
 		if !contains(output, expected) {
 			t.Errorf("Expected output to contain '%s'", expected)

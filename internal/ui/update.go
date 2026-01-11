@@ -300,7 +300,7 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.statusMsg = ""
 
 	// Number of settings options
-	numOptions := 4 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory
+	numOptions := 5 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText
 
 	switch msg.String() {
 	case "up", "k":
@@ -332,6 +332,8 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.config.UseColors = !m.config.UseColors
 		case 3: // Show Move History
 			m.config.ShowMoveHistory = !m.config.ShowMoveHistory
+		case 4: // Show Help Text
+			m.config.ShowHelpText = !m.config.ShowHelpText
 		}
 
 		// Save the configuration immediately after toggling

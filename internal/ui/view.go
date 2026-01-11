@@ -51,6 +51,15 @@ var (
 			Bold(true)
 )
 
+// renderHelpText conditionally renders help text based on config.
+// Returns empty string if help text is disabled.
+func renderHelpText(text string, config Config) string {
+	if !config.ShowHelpText {
+		return ""
+	}
+	return helpStyle.Render(text)
+}
+
 // View renders the UI based on the current model state.
 // This function is called by Bubbletea on every update to generate
 // the string that will be displayed in the terminal.
@@ -103,9 +112,11 @@ func (m Model) renderMainMenu() string {
 	}
 
 	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to navigate, Enter to select, q to quit")
-	b.WriteString(helpText)
+	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
 
 	// Render error message if present
 	if m.errorMsg != "" {
@@ -161,9 +172,11 @@ func (m Model) renderGameTypeSelect() string {
 	}
 
 	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to navigate, Enter to select, q to quit")
-	b.WriteString(helpText)
+	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
 
 	// Render error message if present
 	if m.errorMsg != "" {
@@ -220,9 +233,11 @@ func (m Model) renderGamePlay() string {
 	b.WriteString(inputPrompt + inputText)
 
 	// Add help text
-	b.WriteString("\n\n")
-	helpText := helpStyle.Render("Press q to quit")
-	b.WriteString(helpText)
+	helpText := renderHelpText("Type move (e.g. e4, Nf3) | ESC: menu | q: quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
 
 	// Render error message if present
 	if m.errorMsg != "" {
@@ -315,6 +330,13 @@ func (m Model) renderGameOver() string {
 		Align(lipgloss.Center)
 	b.WriteString(optionsStyle.Render(optionsText))
 
+	// Render help text
+	helpText := renderHelpText("n: new game | m: main menu | q: quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
+
 	return b.String()
 }
 
@@ -347,6 +369,7 @@ func (m Model) renderSettings() string {
 		{"Show Coordinates", m.config.ShowCoords},
 		{"Use Colors", m.config.UseColors},
 		{"Show Move History", m.config.ShowMoveHistory},
+		{"Show Help Text", m.config.ShowHelpText},
 	}
 
 	// Render each setting option with its current state
@@ -375,9 +398,11 @@ func (m Model) renderSettings() string {
 	}
 
 	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to navigate, Enter to toggle, ESC/q to return to menu")
-	b.WriteString(helpText)
+	helpText := renderHelpText("Use arrow keys to navigate, Enter to toggle, ESC/q to return to menu", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
 
 	// Render error message if present
 	if m.errorMsg != "" {

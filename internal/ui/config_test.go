@@ -50,6 +50,10 @@ func TestDefaultConfig(t *testing.T) {
 	if config.ShowMoveHistory != false {
 		t.Errorf("DefaultConfig().ShowMoveHistory = %v, want false", config.ShowMoveHistory)
 	}
+
+	if config.ShowHelpText != true {
+		t.Errorf("DefaultConfig().ShowHelpText = %v, want true", config.ShowHelpText)
+	}
 }
 
 // TestLoadConfigNoFile verifies that LoadConfig returns defaults when no file exists

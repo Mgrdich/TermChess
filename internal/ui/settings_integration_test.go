@@ -26,6 +26,7 @@ func TestSettingsConfigPersistence(t *testing.T) {
 	initialShowCoords := m1.config.ShowCoords
 	initialUseColors := m1.config.UseColors
 	initialShowMoveHistory := m1.config.ShowMoveHistory
+	initialShowHelpText := m1.config.ShowHelpText
 
 	// Phase 2: Navigate to Settings and toggle UseUnicode
 	m1.screen = ScreenSettings
@@ -68,6 +69,10 @@ func TestSettingsConfigPersistence(t *testing.T) {
 	if m2.config.ShowMoveHistory != initialShowMoveHistory {
 		t.Errorf("After restart, ShowMoveHistory = %v, want %v (should be unchanged)", m2.config.ShowMoveHistory, initialShowMoveHistory)
 	}
+
+	if m2.config.ShowHelpText != initialShowHelpText {
+		t.Errorf("After restart, ShowHelpText = %v, want %v (should be unchanged)", m2.config.ShowHelpText, initialShowHelpText)
+	}
 }
 
 // TestSettingsToggleAllOptions tests toggling all settings options
@@ -86,7 +91,7 @@ func TestSettingsToggleAllOptions(t *testing.T) {
 	m.screen = ScreenSettings
 
 	// Toggle all options
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		m.settingsSelection = i
 		model, _ := m.handleSettingsKeys(tea.KeyMsg{Type: tea.KeyEnter})
 		m = model.(Model)
@@ -105,6 +110,9 @@ func TestSettingsToggleAllOptions(t *testing.T) {
 	}
 	if m.config.ShowMoveHistory == defaults.ShowMoveHistory {
 		t.Errorf("ShowMoveHistory should be toggled from default")
+	}
+	if m.config.ShowHelpText == defaults.ShowHelpText {
+		t.Errorf("ShowHelpText should be toggled from default")
 	}
 
 	// Verify persistence

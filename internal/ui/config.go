@@ -17,6 +17,8 @@ type Config struct {
 	UseColors bool
 	// ShowMoveHistory determines whether to display the move history panel
 	ShowMoveHistory bool
+	// ShowHelpText determines whether to display navigation help text at the bottom of screens
+	ShowHelpText bool
 }
 
 // DefaultConfig returns a Config with default values for maximum compatibility
@@ -27,6 +29,7 @@ func DefaultConfig() Config {
 		ShowCoords:      true,  // Show a-h, 1-8 labels
 		UseColors:       true,  // Use colors if terminal supports
 		ShowMoveHistory: false, // Hidden by default
+		ShowHelpText:    true,  // Show help text by default
 	}
 }
 
@@ -43,6 +46,7 @@ type DisplayConfig struct {
 	ShowCoordinates bool `toml:"show_coordinates"`
 	UseColors       bool `toml:"use_colors"`
 	ShowMoveHistory bool `toml:"show_move_history"`
+	ShowHelpText    bool `toml:"show_help_text"`
 }
 
 // GameConfig holds game-related configuration options for the TOML file.
@@ -85,12 +89,22 @@ func LoadConfig() Config {
 	}
 
 	// Convert ConfigFile to Config
-	return Config{
+	config := Config{
 		UseUnicode:      configFile.Display.UseUnicode,
 		ShowCoords:      configFile.Display.ShowCoordinates,
 		UseColors:       configFile.Display.UseColors,
 		ShowMoveHistory: configFile.Display.ShowMoveHistory,
+		ShowHelpText:    configFile.Display.ShowHelpText,
 	}
+
+	// Apply defaults for new fields if they're missing (backward compatibility)
+	// If ShowHelpText is false and all other fields are also false, it's likely
+	// an old config file without ShowHelpText, so we default it to true
+	if !config.ShowHelpText && !config.UseUnicode && !config.ShowCoords && !config.UseColors && !config.ShowMoveHistory {
+		config.ShowHelpText = true
+	}
+
+	return config
 }
 
 // SaveConfig writes the current configuration to ~/.termchess/config.toml.
@@ -115,6 +129,7 @@ func SaveConfig(config Config) error {
 			ShowCoordinates: config.ShowCoords,
 			UseColors:       config.UseColors,
 			ShowMoveHistory: config.ShowMoveHistory,
+			ShowHelpText:    config.ShowHelpText,
 		},
 		Game: GameConfig{
 			DefaultGameType:      "pvp",

@@ -146,10 +146,10 @@
 - [x] Call `SaveConfig()` when option changes
 - [x] Apply config changes immediately to next board render
 - [x] Test: Change Unicode to true, see Unicode pieces; toggle coordinates off, labels disappear
-- [ ] Add "Show Help Text" option to Settings screen (5th toggleable option)
-- [ ] Update Config struct to include ShowHelpText field (default: true)
-- [ ] Update view rendering to conditionally show help text based on config
-- [ ] Test: Toggle help text off, verify navigation hints disappear from all screens
+- [x] Add "Show Help Text" option to Settings screen (5th toggleable option)
+- [x] Update Config struct to include ShowHelpText field (default: true)
+- [x] Update view rendering to conditionally show help text based on config
+- [x] Test: Toggle help text off, verify navigation hints disappear from all screens
 
 ## Slice 14: Implement Save Game on Exit
 
