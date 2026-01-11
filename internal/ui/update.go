@@ -32,14 +32,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Handle global quit keys (work from any screen)
 	// Exception: 'q' on Settings screen returns to menu instead of quitting
+	// Exception: ctrl+c and 'q' during gameplay show save prompt
 	switch msg.String() {
 	case "ctrl+c":
+		// If in active game, show save prompt instead of quitting immediately
+		if m.screen == ScreenGamePlay && m.board != nil {
+			m.screen = ScreenSavePrompt
+			m.savePromptAction = "exit"
+			return m, nil
+		}
 		return m, tea.Quit
 	case "q":
-		// 'q' on Settings screen returns to menu, otherwise quits
-		if m.screen != ScreenSettings {
-			return m, tea.Quit
+		// 'q' on Settings screen returns to menu
+		if m.screen == ScreenSettings {
+			break
 		}
+		// 'q' during gameplay shows save prompt
+		if m.screen == ScreenGamePlay && m.board != nil {
+			m.screen = ScreenSavePrompt
+			m.savePromptAction = "exit"
+			return m, nil
+		}
+		// Otherwise quit
+		return m, tea.Quit
 	}
 
 	// Handle screen-specific keys based on current screen
@@ -54,6 +69,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleGameOverKeys(msg)
 	case ScreenSettings:
 		return m.handleSettingsKeys(msg)
+	case ScreenSavePrompt:
+		return m.handleSavePromptKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -205,6 +222,12 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 // Regular characters are appended to input, backspace deletes, and enter submits.
 func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
+	case tea.KeyEsc:
+		// Show save prompt when trying to return to menu
+		m.screen = ScreenSavePrompt
+		m.savePromptAction = "menu"
+		return m, nil
+
 	case tea.KeyBackspace:
 		// Remove the last character from input
 		if len(m.input) > 0 {
@@ -350,6 +373,58 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleSavePromptKeys handles keyboard input for the SavePrompt screen.
+// Supports 'y' to save and proceed, 'n' to skip save and proceed, ESC to cancel.
+func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y":
+		// Save the game
+		if err := SaveGame(m.board); err != nil {
+			m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
+			return m, nil
+		}
+
+		// Proceed with the action (exit or menu)
+		if m.savePromptAction == "exit" {
+			return m, tea.Quit
+		}
+		// Return to main menu
+		m.screen = ScreenMainMenu
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
+		m.board = nil
+		m.moveHistory = []engine.Move{}
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = ""
+		return m, nil
+
+	case "n", "N":
+		// Don't save, just proceed with the action
+		if m.savePromptAction == "exit" {
+			return m, tea.Quit
+		}
+		// Return to main menu
+		m.screen = ScreenMainMenu
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
+		m.board = nil
+		m.moveHistory = []engine.Move{}
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = ""
+		return m, nil
+
+	case "esc":
+		// Cancel and return to game
+		m.screen = ScreenGamePlay
+		m.errorMsg = ""
+		return m, nil
 	}
 
 	return m, nil

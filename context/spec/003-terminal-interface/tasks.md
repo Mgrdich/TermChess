@@ -155,11 +155,11 @@
 
 **Goal:** When user exits during a game, they're prompted to save; game is saved as FEN.
 
-- [ ] Detect exit attempt during active game (Ctrl+C or quit command)
-- [ ] Show prompt: "Save current game before exiting? (y/n)"
-- [ ] If yes, save current board state as FEN to `~/.termchess/savegame.fen`
-- [ ] If no, return to main menu or exit
-- [ ] Test: Start game, make moves, press Ctrl+C, choose save, check file created
+- [x] Detect exit attempt during active game (Ctrl+C or quit command)
+- [x] Show prompt: "Save current game before exiting? (y/n)"
+- [x] If yes, save current board state as FEN to `~/.termchess/savegame.fen`
+- [x] If no, return to main menu or exit
+- [x] Test: Start game, make moves, press Ctrl+C, choose save, check file created
 
 ## Slice 15: Implement Resume Game on Startup
 

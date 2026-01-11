@@ -79,6 +79,8 @@ func (m Model) View() string {
 		return m.renderGameOver()
 	case ScreenSettings:
 		return m.renderSettings()
+	case ScreenSavePrompt:
+		return m.renderSavePrompt()
 	default:
 		return "Unknown screen"
 	}
@@ -416,6 +418,58 @@ func (m Model) renderSettings() string {
 		b.WriteString("\n\n")
 		statusText := statusStyle.Render(m.statusMsg)
 		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// renderSavePrompt renders the save prompt screen when the user tries to exit during an active game.
+// It shows the current board position and asks if they want to save before exiting.
+func (m Model) renderSavePrompt() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render the current board position
+	if m.board != nil {
+		renderer := NewBoardRenderer(m.config)
+		boardStr := renderer.Render(m.board)
+		b.WriteString(boardStr)
+		b.WriteString("\n\n")
+	}
+
+	// Render the save prompt message
+	promptStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFD700")).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+	promptMsg := "Save current game before exiting?"
+	b.WriteString(promptStyle.Render(promptMsg))
+	b.WriteString("\n\n")
+
+	// Render options
+	optionsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Align(lipgloss.Center)
+	optionsText := "y: Yes  |  n: No  |  ESC: Cancel"
+	b.WriteString(optionsStyle.Render(optionsText))
+
+	// Render help text
+	helpText := renderHelpText("y: save and exit | n: exit without saving | ESC: cancel", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
 	}
 
 	return b.String()

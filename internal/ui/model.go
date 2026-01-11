@@ -23,6 +23,8 @@ const (
 	ScreenGameOver
 	// ScreenSettings allows the user to configure display options
 	ScreenSettings
+	// ScreenSavePrompt is displayed when the user tries to exit during an active game
+	ScreenSavePrompt
 )
 
 // GameType represents the type of chess game being played.
@@ -80,6 +82,10 @@ type Model struct {
 	// Settings state
 	// settingsSelection tracks the currently selected setting option index
 	settingsSelection int
+
+	// Save prompt state
+	// savePromptAction indicates what action to take after save prompt ("exit" or "menu")
+	savePromptAction string
 
 	// Game metadata
 	// gameType indicates whether this is PvP or PvBot
