@@ -265,6 +265,7 @@ type Config struct {
     ShowCoords     bool     // Show file/rank labels
     UseColors      bool     // Color piece symbols
     ShowMoveHistory bool    // Display move history
+    ShowHelpText   bool     // Display navigation help text
 }
 
 // Model is the Bubbletea model
@@ -364,6 +365,39 @@ func (r *BoardRenderer) pieceSymbol(p engine.Piece) string {
         return unicodeSymbol(p)
     }
     return asciiSymbol(p)
+}
+```
+
+**Help Text Rendering** (`internal/ui/view.go`):
+```go
+// renderHelpText conditionally renders help text based on config
+func renderHelpText(text string, config Config) string {
+    if !config.ShowHelpText {
+        return ""
+    }
+
+    // Use dimmed/subtle styling for help text
+    helpStyle := lipgloss.NewStyle().
+        Foreground(lipgloss.Color("#666666")).
+        Padding(1, 0, 0, 0)
+
+    return helpStyle.Render(text)
+}
+
+// Example usage in view rendering:
+func (m Model) renderGamePlay() string {
+    var b strings.Builder
+
+    // ... render board and game state ...
+
+    // Conditionally render help text
+    helpText := renderHelpText("ESC: menu | Type move (e.g. e4, Nf3)", m.config)
+    if helpText != "" {
+        b.WriteString("\n")
+        b.WriteString(helpText)
+    }
+
+    return b.String()
 }
 ```
 
@@ -711,6 +745,7 @@ func TestGameFlow(t *testing.T) {
 - ShowCoords: true (Show a-h, 1-8 labels)
 - UseColors: true (Use colors if terminal supports)
 - ShowMoveHistory: false (Hidden by default per spec)
+- ShowHelpText: true (Show navigation help by default)
 
 **Configuration File Persistence:**
 
@@ -722,6 +757,7 @@ use_unicode = false
 show_coordinates = true
 use_colors = true
 show_move_history = false
+show_help_text = true
 
 [game]
 default_game_type = "pvp"

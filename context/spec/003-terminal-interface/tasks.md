@@ -146,6 +146,10 @@
 - [x] Call `SaveConfig()` when option changes
 - [x] Apply config changes immediately to next board render
 - [x] Test: Change Unicode to true, see Unicode pieces; toggle coordinates off, labels disappear
+- [ ] Add "Show Help Text" option to Settings screen (5th toggleable option)
+- [ ] Update Config struct to include ShowHelpText field (default: true)
+- [ ] Update view rendering to conditionally show help text based on config
+- [ ] Test: Toggle help text off, verify navigation hints disappear from all screens
 
 ## Slice 14: Implement Save Game on Exit
 
@@ -222,3 +226,31 @@
 - [ ] Verify test coverage > 70% for UI logic
 - [ ] Test on macOS, Linux, and Windows (if possible)
 - [ ] Ensure no terminal scrollback pollution (clean redraws)
+
+## Slice 21: Implement Universal Navigation (ESC to Exit)
+
+**Goal:** Every screen provides consistent navigation back to previous screen or main menu.
+
+- [ ] Audit all existing screens for ESC key handling
+- [ ] Implement ESC key navigation for GameTypeSelect screen → Main Menu
+- [ ] Implement ESC key navigation for FENInput screen → Main Menu
+- [ ] Implement ESC key navigation for BotSelect screen → GameTypeSelect
+- [ ] Add save prompt when ESC pressed during active GamePlay (already exists for 'q')
+- [ ] Ensure Settings screen ESC navigation is working (already implemented in Slice 13)
+- [ ] Add consistent help text to all screens showing navigation options (respects ShowHelpText config)
+- [ ] Update view.go to conditionally display help text for each screen based on config.ShowHelpText:
+  - MainMenu: "arrows/jk: navigate | enter: select | q: quit"
+  - GameTypeSelect: "ESC: back to menu | arrows: navigate | enter: select"
+  - FENInput: "ESC: back to menu | enter: load position"
+  - BotSelect: "ESC: back | arrows: navigate | enter: select"
+  - GamePlay: "ESC: menu (with save) | type move (e.g. e4, Nf3)"
+  - GameOver: "ESC: menu | arrows: navigate | enter: select"
+  - Settings: "ESC: back | arrows: navigate | enter: toggle"
+- [ ] Create helper function `renderHelpText(text string, config Config) string` that returns empty string if ShowHelpText is false
+- [ ] Ensure help text is visually distinct (dimmed color, bottom of screen, separated by whitespace)
+- [ ] Ensure Ctrl+C always exits application immediately from any screen
+- [ ] Add unit tests for ESC key handling on each screen
+- [ ] Add unit tests for help text display/hide based on config
+- [ ] Test navigation flow: verify user can navigate from any screen back to menu
+- [ ] Test that ESC during gameplay prompts for save before returning to menu
+- [ ] Test that toggling ShowHelpText in Settings immediately affects next screen render
