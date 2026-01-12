@@ -118,7 +118,7 @@ func (m Model) renderMainMenu() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	helpText := renderHelpText("arrows/jk: navigate | enter: select | q: quit", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -178,7 +178,7 @@ func (m Model) renderGameTypeSelect() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	helpText := renderHelpText("ESC: back to menu | arrows/jk: navigate | enter: select", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -250,7 +250,7 @@ func (m Model) renderGamePlay() string {
 	b.WriteString(inputPrompt + inputText)
 
 	// Add help text
-	helpText := renderHelpText("Type move (e.g. e4, Nf3) | q: quit | Commands: resign, offerdraw, showfen, menu", m.config)
+	helpText := renderHelpText("ESC: menu (with save) | type move (e.g. e4, Nf3) | Commands: resign, offerdraw, showfen, menu", m.config)
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -385,7 +385,7 @@ func (m Model) renderGameOver() string {
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := renderHelpText("n: new game | m: main menu | q: quit", m.config)
+	helpText := renderHelpText("ESC/m: menu | n: new game | q: quit", m.config)
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -452,7 +452,7 @@ func (m Model) renderSettings() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("Use arrow keys to navigate, Space/Enter to toggle, ESC to return to menu", m.config)
+	helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -607,7 +607,7 @@ func (m Model) renderFENInput() string {
 	b.WriteString("\n\n")
 
 	// Help text
-	helpText := renderHelpText("Enter: load position | ESC: back to menu", m.config)
+	helpText := renderHelpText("ESC: back to menu | enter: load position", m.config)
 	if helpText != "" {
 		b.WriteString(helpText)
 	}

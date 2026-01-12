@@ -116,7 +116,7 @@ func TestRenderMainMenu(t *testing.T) {
 	}
 
 	// Should contain instructions
-	if !strings.Contains(view, "arrow keys") || !strings.Contains(view, "Enter") {
+	if !strings.Contains(view, "arrows/jk") || !strings.Contains(view, "enter") {
 		t.Error("Main menu should contain navigation instructions")
 	}
 }
@@ -194,7 +194,7 @@ func TestRenderSettings(t *testing.T) {
 	}
 
 	// Should contain instructions
-	if !strings.Contains(view, "Space") || !strings.Contains(view, "ESC") {
+	if !strings.Contains(view, "space") || !strings.Contains(view, "ESC") {
 		t.Error("Settings screen should contain navigation instructions")
 	}
 }

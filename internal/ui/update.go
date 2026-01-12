@@ -243,6 +243,17 @@ func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Check for 'esc' key to show save prompt before returning to menu
+	if msg.String() == "esc" {
+		// Show save prompt
+		m.screen = ScreenSavePrompt
+		m.savePromptSelection = 0
+		m.savePromptAction = "menu"
+		m.errorMsg = ""
+		m.statusMsg = ""
+		return m, nil
+	}
+
 	switch msg.Type {
 	case tea.KeyBackspace:
 		// Remove the last character from input
@@ -270,7 +281,7 @@ func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleGameOverKeys handles keyboard input for the GameOver screen.
-// Supports 'n' for new game, 'm' for main menu, and 'q' for quit.
+// Supports 'n' for new game, 'm' for main menu, 'esc' for main menu, and 'q' for quit.
 func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "n", "N":
@@ -290,7 +301,7 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.drawOfferedByBlack = false
 		m.drawByAgreement = false
 
-	case "m", "M":
+	case "m", "M", "esc":
 		// Return to main menu
 		m.screen = ScreenMainMenu
 		m.board = nil
