@@ -17,18 +17,18 @@ _The highest priority features that form the core foundation of the product._
   - [x] **Export Current Position:** Allow users to copy/display the FEN string of the current game state at any time.
   - [x] **Import FEN to Start Game:** Enable users to start a new game from any valid FEN position.
 
-- [ ] **Terminal Interface**
-  - [ ] **ASCII/Unicode Board Display:** Render the chess board clearly in the terminal with piece symbols and coordinates.
-  - [ ] **Move Input System:** Accept moves in standard algebraic notation (e.g., `e4`, `Nf3`, `O-O`) with validation and error feedback.
-  - [ ] **Game Menu & Flow:** Provide a main menu to start new games, select game modes, and exit gracefully.
+- [x] **Terminal Interface**
+  - [x] **ASCII/Unicode Board Display:** Render the chess board clearly in the terminal with piece symbols and coordinates.
+  - [x] **Move Input System:** Accept moves in standard algebraic notation (e.g., `e4`, `Nf3`, `O-O`) with validation and error feedback.
+  - [x] **Game Menu & Flow:** Provide a main menu to start new games, select game modes, and exit gracefully.
 
-- [ ] **Local Player vs Player**
-  - [ ] **Two-Player Mode:** Enable two humans to play against each other on the same machine, alternating turns.
+- [x] **Local Player vs Player**
+  - [x] **Two-Player Mode:** Enable two humans to play against each other on the same machine, alternating turns.
 
-- [ ] **Configuration & Persistence**
-  - [ ] **User Config Loading:** Read user preferences from config file on startup (board style, default difficulty, etc.)
-  - [ ] **Game Saves:** Allow users to save and load game positions using FEN strings stored on disk.
-  - [ ] **Settings Application:** Apply loaded configuration to customize the game experience accordingly.
+- [x] **Configuration & Persistence**
+  - [x] **User Config Loading:** Read user preferences from config file on startup (board style, default difficulty, etc.)
+  - [x] **Game Saves:** Allow users to save and load game positions using FEN strings stored on disk.
+  - [x] **Settings Application:** Apply loaded configuration to customize the game experience accordingly.
 
 ---
 
