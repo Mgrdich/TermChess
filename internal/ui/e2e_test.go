@@ -409,6 +409,38 @@ func TestHandleSavePromptKeys(t *testing.T) {
 	if m.screen != ScreenGamePlay {
 		t.Errorf("Expected to return to game play after ESC, got screen %v", m.screen)
 	}
+
+	// Test direct 'n' key - should go to main menu without saving
+	m.screen = ScreenSavePrompt
+	m.board = engine.NewBoard()
+	m.savePromptAction = "menu"
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+	result, _ = m.handleSavePromptKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected to return to main menu after 'n', got screen %v", m.screen)
+	}
+
+	// Test direct 'y' key - should save and go to main menu
+	m.screen = ScreenSavePrompt
+	m.board = engine.NewBoard()
+	m.savePromptAction = "menu"
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
+	result, _ = m.handleSavePromptKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected to return to main menu after 'y', got screen %v", m.screen)
+	}
+
+	// Verify the game was saved
+	if !SaveGameExists() {
+		t.Error("Expected game to be saved after pressing 'y'")
+	}
+
+	// Clean up
+	_ = DeleteSaveGame()
 }
 
 // TestFullGameFlow tests a complete game from start to finish

@@ -384,7 +384,7 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 }
 
 // handleSavePromptKeys handles keyboard input for the Save Prompt screen.
-// Supports arrow keys to navigate between Yes/No, Enter to confirm, and ESC to cancel.
+// Supports arrow keys to navigate between Yes/No, Enter to confirm, direct 'y'/'n' keys, and ESC to cancel.
 func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Clear any previous error or status messages when user takes action
 	m.errorMsg = ""
@@ -408,6 +408,42 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Wrap to top
 			m.savePromptSelection = 0
 		}
+
+	case "y", "Y":
+		// Direct "Yes" - save the game
+		err := SaveGame(m.board)
+		if err != nil {
+			m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
+			return m, nil
+		}
+		// Save completed successfully, execute the action (exit or menu)
+		if m.savePromptAction == "exit" {
+			return m, tea.Quit
+		}
+		// Return to main menu
+		m.screen = ScreenMainMenu
+		m.board = nil
+		m.moveHistory = []engine.Move{}
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = ""
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
+
+	case "n", "N":
+		// Direct "No" - don't save, just execute the action
+		if m.savePromptAction == "exit" {
+			return m, tea.Quit
+		}
+		// Return to main menu without saving
+		m.screen = ScreenMainMenu
+		m.board = nil
+		m.moveHistory = []engine.Move{}
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = ""
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
 
 	case "enter":
 		// Execute the selected action
