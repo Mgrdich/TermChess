@@ -92,6 +92,7 @@ func (m Model) View() string {
 
 // renderMainMenu renders the main menu screen with title, menu options,
 // cursor indicator, help text, and any error or status messages.
+// The "Resume Game" option (if present) is visually distinct with a special indicator and color.
 func (m Model) renderMainMenu() string {
 	var b strings.Builder
 
@@ -105,13 +106,35 @@ func (m Model) renderMainMenu() string {
 		cursor := "  " // Two spaces for non-selected items
 		optionText := option
 
+		// Check if this is the "Resume Game" option
+		isResumeGame := option == "Resume Game"
+
 		if i == m.menuSelection {
 			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			if isResumeGame {
+				// Special styling for selected Resume Game option
+				cursor = cursorStyle.Render("▶ ")
+				resumeStyle := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#50FA7B")).
+					Bold(true).
+					Padding(0, 2)
+				optionText = resumeStyle.Render(option)
+			} else {
+				cursor = cursorStyle.Render("> ")
+				optionText = selectedItemStyle.Render(option)
+			}
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			if isResumeGame {
+				// Special styling for unselected Resume Game option
+				resumeStyle := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#50FA7B")).
+					Padding(0, 2)
+				optionText = resumeStyle.Render("▶ " + option)
+				cursor = "" // No cursor needed, indicator is part of the text
+			} else {
+				optionText = menuItemStyle.Render(option)
+			}
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))

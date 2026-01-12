@@ -271,3 +271,25 @@
 - [x] Test navigation flow: verify user can navigate from any screen back to menu
 - [x] Test that ESC during gameplay prompts for save before returning to menu
 - [x] Test that toggling ShowHelpText in Settings immediately affects next screen render
+
+---
+
+## Slice 23: Add Resume Game Option to Main Menu
+
+**Goal:** Show "Resume Game" option in main menu when a saved game exists, providing easier access to continue interrupted games.
+
+- [x] Add function to check if saved game file exists (`~/.termchess/savegame.fen`)
+- [x] Modify main menu to dynamically include "Resume Game" option when saved game exists
+- [x] Update menu option indices to accommodate dynamic menu items
+- [x] Implement "Resume Game" selection handler to load saved game and start gameplay
+- [x] Ensure "Resume Game" option appears at the top of the menu (after title, before "New Game")
+- [x] Update main menu rendering to highlight the "Resume Game" option distinctly (e.g., different color or indicator)
+- [x] Remove or deprecate the startup resume prompt (Slice 15) in favor of menu-based approach
+- [x] Update menu navigation tests to handle dynamic menu options
+- [x] Add unit tests for saved game detection logic
+- [x] Add unit tests for menu option ordering with/without saved game
+- [x] Add integration test: save game → return to menu → verify "Resume Game" appears
+- [x] Add integration test: select "Resume Game" → verify game state restored correctly
+- [x] Add integration test: complete resumed game → verify "Resume Game" option disappears from menu
+- [x] Update help text to reflect "Resume Game" option availability
+- [x] Test full flow: play game → save → quit → restart → see "Resume Game" in menu → select → continue game

@@ -85,9 +85,12 @@ This feature provides a clean, distraction-free chess experience that integrates
 **Main Menu Acceptance Criteria:**
 - [x] When the application starts, a main menu is displayed with the following options:
   - "New Game"
-  - "Load Game" (resume a saved game)
+  - "Load Game" (load a position from FEN string)
   - "Settings"
   - "Exit"
+- [x] When a saved game exists, an additional "Resume Game" option appears at the top of the menu
+- [x] The "Resume Game" option is visually distinct (highlighted or with an indicator)
+- [x] Selecting "Resume Game" loads the saved game and starts gameplay immediately
 - [x] Users can select menu options using keyboard input
 - [x] Selecting "Exit" closes the application gracefully
 
@@ -104,7 +107,8 @@ This feature provides a clean, distraction-free chess experience that integrates
 - [x] If a user attempts to exit or return to menu during an active game, the system prompts: "Save current game before exiting?"
 - [x] If the user chooses "Yes", the game is saved (using FEN) and can be resumed later
 - [x] If the user chooses "No", the game is abandoned and the user returns to the main menu
-- [x] When the user next launches the application, if a saved game exists, the system offers: "Resume last game?"
+- [x] When the user next launches the application, if a saved game exists, the system offers: "Resume last game?" (legacy startup prompt - deprecated)
+- [x] **New approach**: When a saved game exists, a "Resume Game" option appears in the main menu instead of showing a startup prompt
 
 **Mid-Game Options Acceptance Criteria:**
 - [x] During an active game, users can access the following commands/options:
@@ -182,6 +186,7 @@ This feature provides a clean, distraction-free chess experience that integrates
 - Main menu system for game navigation
 - New game flow with game type and difficulty selection
 - Automatic game saving on exit with resume capability
+- Dynamic "Resume Game" menu option when saved game exists
 - Mid-game options (resign, draw offer, show FEN, menu access)
 - Clean screen redrawing for better UX
 - Game end screen with result, summary, and next action options

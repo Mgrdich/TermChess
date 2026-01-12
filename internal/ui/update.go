@@ -105,12 +105,34 @@ func (m Model) handleMainMenuKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleMainMenuSelection executes the action for the currently selected menu option.
-// For now, only "Exit" and "New Game" are fully implemented.
-// Other options set a status message indicating they are not yet implemented.
+// Handles all main menu options including the dynamic "Resume Game" option.
 func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 	selected := m.menuOptions[m.menuSelection]
 
 	switch selected {
+	case "Resume Game":
+		// Load the saved game and start gameplay
+		board, err := LoadGame()
+		if err != nil {
+			// Failed to load - show error and stay on main menu
+			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
+			return m, nil
+		}
+
+		// Successfully loaded - start gameplay with loaded board
+		m.board = board
+		m.moveHistory = []engine.Move{}
+		m.screen = ScreenGamePlay
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = "Game resumed"
+		m.resignedBy = -1
+		// Reset draw offer state
+		m.drawOfferedBy = -1
+		m.drawOfferedByWhite = false
+		m.drawOfferedByBlack = false
+		m.drawByAgreement = false
+
 	case "Exit":
 		return m, tea.Quit
 
@@ -181,7 +203,7 @@ func (m Model) handleGameTypeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		// Return to main menu
 		m.screen = ScreenMainMenu
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -438,7 +460,7 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input = ""
 		m.errorMsg = ""
 		m.statusMsg = ""
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
 
 	case "n", "N":
@@ -453,7 +475,7 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input = ""
 		m.errorMsg = ""
 		m.statusMsg = ""
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
 
 	case "enter":
@@ -478,7 +500,7 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input = ""
 		m.errorMsg = ""
 		m.statusMsg = ""
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
 
 	case "esc":
@@ -525,7 +547,7 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Failed to load - show error and go to main menu
 			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
 			m.screen = ScreenMainMenu
-			m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+			m.menuOptions = buildMainMenuOptions()
 			m.menuSelection = 0
 			return m, nil
 		}
@@ -547,7 +569,7 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "n", "N":
 		// Direct "No" - go to main menu
 		m.screen = ScreenMainMenu
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -582,7 +604,7 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			// User selected "No" - go to main menu
 			m.screen = ScreenMainMenu
-			m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+			m.menuOptions = buildMainMenuOptions()
 			m.menuSelection = 0
 			m.errorMsg = ""
 			m.statusMsg = ""
@@ -602,7 +624,7 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		// Return to main menu
 		m.screen = ScreenMainMenu
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""

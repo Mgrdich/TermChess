@@ -337,9 +337,17 @@ func TestNewModel_WithSavedGame(t *testing.T) {
 	// Create a new model (simulates app startup)
 	m := NewModel(DefaultConfig())
 
-	// Verify screen is ScreenResumePrompt
-	if m.screen != ScreenResumePrompt {
-		t.Errorf("NewModel with saved game should start at ScreenResumePrompt, got %v", m.screen)
+	// Verify screen is ScreenMainMenu (new behavior: always start at main menu)
+	if m.screen != ScreenMainMenu {
+		t.Errorf("NewModel with saved game should start at ScreenMainMenu, got %v", m.screen)
+	}
+
+	// Verify "Resume Game" option is present in menu
+	if len(m.menuOptions) != 5 {
+		t.Errorf("Expected 5 menu options with saved game, got %d", len(m.menuOptions))
+	}
+	if m.menuOptions[0] != "Resume Game" {
+		t.Errorf("Expected first option to be 'Resume Game', got '%s'", m.menuOptions[0])
 	}
 
 	// Clean up
@@ -362,7 +370,8 @@ func TestNewModel_WithoutSavedGame(t *testing.T) {
 	}
 }
 
-// TestHandleResumePromptKeys_Yes tests resuming a saved game
+// TestHandleResumePromptKeys_Yes tests resuming a saved game via the resume prompt handler
+// Note: This tests the handler function directly, even though the screen is deprecated
 func TestHandleResumePromptKeys_Yes(t *testing.T) {
 	// Create and save a game with a specific position
 	board := engine.NewBoard()
@@ -374,11 +383,10 @@ func TestHandleResumePromptKeys_Yes(t *testing.T) {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
-	// Create a model at the resume prompt screen
+	// Create a model and manually set it to the resume prompt screen
+	// (even though this screen is deprecated, we test the handler for backwards compatibility)
 	m := NewModel(DefaultConfig())
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("Model should start at ScreenResumePrompt")
-	}
+	m.screen = ScreenResumePrompt
 
 	// Simulate pressing 'y' to resume
 	keyMsg := KeyMsg("y")
@@ -415,7 +423,8 @@ func TestHandleResumePromptKeys_Yes(t *testing.T) {
 	os.Remove(path)
 }
 
-// TestHandleResumePromptKeys_No tests declining to resume
+// TestHandleResumePromptKeys_No tests declining to resume via the resume prompt handler
+// Note: This tests the handler function directly, even though the screen is deprecated
 func TestHandleResumePromptKeys_No(t *testing.T) {
 	// Create and save a game
 	board := engine.NewBoard()
@@ -424,11 +433,10 @@ func TestHandleResumePromptKeys_No(t *testing.T) {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
-	// Create a model at the resume prompt screen
+	// Create a model and manually set it to the resume prompt screen
+	// (even though this screen is deprecated, we test the handler for backwards compatibility)
 	m := NewModel(DefaultConfig())
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("Model should start at ScreenResumePrompt")
-	}
+	m.screen = ScreenResumePrompt
 
 	// Simulate pressing 'n' to decline resume
 	keyMsg := KeyMsg("n")
@@ -455,7 +463,8 @@ func TestHandleResumePromptKeys_No(t *testing.T) {
 	os.Remove(path)
 }
 
-// TestHandleResumePromptKeys_CorruptSavegame tests error handling for corrupt savegame
+// TestHandleResumePromptKeys_CorruptSavegame tests error handling for corrupt savegame via resume prompt handler
+// Note: This tests the handler function directly, even though the screen is deprecated
 func TestHandleResumePromptKeys_CorruptSavegame(t *testing.T) {
 	// Write invalid FEN to save file
 	path, _ := SaveGamePath()
@@ -466,11 +475,10 @@ func TestHandleResumePromptKeys_CorruptSavegame(t *testing.T) {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
-	// Create a model at the resume prompt screen
+	// Create a model and manually set it to the resume prompt screen
+	// (even though this screen is deprecated, we test the handler for backwards compatibility)
 	m := NewModel(DefaultConfig())
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("Model should start at ScreenResumePrompt")
-	}
+	m.screen = ScreenResumePrompt
 
 	// Simulate pressing 'y' to resume
 	keyMsg := KeyMsg("y")
@@ -583,14 +591,18 @@ func TestResumeGame_Integration(t *testing.T) {
 	// Phase 3: Simulate app restart
 	m := NewModel(DefaultConfig())
 
-	// Phase 4: Verify resume prompt appears
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("After restart with saved game, screen should be ScreenResumePrompt, got %v", m.screen)
+	// Phase 4: Verify main menu appears with Resume Game option
+	if m.screen != ScreenMainMenu {
+		t.Fatalf("After restart with saved game, screen should be ScreenMainMenu, got %v", m.screen)
 	}
 
-	// Phase 5: Resume the game
-	keyMsg := KeyMsg("y")
-	updatedModel, _ := m.handleResumePromptKeys(keyMsg)
+	if m.menuOptions[0] != "Resume Game" {
+		t.Fatalf("Expected first menu option to be 'Resume Game', got '%s'", m.menuOptions[0])
+	}
+
+	// Phase 5: Select Resume Game from menu
+	m.menuSelection = 0
+	updatedModel, _ := m.handleMainMenuSelection()
 	m = updatedModel.(Model)
 
 	// Phase 6: Verify game state is restored

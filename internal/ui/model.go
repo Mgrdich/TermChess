@@ -114,28 +114,25 @@ type Model struct {
 }
 
 // NewModel creates and initializes a new Model with the provided configuration.
-// The model starts at the resume prompt screen if a saved game exists,
-// otherwise it starts at the main menu screen.
+// The model always starts at the main menu screen.
+// If a saved game exists, the menu will include a "Resume Game" option.
 func NewModel(config Config) Model {
-	// Check if a saved game exists
-	startScreen := ScreenMainMenu
-	if SaveGameExists() {
-		startScreen = ScreenResumePrompt
-	}
-
 	// Initialize the text input for FEN entry
 	ti := textinput.New()
 	ti.Placeholder = "Enter FEN string..."
 	ti.CharLimit = 100
 	ti.Width = 80
 
+	// Build menu options dynamically based on saved game existence
+	menuOptions := buildMainMenuOptions()
+
 	return Model{
 		// Initialize with nil board (created when starting a new game)
 		board:       nil,
 		moveHistory: []engine.Move{},
 
-		// Start at resume prompt if saved game exists, otherwise main menu
-		screen: startScreen,
+		// Always start at main menu
+		screen: ScreenMainMenu,
 
 		// Use the provided configuration
 		config: config,
@@ -146,9 +143,9 @@ func NewModel(config Config) Model {
 		errorMsg:  "",
 		statusMsg: "",
 
-		// Initialize main menu
+		// Initialize main menu with dynamic options
 		menuSelection: 0,
-		menuOptions:   []string{"New Game", "Load Game", "Settings", "Exit"},
+		menuOptions:   menuOptions,
 
 		// Initialize settings
 		settingsSelection: 0,
@@ -164,6 +161,15 @@ func NewModel(config Config) Model {
 		drawOfferedByBlack: false,
 		drawByAgreement:    false,
 	}
+}
+
+// buildMainMenuOptions constructs the main menu options array.
+// If a saved game exists, it includes "Resume Game" at the top of the menu.
+func buildMainMenuOptions() []string {
+	if SaveGameExists() {
+		return []string{"Resume Game", "New Game", "Load Game", "Settings", "Exit"}
+	}
+	return []string{"New Game", "Load Game", "Settings", "Exit"}
 }
 
 // View renders the current state of the UI as a string.

@@ -36,11 +36,20 @@ func TestResumeGameFunctionality(t *testing.T) {
 			board.ToFEN(), loadedBoard.ToFEN())
 	}
 
-	// Test 3: NewModel should start at ScreenResumePrompt when save exists
+	// Test 3: NewModel should start at ScreenMainMenu with Resume Game option when save exists
 	config := DefaultConfig()
 	model := NewModel(config)
-	if model.screen != ScreenResumePrompt {
-		t.Errorf("NewModel screen = %v, expected ScreenResumePrompt (%v)", model.screen, ScreenResumePrompt)
+	if model.screen != ScreenMainMenu {
+		t.Errorf("NewModel screen = %v, expected ScreenMainMenu (%v)", model.screen, ScreenMainMenu)
+	}
+
+	// Verify Resume Game is the first menu option
+	if len(model.menuOptions) != 5 {
+		t.Errorf("Expected 5 menu options with saved game, got %d", len(model.menuOptions))
+	}
+
+	if model.menuOptions[0] != "Resume Game" {
+		t.Errorf("Expected first menu option to be 'Resume Game', got '%s'", model.menuOptions[0])
 	}
 
 	// Test 4: DeleteSaveGame should remove the saved game
