@@ -116,80 +116,84 @@
 
 **Goal:** After "New Game", user chooses game type (PvP or PvBot), then game starts.
 
-- [ ] Create GameTypeSelect screen state
-- [ ] Add transition: MainMenu → "New Game" → GameTypeSelect → GamePlay
-- [ ] Display options: "Player vs Player", "Player vs Bot"
-- [ ] Add keyboard navigation for selection
-- [ ] Store selected game type in model
-- [ ] If "PvBot" selected, show "Coming soon" message and return to menu
-- [ ] Test: Select PvP, game starts; select PvBot, see "Coming soon"
+- [x] Create GameTypeSelect screen state
+- [x] Add transition: MainMenu → "New Game" → GameTypeSelect → GamePlay
+- [x] Display options: "Player vs Player", "Player vs Bot"
+- [x] Add keyboard navigation for selection
+- [x] Store selected game type in model
+- [x] If "PvBot" selected, show "Coming soon" message and return to menu
+- [x] Test: Select PvP, game starts; select PvBot, see "Coming soon"
 
 ## Slice 12: Implement Configuration File Persistence
 
 **Goal:** User preferences (display settings) are saved to `~/.termchess/config.toml` and loaded on startup.
 
-- [ ] Create `internal/ui/persistence.go` (or extend `config.go`)
-- [ ] Implement `LoadConfig()` to read `~/.termchess/config.toml`
-- [ ] Implement `SaveConfig()` to write config to file
-- [ ] Create `~/.termchess/` directory if it doesn't exist
-- [ ] Load config on app startup, use defaults if file missing
-- [ ] Test: Modify config in code, restart app, see config persisted
+- [x] Create `internal/ui/persistence.go` (or extend `config.go`)
+- [x] Implement `LoadConfig()` to read `~/.termchess/config.toml`
+- [x] Implement `SaveConfig()` to write config to file
+- [x] Create `~/.termchess/` directory if it doesn't exist
+- [x] Load config on app startup, use defaults if file missing
+- [x] Test: Modify config in code, restart app, see config persisted
 
 ## Slice 13: Add Settings Screen to Change Display Options
 
 **Goal:** User can navigate to Settings, change display options, and see them applied immediately.
 
-- [ ] Create Settings screen state
-- [ ] Add transition: MainMenu → "Settings" → Settings screen
-- [ ] Display toggleable options: Unicode, Coordinates, Colors, Move History
-- [ ] Allow keyboard navigation to toggle options
-- [ ] Call `SaveConfig()` when option changes
-- [ ] Apply config changes immediately to next board render
-- [ ] Test: Change Unicode to true, see Unicode pieces; toggle coordinates off, labels disappear
+- [x] Create Settings screen state
+- [x] Add transition: MainMenu → "Settings" → Settings screen
+- [x] Display toggleable options: Unicode, Coordinates, Colors, Move History
+- [x] Allow keyboard navigation to toggle options
+- [x] Call `SaveConfig()` when option changes
+- [x] Apply config changes immediately to next board render
+- [x] Test: Change Unicode to true, see Unicode pieces; toggle coordinates off, labels disappear
+- [x] Add "Show Help Text" option to Settings screen (5th toggleable option)
+- [x] Update Config struct to include ShowHelpText field (default: true)
+- [x] Update view rendering to conditionally show help text based on config
+- [x] Test: Toggle help text off, verify navigation hints disappear from all screens
 
 ## Slice 14: Implement Save Game on Exit
 
 **Goal:** When user exits during a game, they're prompted to save; game is saved as FEN.
 
-- [ ] Detect exit attempt during active game (Ctrl+C or quit command)
-- [ ] Show prompt: "Save current game before exiting? (y/n)"
-- [ ] If yes, save current board state as FEN to `~/.termchess/savegame.fen`
-- [ ] If no, return to main menu or exit
-- [ ] Test: Start game, make moves, press Ctrl+C, choose save, check file created
+- [x] Detect exit attempt during active game (Ctrl+C or quit command)
+- [x] Show prompt: "Save current game before exiting? (y/n)"
+- [x] If yes, save current board state as FEN to `~/.termchess/savegame.fen`
+- [x] If no, return to main menu or exit
+- [x] Test: Start game, make moves, press Ctrl+C, choose save, check file created
 
 ## Slice 15: Implement Resume Game on Startup
 
 **Goal:** When user launches app with saved game, they're prompted to resume.
 
-- [ ] On app startup, check for `~/.termchess/savegame.fen`
-- [ ] If exists, show prompt: "Resume last game? (y/n)"
-- [ ] If yes, load FEN using `engine.FromFEN()`, start GamePlay screen
-- [ ] If no, show main menu
-- [ ] When game ends normally, delete `savegame.fen`
-- [ ] Test: Save game, restart app, choose resume, see board state restored
+- [x] On app startup, check for `~/.termchess/savegame.fen`
+- [x] If exists, show prompt: "Resume last game? (y/n)"
+- [x] If yes, load FEN using `engine.FromFEN()`, start GamePlay screen
+- [x] If no, show main menu
+- [x] When game ends normally, delete `savegame.fen`
+- [x] Test: Save game, restart app, choose resume, see board state restored
 
 ## Slice 16: Add "Load Game" Menu Option for FEN Input
 
 **Goal:** User can select "Load Game" from main menu and enter a FEN string to load a position.
 
-- [ ] Create FENInput screen state
-- [ ] Add transition: MainMenu → "Load Game" → FENInput screen
-- [ ] Display text input for FEN string
-- [ ] Parse FEN using `engine.FromFEN()` on Enter
-- [ ] If valid, load board and start GamePlay
-- [ ] If invalid, show error message
-- [ ] Test: Enter valid FEN, see position loaded; enter invalid FEN, see error
+- [x] Create FENInput screen state
+- [x] Add transition: MainMenu → "Load Game" → FENInput screen
+- [x] Display text input for FEN string
+- [x] Parse FEN using `engine.FromFEN()` on Enter
+- [x] If valid, load board and start GamePlay
+- [x] If invalid, show error message
+- [x] Test: Enter valid FEN, see position loaded; enter invalid FEN, see error
 
 ## Slice 17: Add Move History Display (Optional, Configurable)
 
 **Goal:** When enabled in config, user sees move history during game.
 
-- [ ] Add `moveHistory []engine.Move` to model
-- [ ] After each move, append to moveHistory
-- [ ] Create `FormatSAN()` function to convert Move to SAN for display
-- [ ] In View, if `config.ShowMoveHistory = true`, render move history
-- [ ] Format as "1. e4 e5 2. Nf3 Nc6" (numbered pairs)
-- [ ] Test: Enable show_move_history in config, play moves, see history displayed
+- [x] Add `moveHistory []engine.Move` to model
+- [x] After each move, append to moveHistory
+- [x] Create `FormatSAN()` function to convert Move to SAN for display
+- [x] In View, if `config.ShowMoveHistory = true`, render move history
+- [x] Format as "1. e4 e5 2. Nf3 Nc6" (numbered pairs)
+- [x] Test: Enable show_move_history in config, play moves, see history displayed
 
 ## Slice 18: Add Mid-Game Commands (Resign, Show FEN, Menu)
 
@@ -222,3 +226,31 @@
 - [ ] Verify test coverage > 70% for UI logic
 - [ ] Test on macOS, Linux, and Windows (if possible)
 - [ ] Ensure no terminal scrollback pollution (clean redraws)
+
+## Slice 21: Implement Universal Navigation (ESC to Exit)
+
+**Goal:** Every screen provides consistent navigation back to previous screen or main menu.
+
+- [ ] Audit all existing screens for ESC key handling
+- [ ] Implement ESC key navigation for GameTypeSelect screen → Main Menu
+- [ ] Implement ESC key navigation for FENInput screen → Main Menu
+- [ ] Implement ESC key navigation for BotSelect screen → GameTypeSelect
+- [ ] Add save prompt when ESC pressed during active GamePlay (already exists for 'q')
+- [ ] Ensure Settings screen ESC navigation is working (already implemented in Slice 13)
+- [ ] Add consistent help text to all screens showing navigation options (respects ShowHelpText config)
+- [ ] Update view.go to conditionally display help text for each screen based on config.ShowHelpText:
+  - MainMenu: "arrows/jk: navigate | enter: select | q: quit"
+  - GameTypeSelect: "ESC: back to menu | arrows: navigate | enter: select"
+  - FENInput: "ESC: back to menu | enter: load position"
+  - BotSelect: "ESC: back | arrows: navigate | enter: select"
+  - GamePlay: "ESC: menu (with save) | type move (e.g. e4, Nf3)"
+  - GameOver: "ESC: menu | arrows: navigate | enter: select"
+  - Settings: "ESC: back | arrows: navigate | enter: toggle"
+- [ ] Create helper function `renderHelpText(text string, config Config) string` that returns empty string if ShowHelpText is false
+- [ ] Ensure help text is visually distinct (dimmed color, bottom of screen, separated by whitespace)
+- [ ] Ensure Ctrl+C always exits application immediately from any screen
+- [ ] Add unit tests for ESC key handling on each screen
+- [ ] Add unit tests for help text display/hide based on config
+- [ ] Test navigation flow: verify user can navigate from any screen back to menu
+- [ ] Test that ESC during gameplay prompts for save before returning to menu
+- [ ] Test that toggling ShowHelpText in Settings immediately affects next screen render

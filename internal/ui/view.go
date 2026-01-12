@@ -51,6 +51,15 @@ var (
 			Bold(true)
 )
 
+// renderHelpText conditionally renders help text based on config.
+// Returns empty string if help text is disabled.
+func renderHelpText(text string, config Config) string {
+	if !config.ShowHelpText {
+		return ""
+	}
+	return helpStyle.Render(text)
+}
+
 // View renders the UI based on the current model state.
 // This function is called by Bubbletea on every update to generate
 // the string that will be displayed in the terminal.
@@ -59,17 +68,21 @@ func (m Model) View() string {
 	case ScreenMainMenu:
 		return m.renderMainMenu()
 	case ScreenGameTypeSelect:
-		return "Game Type Selection - Coming Soon"
+		return m.renderGameTypeSelect()
 	case ScreenBotSelect:
 		return "Bot Selection - Coming Soon"
 	case ScreenFENInput:
-		return "FEN Input - Coming Soon"
+		return m.renderFENInput()
 	case ScreenGamePlay:
 		return m.renderGamePlay()
 	case ScreenGameOver:
 		return m.renderGameOver()
 	case ScreenSettings:
-		return "Settings - Coming Soon"
+		return m.renderSettings()
+	case ScreenSavePrompt:
+		return m.renderSavePrompt()
+	case ScreenResumePrompt:
+		return m.renderResumePrompt()
 	default:
 		return "Unknown screen"
 	}
@@ -103,9 +116,71 @@ func (m Model) renderMainMenu() string {
 	}
 
 	// Render help text
+	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// renderGameTypeSelect renders the GameTypeSelect screen with title, game type options,
+// cursor indicator, help text, and any error or status messages.
+func (m Model) renderGameTypeSelect() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Game Type:")
+	b.WriteString(header)
 	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to navigate, Enter to select, q to quit")
-	b.WriteString(helpText)
+
+	// Render menu options with cursor indicator for selected item
+	for i, option := range m.menuOptions {
+		cursor := "  " // Two spaces for non-selected items
+		optionText := option
+
+		if i == m.menuSelection {
+			// Highlight the selected item
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(option)
+		} else {
+			// Regular menu item styling
+			optionText = menuItemStyle.Render(option)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Render help text
+	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
 
 	// Render error message if present
 	if m.errorMsg != "" {
@@ -162,9 +237,11 @@ func (m Model) renderGamePlay() string {
 	b.WriteString(inputPrompt + inputText)
 
 	// Add help text
-	b.WriteString("\n\n")
-	helpText := helpStyle.Render("Press q to quit")
-	b.WriteString(helpText)
+	helpText := renderHelpText("Type move (e.g. e4, Nf3) | ESC: menu | q: quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
 
 	// Render error message if present
 	if m.errorMsg != "" {
@@ -178,6 +255,27 @@ func (m Model) renderGamePlay() string {
 		b.WriteString("\n\n")
 		statusText := statusStyle.Render(m.statusMsg)
 		b.WriteString(statusText)
+	}
+
+	// Render move history if enabled
+	if m.config.ShowMoveHistory && len(m.moveHistory) > 0 {
+		b.WriteString("\n\n")
+
+		// Move history header
+		historyHeaderStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FAFAFA"))
+		historyHeader := historyHeaderStyle.Render("Move History:")
+		b.WriteString(historyHeader)
+		b.WriteString("\n")
+
+		// Format and display move history
+		historyText := FormatMoveHistory(m.moveHistory)
+		historyStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4"))
+		history := historyStyle.Render(historyText)
+		b.WriteString(history)
+		b.WriteString("\n")
 	}
 
 	return b.String()
@@ -256,6 +354,244 @@ func (m Model) renderGameOver() string {
 		Foreground(lipgloss.Color("#7D56F4")).
 		Align(lipgloss.Center)
 	b.WriteString(optionsStyle.Render(optionsText))
+
+	// Render help text
+	helpText := renderHelpText("n: new game | m: main menu | q: quit", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
+
+	return b.String()
+}
+
+// renderSettings renders the Settings screen showing display configuration options.
+// Each option displays its current value and can be toggled by the user.
+func (m Model) renderSettings() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Settings")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Define settings options with their current values
+	// The order here determines the settingsSelection index
+	settingsOptions := []struct {
+		label   string
+		enabled bool
+	}{
+		{"Use Unicode Pieces", m.config.UseUnicode},
+		{"Show Coordinates", m.config.ShowCoords},
+		{"Use Colors", m.config.UseColors},
+		{"Show Move History", m.config.ShowMoveHistory},
+		{"Show Help Text", m.config.ShowHelpText},
+	}
+
+	// Render each setting option with its current state
+	for i, option := range settingsOptions {
+		cursor := "  " // Two spaces for non-selected items
+
+		// Determine checkbox state
+		checkbox := "[ ]"
+		if option.enabled {
+			checkbox = "[X]"
+		}
+
+		// Build the option text
+		optionText := fmt.Sprintf("%s %s", option.label, checkbox)
+
+		if i == m.settingsSelection {
+			// Highlight the selected item
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(optionText)
+		} else {
+			// Regular menu item styling
+			optionText = menuItemStyle.Render(optionText)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Render help text
+	helpText := renderHelpText("Use arrow keys to navigate, Enter to toggle, ESC/q to return to menu", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// renderSavePrompt renders the save prompt screen when the user tries to exit during an active game.
+// It shows the current board position and asks if they want to save before exiting.
+func (m Model) renderSavePrompt() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render the current board position
+	if m.board != nil {
+		renderer := NewBoardRenderer(m.config)
+		boardStr := renderer.Render(m.board)
+		b.WriteString(boardStr)
+		b.WriteString("\n\n")
+	}
+
+	// Render the save prompt message
+	promptStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFD700")).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+	promptMsg := "Save current game before exiting?"
+	b.WriteString(promptStyle.Render(promptMsg))
+	b.WriteString("\n\n")
+
+	// Render options
+	optionsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Align(lipgloss.Center)
+	optionsText := "y: Yes  |  n: No  |  ESC: Cancel"
+	b.WriteString(optionsStyle.Render(optionsText))
+
+	// Render help text
+	helpText := renderHelpText("y: save and exit | n: exit without saving | ESC: cancel", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// renderResumePrompt renders the resume prompt screen when a saved game exists on startup.
+// It asks the user if they want to resume the saved game or go to the main menu.
+func (m Model) renderResumePrompt() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render the resume prompt message
+	promptStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFD700")).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+	promptMsg := "A saved game was found. Resume last game?"
+	b.WriteString(promptStyle.Render(promptMsg))
+	b.WriteString("\n\n")
+
+	// Render options
+	optionsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Align(lipgloss.Center)
+	optionsText := "y: Yes  |  n: No"
+	b.WriteString(optionsStyle.Render(optionsText))
+
+	// Render help text
+	helpText := renderHelpText("y: resume game | n: go to main menu", m.config)
+	if helpText != "" {
+		b.WriteString("\n\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// renderFENInput renders the FEN input screen where users can load a chess position from FEN notation.
+// Displays input field, instructions, example FEN, help text, and any error messages.
+func (m Model) renderFENInput() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Load Game from FEN")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Instructions
+	instructions := "Enter a FEN string to load a chess position:\n\n"
+	b.WriteString(instructions)
+
+	// Input field with cursor
+	inputStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Bold(true)
+	inputLine := inputStyle.Render(m.fenInput + "█")
+	b.WriteString(inputLine)
+	b.WriteString("\n\n")
+
+	// Example
+	exampleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#626262"))
+	example := exampleStyle.Render("Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	b.WriteString(example)
+	b.WriteString("\n\n")
+
+	// Help text
+	helpText := renderHelpText("Enter: load position | ESC: back to menu", m.config)
+	if helpText != "" {
+		b.WriteString(helpText)
+	}
+
+	// Error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
 
 	return b.String()
 }

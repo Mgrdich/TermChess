@@ -23,6 +23,10 @@ const (
 	ScreenGameOver
 	// ScreenSettings allows the user to configure display options
 	ScreenSettings
+	// ScreenSavePrompt is displayed when the user tries to exit during an active game
+	ScreenSavePrompt
+	// ScreenResumePrompt is displayed on startup when a saved game exists
+	ScreenResumePrompt
 )
 
 // GameType represents the type of chess game being played.
@@ -66,6 +70,8 @@ type Model struct {
 	// Input state
 	// input holds the current user input text
 	input string
+	// fenInput holds the FEN string input for loading games
+	fenInput string
 	// errorMsg holds any error message to display to the user
 	errorMsg string
 	// statusMsg holds status information to display to the user
@@ -77,6 +83,14 @@ type Model struct {
 	// menuOptions holds the list of options available in the current menu
 	menuOptions []string
 
+	// Settings state
+	// settingsSelection tracks the currently selected setting option index
+	settingsSelection int
+
+	// Save prompt state
+	// savePromptAction indicates what action to take after save prompt ("exit" or "menu")
+	savePromptAction string
+
 	// Game metadata
 	// gameType indicates whether this is PvP or PvBot
 	gameType GameType
@@ -85,18 +99,29 @@ type Model struct {
 }
 
 // NewModel creates and initializes a new Model with default values.
-// The model starts at the main menu screen with default configuration.
+// The model starts at the main menu screen with configuration loaded from file.
+// If no config file exists, default values are used.
+// If a saved game exists, the model starts at the resume prompt screen.
 func NewModel() Model {
+	// Load configuration from ~/.termchess/config.toml (or use defaults if not found)
+	config := LoadConfig()
+
+	// Determine initial screen based on whether a saved game exists
+	initialScreen := ScreenMainMenu
+	if SaveGameExists() {
+		initialScreen = ScreenResumePrompt
+	}
+
 	return Model{
 		// Initialize with nil board (created when starting a new game)
 		board:       nil,
 		moveHistory: []engine.Move{},
 
-		// Start at the main menu
-		screen: ScreenMainMenu,
+		// Start at the resume prompt if saved game exists, otherwise main menu
+		screen: initialScreen,
 
-		// Default display configuration
-		config: DefaultConfig(),
+		// Load configuration from ~/.termchess/config.toml (or use defaults if not found)
+		config: config,
 
 		// Initialize input state
 		input:     "",
@@ -106,6 +131,9 @@ func NewModel() Model {
 		// Initialize main menu
 		menuSelection: 0,
 		menuOptions:   []string{"New Game", "Load Game", "Settings", "Exit"},
+
+		// Initialize settings
+		settingsSelection: 0,
 
 		// Default game metadata
 		gameType:      GameTypePvP,
