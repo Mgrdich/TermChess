@@ -10,8 +10,12 @@ import (
 )
 
 func main() {
-	// Initialize the Bubbletea model
-	model := ui.NewModel()
+	// Load configuration from ~/.termchess/config.toml
+	// If the file doesn't exist or cannot be parsed, default values are used
+	config := ui.LoadConfig()
+
+	// Initialize the Bubbletea model with the loaded configuration
+	model := ui.NewModel(config)
 
 	// Create the Bubbletea program with options:
 	// - WithAltScreen: Use alternate screen buffer for clean TUI experience

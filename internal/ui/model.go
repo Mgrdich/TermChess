@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/Mgrdich/TermChess/internal/engine"
+	"github.com/charmbracelet/bubbles/textinput"
 )
 
 // Screen represents the current UI screen state in the application.
@@ -23,10 +24,12 @@ const (
 	ScreenGameOver
 	// ScreenSettings allows the user to configure display options
 	ScreenSettings
-	// ScreenSavePrompt is displayed when the user tries to exit during an active game
+	// ScreenSavePrompt is displayed when the user tries to quit during an active game
 	ScreenSavePrompt
 	// ScreenResumePrompt is displayed on startup when a saved game exists
 	ScreenResumePrompt
+	// ScreenDrawPrompt is displayed when one player offers a draw
+	ScreenDrawPrompt
 )
 
 // GameType represents the type of chess game being played.
@@ -70,8 +73,8 @@ type Model struct {
 	// Input state
 	// input holds the current user input text
 	input string
-	// fenInput holds the FEN string input for loading games
-	fenInput string
+	// fenInput holds the text input component for FEN string entry
+	fenInput textinput.Model
 	// errorMsg holds any error message to display to the user
 	errorMsg string
 	// statusMsg holds status information to display to the user
@@ -82,6 +85,16 @@ type Model struct {
 	menuSelection int
 	// menuOptions holds the list of options available in the current menu
 	menuOptions []string
+	// settingsSelection tracks the currently selected setting in the settings screen
+	settingsSelection int
+	// savePromptSelection tracks the currently selected option in the save prompt (0=Yes, 1=No)
+	savePromptSelection int
+	// savePromptAction indicates what action to take after save decision ("exit" or "menu")
+	savePromptAction string
+	// resumePromptSelection tracks the currently selected option in the resume prompt (0=Yes, 1=No)
+	resumePromptSelection int
+	// drawPromptSelection tracks the currently selected option in the draw prompt (0=Accept, 1=Decline)
+	drawPromptSelection int
 
 	// Settings state
 	// settingsSelection tracks the currently selected setting option index
@@ -96,35 +109,48 @@ type Model struct {
 	gameType GameType
 	// botDifficulty stores the selected bot difficulty (for future use)
 	botDifficulty BotDifficulty
+	// resignedBy indicates which player resigned (White, Black, or -1 for no resignation)
+	resignedBy int8
+	// drawOfferedBy indicates which color offered a draw (-1 if none)
+	drawOfferedBy int8
+	// drawOfferedByWhite tracks if White has already offered a draw this game
+	drawOfferedByWhite bool
+	// drawOfferedByBlack tracks if Black has already offered a draw this game
+	drawOfferedByBlack bool
+	// drawByAgreement indicates if the game ended by draw agreement
+	drawByAgreement bool
 }
 
-// NewModel creates and initializes a new Model with default values.
-// The model starts at the main menu screen with configuration loaded from file.
-// If no config file exists, default values are used.
-// If a saved game exists, the model starts at the resume prompt screen.
-func NewModel() Model {
-	// Load configuration from ~/.termchess/config.toml (or use defaults if not found)
-	config := LoadConfig()
-
-	// Determine initial screen based on whether a saved game exists
-	initialScreen := ScreenMainMenu
+// NewModel creates and initializes a new Model with the provided configuration.
+// The model starts at the resume prompt screen if a saved game exists,
+// otherwise it starts at the main menu screen.
+func NewModel(config Config) Model {
+	// Check if a saved game exists
+	startScreen := ScreenMainMenu
 	if SaveGameExists() {
-		initialScreen = ScreenResumePrompt
+		startScreen = ScreenResumePrompt
 	}
+
+	// Initialize the text input for FEN entry
+	ti := textinput.New()
+	ti.Placeholder = "Enter FEN string..."
+	ti.CharLimit = 100
+	ti.Width = 80
 
 	return Model{
 		// Initialize with nil board (created when starting a new game)
 		board:       nil,
 		moveHistory: []engine.Move{},
 
-		// Start at the resume prompt if saved game exists, otherwise main menu
-		screen: initialScreen,
+		// Start at resume prompt if saved game exists, otherwise main menu
+		screen: startScreen,
 
-		// Load configuration from ~/.termchess/config.toml (or use defaults if not found)
+		// Use the provided configuration
 		config: config,
 
 		// Initialize input state
 		input:     "",
+		fenInput:  ti,
 		errorMsg:  "",
 		statusMsg: "",
 
@@ -138,6 +164,13 @@ func NewModel() Model {
 		// Default game metadata
 		gameType:      GameTypePvP,
 		botDifficulty: BotEasy,
+		resignedBy:    -1, // No resignation
+
+		// Initialize draw offer state
+		drawOfferedBy:      -1, // No draw offer
+		drawOfferedByWhite: false,
+		drawOfferedByBlack: false,
+		drawByAgreement:    false,
 	}
 }
 

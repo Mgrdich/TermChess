@@ -57,9 +57,7 @@ func (r *BoardRenderer) Render(b *engine.Board) string {
 
 	// Show file labels at the bottom if coordinates are enabled
 	if r.config.ShowCoords {
-		if r.config.ShowCoords {
-			result.WriteString("  ") // Indent to align with rank numbers
-		}
+		result.WriteString("  ") // Indent to align with rank numbers
 		result.WriteString("a b c d e f g h")
 	}
 

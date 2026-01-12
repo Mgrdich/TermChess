@@ -1,446 +1,216 @@
 package ui
 
 import (
-	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// TestFENInputScreen_Initialize verifies that the FEN input screen initializes correctly.
-func TestFENInputScreen_Initialize(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = ""
+// TestFENInputNavigation tests that "Load Game" from main menu transitions to FEN input screen.
+func TestFENInputNavigation(t *testing.T) {
+	config := DefaultConfig()
+	m := NewModel(config)
 
-	// Verify screen renders without errors
-	view := m.View()
-	if !strings.Contains(view, "Load Game from FEN") {
-		t.Error("FEN input screen should contain header")
-	}
-
-	if !strings.Contains(view, "Enter a FEN string to load a chess position") {
-		t.Error("FEN input screen should contain instructions")
-	}
-
-	if !strings.Contains(view, "Example:") {
-		t.Error("FEN input screen should contain example FEN")
-	}
-}
-
-// TestFENInput_ValidFEN verifies that a valid FEN string loads correctly.
-func TestFENInput_ValidFEN(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	// Starting position FEN
-	m.fenInput = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-	// Simulate Enter key
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	// Should transition to GamePlay
-	if m.screen != ScreenGamePlay {
-		t.Errorf("Expected ScreenGamePlay, got %v", m.screen)
-	}
-
-	// Should have loaded board
-	if m.board == nil {
-		t.Error("Board should be loaded")
-	}
-
-	// Should have no error
-	if m.errorMsg != "" {
-		t.Errorf("Should have no error, got: %s", m.errorMsg)
-	}
-
-	// FEN input should be cleared
-	if m.fenInput != "" {
-		t.Error("FEN input should be cleared after successful load")
-	}
-
-	// Should have status message
-	if m.statusMsg == "" {
-		t.Error("Should have status message after loading FEN")
-	}
-}
-
-// TestFENInput_ValidFENWithMovePlayed verifies loading a FEN with a move already played.
-func TestFENInput_ValidFENWithMovePlayed(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	// Position after 1.e4
-	m.fenInput = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
-
-	// Simulate Enter key
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	// Should transition to GamePlay
-	if m.screen != ScreenGamePlay {
-		t.Errorf("Expected ScreenGamePlay, got %v", m.screen)
-	}
-
-	// Should have loaded board
-	if m.board == nil {
-		t.Fatal("Board should be loaded")
-	}
-
-	// Should have no error
-	if m.errorMsg != "" {
-		t.Errorf("Should have no error, got: %s", m.errorMsg)
-	}
-
-	// Verify it's Black's turn (since FEN has 'b')
-	if m.board.ActiveColor != 1 { // Black = 1
-		t.Error("Expected Black to move after loading this FEN")
-	}
-}
-
-// TestFENInput_InvalidFEN verifies that an invalid FEN string shows an error.
-func TestFENInput_InvalidFEN(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = "invalid fen string"
-
-	// Simulate Enter key
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	// Should stay on FEN input screen
-	if m.screen != ScreenFENInput {
-		t.Errorf("Expected ScreenFENInput, got %v", m.screen)
-	}
-
-	// Should have error message
-	if m.errorMsg == "" {
-		t.Error("Should have error message for invalid FEN")
-	}
-
-	if !strings.Contains(m.errorMsg, "Invalid FEN") {
-		t.Errorf("Error should mention invalid FEN, got: %s", m.errorMsg)
-	}
-
-	// Should still have the input (not cleared)
-	if m.fenInput != "invalid fen string" {
-		t.Error("FEN input should not be cleared when there's an error")
-	}
-}
-
-// TestFENInput_EmptyFEN verifies that submitting an empty FEN shows an error.
-func TestFENInput_EmptyFEN(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = ""
-
-	// Simulate Enter key
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	// Should stay on FEN input screen
-	if m.screen != ScreenFENInput {
-		t.Error("Should stay on FEN input screen")
-	}
-
-	// Should have error message
-	if !strings.Contains(m.errorMsg, "Please enter a FEN string") {
-		t.Errorf("Should prompt user to enter FEN, got: %s", m.errorMsg)
-	}
-}
-
-// TestFENInput_ESCToMainMenu verifies that ESC returns to the main menu.
-func TestFENInput_ESCToMainMenu(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = "some input"
-	m.errorMsg = "some error"
-
-	// Simulate ESC key
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	// Should return to main menu
-	if m.screen != ScreenMainMenu {
-		t.Errorf("Expected ScreenMainMenu, got %v", m.screen)
-	}
-
-	// Input should be cleared
-	if m.fenInput != "" {
-		t.Error("FEN input should be cleared")
-	}
-
-	// Error should be cleared
-	if m.errorMsg != "" {
-		t.Error("Error message should be cleared")
-	}
-
-	// Menu options should be reset
-	expectedOptions := []string{"New Game", "Load Game", "Settings", "Exit"}
-	if len(m.menuOptions) != len(expectedOptions) {
-		t.Errorf("Expected %d menu options, got %d", len(expectedOptions), len(m.menuOptions))
-	}
-}
-
-// TestFENInput_Backspace verifies that backspace removes characters.
-func TestFENInput_Backspace(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = "test"
-
-	// Simulate backspace
-	msg := tea.KeyMsg{Type: tea.KeyBackspace}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	if m.fenInput != "tes" {
-		t.Errorf("Expected 'tes', got '%s'", m.fenInput)
-	}
-
-	// Backspace again
-	msg = tea.KeyMsg{Type: tea.KeyBackspace}
-	result, _ = m.Update(msg)
-	m = result.(Model)
-
-	if m.fenInput != "te" {
-		t.Errorf("Expected 'te', got '%s'", m.fenInput)
-	}
-}
-
-// TestFENInput_BackspaceOnEmpty verifies that backspace on empty input doesn't cause issues.
-func TestFENInput_BackspaceOnEmpty(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = ""
-
-	// Simulate backspace on empty input
-	msg := tea.KeyMsg{Type: tea.KeyBackspace}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	// Should remain empty
-	if m.fenInput != "" {
-		t.Errorf("Expected empty input, got '%s'", m.fenInput)
-	}
-}
-
-// TestFENInput_CharacterInput verifies that typing adds characters to the input.
-func TestFENInput_CharacterInput(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = ""
-
-	// Simulate typing characters
-	chars := []string{"r", "n", "b", "q"}
-	for _, ch := range chars {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(ch)}
-		result, _ := m.Update(msg)
-		m = result.(Model)
-	}
-
-	if m.fenInput != "rnbq" {
-		t.Errorf("Expected 'rnbq', got '%s'", m.fenInput)
-	}
-}
-
-// TestFENInput_SpecialCharacters verifies that special characters in FEN are accepted.
-func TestFENInput_SpecialCharacters(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = ""
-
-	// Simulate typing FEN-relevant characters
-	chars := []string{"r", "n", "8", "/", " ", "w", " ", "K", "Q", "k", "q", " ", "-", " ", "0", " ", "1"}
-	for _, ch := range chars {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(ch)}
-		result, _ := m.Update(msg)
-		m = result.(Model)
-	}
-
-	expected := "rn8/ w KQkq - 0 1"
-	if m.fenInput != expected {
-		t.Errorf("Expected '%s', got '%s'", expected, m.fenInput)
-	}
-}
-
-// TestFENInput_CtrlU_ClearInput verifies that Ctrl+U clears the entire input.
-func TestFENInput_CtrlU_ClearInput(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = "some long input text"
-
-	// Simulate Ctrl+U
-	msg := tea.KeyMsg{Type: tea.KeyCtrlU}
-	result, _ := m.Update(msg)
-	m = result.(Model)
-
-	if m.fenInput != "" {
-		t.Errorf("Expected empty input after Ctrl+U, got '%s'", m.fenInput)
-	}
-}
-
-// TestFENInput_ViewWithInput verifies that the view displays the current input.
-func TestFENInput_ViewWithInput(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.fenInput = "rnbqkbnr"
-
-	view := m.View()
-
-	// Should contain the input text
-	if !strings.Contains(view, "rnbqkbnr") {
-		t.Error("View should display the current input")
-	}
-
-	// Should contain cursor
-	if !strings.Contains(view, "█") {
-		t.Error("View should display cursor")
-	}
-}
-
-// TestFENInput_ViewWithError verifies that the view displays error messages.
-func TestFENInput_ViewWithError(t *testing.T) {
-	m := NewModel()
-	m.screen = ScreenFENInput
-	m.errorMsg = "Test error message"
-
-	view := m.View()
-
-	// Should contain the error message
-	if !strings.Contains(view, "Test error message") {
-		t.Error("View should display error message")
-	}
-
-	if !strings.Contains(view, "Error:") {
-		t.Error("View should display error label")
-	}
-}
-
-// TestFENInput_MainMenuTransition verifies transition from main menu to FEN input.
-func TestFENInput_MainMenuTransition(t *testing.T) {
-	m := NewModel()
+	// Set screen to main menu (if not already there due to saved game)
 	m.screen = ScreenMainMenu
-	m.menuSelection = 1 // "Load Game" is at index 1
+	m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
 
-	// Simulate pressing Enter on "Load Game"
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
+	// Select "Load Game" option (index 1)
+	m.menuSelection = 1
 
-	// Should transition to FEN input screen
-	if m.screen != ScreenFENInput {
-		t.Errorf("Expected ScreenFENInput, got %v", m.screen)
+	// Simulate Enter key press
+	updatedModelInterface, _ := m.handleMainMenuSelection()
+	updatedModel := updatedModelInterface.(Model)
+
+	// Verify we're now on FEN input screen
+	if updatedModel.screen != ScreenFENInput {
+		t.Errorf("Expected screen to be ScreenFENInput, got %v", updatedModel.screen)
 	}
 
-	// FEN input should be empty
-	if m.fenInput != "" {
-		t.Error("FEN input should be empty on transition")
-	}
-
-	// Error and status messages should be cleared
-	if m.errorMsg != "" {
-		t.Error("Error message should be cleared on transition")
-	}
-	if m.statusMsg != "" {
-		t.Error("Status message should be cleared on transition")
+	// Verify text input is ready
+	if updatedModel.fenInput.Value() != "" {
+		t.Errorf("Expected fenInput to be empty, got %q", updatedModel.fenInput.Value())
 	}
 }
 
-// TestFENInput_ComplexFEN verifies loading a complex mid-game position.
-func TestFENInput_ComplexFEN(t *testing.T) {
-	m := NewModel()
+// TestFENInputValidFEN tests loading a valid FEN string.
+func TestFENInputValidFEN(t *testing.T) {
+	config := DefaultConfig()
+	m := NewModel(config)
+
+	// Set screen to FEN input
 	m.screen = ScreenFENInput
-	// A complex mid-game position
-	m.fenInput = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 4 5"
+	m.fenInput.Focus()
 
-	// Simulate Enter key
+	// Set a valid FEN string (starting position)
+	validFEN := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	m.fenInput.SetValue(validFEN)
+
+	// Simulate Enter key press
 	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
+	updatedModelInterface, _ := m.handleFENInputKeys(msg)
+	updatedModel := updatedModelInterface.(Model)
 
-	// Should transition to GamePlay
-	if m.screen != ScreenGamePlay {
-		t.Errorf("Expected ScreenGamePlay, got %v", m.screen)
+	// Verify we transitioned to gameplay screen
+	if updatedModel.screen != ScreenGamePlay {
+		t.Errorf("Expected screen to be ScreenGamePlay, got %v", updatedModel.screen)
 	}
 
-	// Should have loaded board
-	if m.board == nil {
-		t.Fatal("Board should be loaded")
+	// Verify the board was loaded
+	if updatedModel.board == nil {
+		t.Fatal("Expected board to be loaded, got nil")
 	}
 
-	// Should have no error
-	if m.errorMsg != "" {
-		t.Errorf("Should have no error for complex FEN, got: %s", m.errorMsg)
+	// Verify the board has the correct starting position
+	expectedBoard := engine.NewBoard()
+	if updatedModel.board.ToFEN() != expectedBoard.ToFEN() {
+		t.Errorf("Expected starting position, got %s", updatedModel.board.ToFEN())
 	}
 
-	// Verify full move number
-	if m.board.FullMoveNum != 5 {
-		t.Errorf("Expected full move number 5, got %d", m.board.FullMoveNum)
+	// Verify game type is set to PvP
+	if updatedModel.gameType != GameTypePvP {
+		t.Errorf("Expected game type to be PvP, got %v", updatedModel.gameType)
+	}
+
+	// Verify no error message
+	if updatedModel.errorMsg != "" {
+		t.Errorf("Expected no error message, got %q", updatedModel.errorMsg)
 	}
 }
 
-// TestFENInput_PartialFEN verifies that incomplete FEN strings are rejected.
-func TestFENInput_PartialFEN(t *testing.T) {
-	m := NewModel()
+// TestFENInputInvalidFEN tests loading an invalid FEN string.
+func TestFENInputInvalidFEN(t *testing.T) {
+	config := DefaultConfig()
+	m := NewModel(config)
+
+	// Set screen to FEN input
 	m.screen = ScreenFENInput
-	// Only has 4 parts instead of 6
-	m.fenInput = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq"
+	m.fenInput.Focus()
 
-	// Simulate Enter key
+	// Set an invalid FEN string (missing fields)
+	invalidFEN := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+	m.fenInput.SetValue(invalidFEN)
+
+	// Simulate Enter key press
 	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
+	updatedModelInterface, _ := m.handleFENInputKeys(msg)
+	updatedModel := updatedModelInterface.(Model)
 
-	// Should stay on FEN input screen
-	if m.screen != ScreenFENInput {
-		t.Errorf("Expected ScreenFENInput, got %v", m.screen)
+	// Verify we're still on FEN input screen
+	if updatedModel.screen != ScreenFENInput {
+		t.Errorf("Expected to stay on ScreenFENInput, got %v", updatedModel.screen)
 	}
 
-	// Should have error message
-	if m.errorMsg == "" {
-		t.Error("Should have error message for partial FEN")
+	// Verify an error message is displayed
+	if updatedModel.errorMsg == "" {
+		t.Error("Expected error message for invalid FEN")
+	}
+
+	// Verify the board was not loaded
+	if updatedModel.board != nil {
+		t.Error("Expected board to remain nil for invalid FEN")
 	}
 }
 
-// TestFENInput_MultipleAttempts verifies that multiple FEN inputs can be attempted.
-func TestFENInput_MultipleAttempts(t *testing.T) {
-	m := NewModel()
+// TestFENInputEmptyString tests submitting an empty FEN string.
+func TestFENInputEmptyString(t *testing.T) {
+	config := DefaultConfig()
+	m := NewModel(config)
+
+	// Set screen to FEN input
 	m.screen = ScreenFENInput
+	m.fenInput.Focus()
+	m.fenInput.SetValue("")
 
-	// First attempt - invalid
-	m.fenInput = "invalid"
+	// Simulate Enter key press
 	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ := m.Update(msg)
-	m = result.(Model)
+	updatedModelInterface, _ := m.handleFENInputKeys(msg)
+	updatedModel := updatedModelInterface.(Model)
 
-	if m.errorMsg == "" {
-		t.Error("Should have error message after first invalid attempt")
+	// Verify we're still on FEN input screen
+	if updatedModel.screen != ScreenFENInput {
+		t.Errorf("Expected to stay on ScreenFENInput, got %v", updatedModel.screen)
 	}
 
-	// Clear input and try again with valid FEN
-	m.fenInput = ""
-	chars := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-	for _, ch := range chars {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{ch}}
-		result, _ = m.Update(msg)
-		m = result.(Model)
+	// Verify an error message is displayed
+	if updatedModel.errorMsg == "" {
+		t.Error("Expected error message for empty FEN string")
+	}
+}
+
+// TestFENInputEscapeToMenu tests pressing Esc to return to main menu.
+func TestFENInputEscapeToMenu(t *testing.T) {
+	config := DefaultConfig()
+	m := NewModel(config)
+
+	// Set screen to FEN input
+	m.screen = ScreenFENInput
+	m.fenInput.Focus()
+	m.fenInput.SetValue("some test input")
+
+	// Simulate Esc key press
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	updatedModelInterface, _ := m.handleFENInputKeys(msg)
+	updatedModel := updatedModelInterface.(Model)
+
+	// Verify we're back on main menu
+	if updatedModel.screen != ScreenMainMenu {
+		t.Errorf("Expected screen to be ScreenMainMenu, got %v", updatedModel.screen)
 	}
 
-	// Second attempt - valid
-	msg = tea.KeyMsg{Type: tea.KeyEnter}
-	result, _ = m.Update(msg)
-	m = result.(Model)
-
-	// Should succeed and transition to GamePlay
-	if m.screen != ScreenGamePlay {
-		t.Errorf("Expected ScreenGamePlay after valid FEN, got %v", m.screen)
+	// Verify menu options are restored
+	expectedOptions := []string{"New Game", "Load Game", "Settings", "Exit"}
+	if len(updatedModel.menuOptions) != len(expectedOptions) {
+		t.Errorf("Expected %d menu options, got %d", len(expectedOptions), len(updatedModel.menuOptions))
 	}
 
-	if m.errorMsg != "" {
-		t.Errorf("Should have no error after valid FEN, got: %s", m.errorMsg)
+	// Verify fenInput is cleared
+	if updatedModel.fenInput.Value() != "" {
+		t.Errorf("Expected fenInput to be cleared, got %q", updatedModel.fenInput.Value())
+	}
+}
+
+// TestFENInputMidGamePosition tests loading a mid-game position.
+func TestFENInputMidGamePosition(t *testing.T) {
+	config := DefaultConfig()
+	m := NewModel(config)
+
+	// Set screen to FEN input
+	m.screen = ScreenFENInput
+	m.fenInput.Focus()
+
+	// Set a mid-game FEN string
+	midGameFEN := "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4"
+	m.fenInput.SetValue(midGameFEN)
+
+	// Simulate Enter key press
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	updatedModelInterface, _ := m.handleFENInputKeys(msg)
+	updatedModel := updatedModelInterface.(Model)
+
+	// Verify we transitioned to gameplay screen
+	if updatedModel.screen != ScreenGamePlay {
+		t.Errorf("Expected screen to be ScreenGamePlay, got %v", updatedModel.screen)
+	}
+
+	// Verify the board was loaded
+	if updatedModel.board == nil {
+		t.Fatal("Expected board to be loaded, got nil")
+	}
+
+	// Verify the board matches the mid-game position
+	if updatedModel.board.ToFEN() != midGameFEN {
+		t.Errorf("Expected FEN %s, got %s", midGameFEN, updatedModel.board.ToFEN())
+	}
+
+	// Verify it's White's turn
+	if updatedModel.board.ActiveColor != engine.White {
+		t.Errorf("Expected White to move, got %v", updatedModel.board.ActiveColor)
+	}
+
+	// Verify castling rights are correct
+	if updatedModel.board.CastlingRights != (engine.CastleWhiteKing | engine.CastleWhiteQueen | engine.CastleBlackKing | engine.CastleBlackQueen) {
+		t.Errorf("Expected all castling rights, got %v", updatedModel.board.CastlingRights)
 	}
 }

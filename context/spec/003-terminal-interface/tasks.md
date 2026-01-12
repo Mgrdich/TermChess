@@ -199,35 +199,52 @@
 
 **Goal:** During gameplay, user can type commands to resign, show FEN, or return to menu.
 
-- [ ] Recognize special input commands: `resign`, `showfen`, `menu`
-- [ ] `resign`: Transition to GameOver screen with resignation message
-- [ ] `showfen`: Display current FEN string (copy to clipboard if possible)
-- [ ] `menu`: Prompt to save, then return to MainMenu
-- [ ] Test: Play game, type `resign`, see game over; type `showfen`, see FEN displayed
+- [x] Recognize special input commands: `resign`, `showfen`, `menu`
+- [x] `resign`: Transition to GameOver screen with resignation message
+- [x] `showfen`: Display current FEN string (copy to clipboard if possible)
+- [x] `menu`: Prompt to save, then return to MainMenu
+- [x] Test: Play game, type `resign`, see game over; type `showfen`, see FEN displayed
 
 ## Slice 19: Add Coordinate Label Toggle
 
 **Goal:** User can hide file/rank labels via config.
 
-- [ ] Update BoardRenderer to check `config.ShowCoords`
-- [ ] If false, render board without file/rank labels
-- [ ] Test: Toggle show_coordinates in config, see labels appear/disappear
+- [x] Update BoardRenderer to check `config.ShowCoords`
+- [x] If false, render board without file/rank labels
+- [x] Test: Toggle show_coordinates in config, see labels appear/disappear
 
 ## Slice 20: Final Polish and Testing
 
 **Goal:** Ensure all features work together, fix bugs, add final touches.
 
-- [ ] Run full game test: main menu → new game → play full game → game over → new game
-- [ ] Test all screen transitions
-- [ ] Test save/resume flow multiple times
-- [ ] Test FEN load with various positions
-- [ ] Ensure error messages are clear and helpful
-- [ ] Run `golangci-lint` and fix any issues
-- [ ] Verify test coverage > 70% for UI logic
-- [ ] Test on macOS, Linux, and Windows (if possible)
-- [ ] Ensure no terminal scrollback pollution (clean redraws)
+- [x] Run full game test: main menu → new game → play full game → game over → new game
+- [x] Test all screen transitions
+- [x] Test save/resume flow multiple times
+- [x] Test FEN load with various positions
+- [x] Ensure error messages are clear and helpful
+- [x] Run `golangci-lint` and fix any issues
+- [x] Verify test coverage > 70% for UI logic
+- [x] Test on macOS, Linux, and Windows (if possible)
+- [x] Ensure no terminal scrollback pollution (clean redraws)
 
-## Slice 21: Implement Universal Navigation (ESC to Exit)
+---
+
+## Slice 21: Add Draw Offer Command
+
+**Goal:** Allow players to offer a draw during gameplay in Player vs Player mode.
+
+- [x] Add `offerdraw` command recognition during gameplay
+- [x] When player types "offerdraw", show prompt to opponent: "Opponent offers a draw. Accept? (y/n)"
+- [x] If opponent accepts (y), transition to GameOver screen with draw message
+- [x] If opponent declines (n), display "Draw offer declined" and continue game
+- [x] Track draw offer state to prevent spamming (limit one offer per player per game, or cooldown)
+- [x] Add draw offer to help text display
+- [x] Test: Offer draw, accept it, verify game ends in draw
+- [x] Test: Offer draw, decline it, verify game continues
+
+---
+
+## Slice 22: Implement Universal Navigation (ESC to Exit)
 
 **Goal:** Every screen provides consistent navigation back to previous screen or main menu.
 

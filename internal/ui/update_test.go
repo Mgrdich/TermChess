@@ -9,7 +9,7 @@ import (
 
 func TestHandleGamePlayKeys_ValidMove(t *testing.T) {
 	// Create a model with a new board
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 
@@ -66,7 +66,7 @@ func TestHandleGamePlayKeys_ValidMove(t *testing.T) {
 
 func TestHandleGamePlayKeys_InvalidMoveFormat(t *testing.T) {
 	// Create a model with a new board
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 
@@ -93,7 +93,7 @@ func TestHandleGamePlayKeys_InvalidMoveFormat(t *testing.T) {
 
 func TestHandleGamePlayKeys_IllegalMove(t *testing.T) {
 	// Create a model with a new board
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 
@@ -129,7 +129,7 @@ func TestHandleGamePlayKeys_IllegalMove(t *testing.T) {
 
 func TestHandleGamePlayKeys_ErrorClearingOnNewInput(t *testing.T) {
 	// Create a model with a new board and an error message
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 	m.errorMsg = "Previous error"
@@ -152,7 +152,7 @@ func TestHandleGamePlayKeys_ErrorClearingOnNewInput(t *testing.T) {
 
 func TestHandleGamePlayKeys_BackspaceHandling(t *testing.T) {
 	// Create a model with some input
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 	m.input = "e2e4"
@@ -186,7 +186,7 @@ func TestHandleGamePlayKeys_BackspaceHandling(t *testing.T) {
 
 func TestHandleGamePlayKeys_SequenceOfMoves(t *testing.T) {
 	// Create a model with a new board
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 
@@ -223,7 +223,7 @@ func TestHandleGamePlayKeys_SequenceOfMoves(t *testing.T) {
 
 func TestHandleGamePlayKeys_EmptyInputEnter(t *testing.T) {
 	// Create a model with a new board
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 	m.input = ""
@@ -249,7 +249,7 @@ func TestHandleGamePlayKeys_EmptyInputEnter(t *testing.T) {
 
 func TestHandleGamePlayKeys_PromotionMove(t *testing.T) {
 	// Create a custom board position where a pawn can promote
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.board = engine.NewBoard()
 	m.screen = ScreenGamePlay
 
@@ -288,5 +288,188 @@ func TestHandleGamePlayKeys_PromotionMove(t *testing.T) {
 	pieceAtE8 := m.board.PieceAt(e8)
 	if pieceAtE8.Type() != engine.Queen || pieceAtE8.Color() != engine.White {
 		t.Error("Expected white queen at e8 after promotion")
+	}
+}
+
+func TestHandleMainMenuSelection_Settings(t *testing.T) {
+	// Create a model at the main menu
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenMainMenu
+	m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+	m.menuSelection = 2 // Select "Settings"
+
+	// Simulate pressing Enter
+	result, _ := m.handleMainMenuSelection()
+	m = result.(Model)
+
+	// Verify transitioned to Settings screen
+	if m.screen != ScreenSettings {
+		t.Errorf("Expected screen to be ScreenSettings, got %v", m.screen)
+	}
+
+	// Verify settings selection is initialized to 0
+	if m.settingsSelection != 0 {
+		t.Errorf("Expected settingsSelection to be 0, got %d", m.settingsSelection)
+	}
+
+	// Verify messages are cleared
+	if m.errorMsg != "" {
+		t.Errorf("Expected errorMsg to be cleared, got '%s'", m.errorMsg)
+	}
+
+	if m.statusMsg != "" {
+		t.Errorf("Expected statusMsg to be cleared, got '%s'", m.statusMsg)
+	}
+}
+
+func TestHandleSettingsKeys_Navigation(t *testing.T) {
+	// Create a model at the settings screen
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenSettings
+	m.settingsSelection = 0
+
+	// Test moving down
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	result, _ := m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	if m.settingsSelection != 1 {
+		t.Errorf("Expected settingsSelection to be 1 after down, got %d", m.settingsSelection)
+	}
+
+	// Test moving down with arrow key
+	msg = tea.KeyMsg{Type: tea.KeyDown}
+	result, _ = m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	if m.settingsSelection != 2 {
+		t.Errorf("Expected settingsSelection to be 2 after down, got %d", m.settingsSelection)
+	}
+
+	// Test moving up
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	result, _ = m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	if m.settingsSelection != 1 {
+		t.Errorf("Expected settingsSelection to be 1 after up, got %d", m.settingsSelection)
+	}
+
+	// Test wrapping at bottom (move to index 3, then down should wrap to 0)
+	m.settingsSelection = 3
+	msg = tea.KeyMsg{Type: tea.KeyDown}
+	result, _ = m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	if m.settingsSelection != 0 {
+		t.Errorf("Expected settingsSelection to wrap to 0, got %d", m.settingsSelection)
+	}
+
+	// Test wrapping at top (at index 0, up should wrap to 3)
+	msg = tea.KeyMsg{Type: tea.KeyUp}
+	result, _ = m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	if m.settingsSelection != 3 {
+		t.Errorf("Expected settingsSelection to wrap to 3, got %d", m.settingsSelection)
+	}
+}
+
+func TestHandleSettingsKeys_Toggle(t *testing.T) {
+	// Create a model at the settings screen
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenSettings
+	m.settingsSelection = 0 // Use Unicode Pieces
+
+	// Store initial value
+	initialValue := m.config.UseUnicode
+
+	// Toggle with Space
+	msg := tea.KeyMsg{Type: tea.KeySpace}
+	result, _ := m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	// Verify value was toggled
+	if m.config.UseUnicode == initialValue {
+		t.Error("Expected UseUnicode to be toggled")
+	}
+
+	// Toggle with Enter
+	msg = tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ = m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	// Verify value was toggled back
+	if m.config.UseUnicode != initialValue {
+		t.Error("Expected UseUnicode to be toggled back to initial value")
+	}
+}
+
+func TestHandleSettingsKeys_ToggleAllSettings(t *testing.T) {
+	// Create a model at the settings screen
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenSettings
+
+	// Test toggling each setting
+	settings := []struct {
+		index    int
+		getName  func() string
+		getValue func() bool
+	}{
+		{0, func() string { return "UseUnicode" }, func() bool { return m.config.UseUnicode }},
+		{1, func() string { return "ShowCoords" }, func() bool { return m.config.ShowCoords }},
+		{2, func() string { return "UseColors" }, func() bool { return m.config.UseColors }},
+		{3, func() string { return "ShowMoveHistory" }, func() bool { return m.config.ShowMoveHistory }},
+	}
+
+	for _, setting := range settings {
+		m.settingsSelection = setting.index
+		initialValue := setting.getValue()
+
+		// Toggle the setting
+		msg := tea.KeyMsg{Type: tea.KeySpace}
+		result, _ := m.handleSettingsKeys(msg)
+		m = result.(Model)
+
+		// Verify value was toggled
+		if setting.getValue() == initialValue {
+			t.Errorf("Expected %s to be toggled from %v", setting.getName(), initialValue)
+		}
+	}
+}
+
+func TestHandleSettingsKeys_ESC(t *testing.T) {
+	// Create a model at the settings screen
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenSettings
+	m.settingsSelection = 2
+
+	// Press ESC
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleSettingsKeys(msg)
+	m = result.(Model)
+
+	// Verify returned to main menu
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected screen to be ScreenMainMenu, got %v", m.screen)
+	}
+
+	// Verify menu was reset
+	if m.menuSelection != 0 {
+		t.Errorf("Expected menuSelection to be reset to 0, got %d", m.menuSelection)
+	}
+
+	expectedOptions := []string{"New Game", "Load Game", "Settings", "Exit"}
+	if len(m.menuOptions) != len(expectedOptions) {
+		t.Errorf("Expected %d menu options, got %d", len(expectedOptions), len(m.menuOptions))
+	}
+
+	// Verify messages are cleared
+	if m.errorMsg != "" {
+		t.Errorf("Expected errorMsg to be cleared, got '%s'", m.errorMsg)
+	}
+
+	if m.statusMsg != "" {
+		t.Errorf("Expected statusMsg to be cleared, got '%s'", m.statusMsg)
 	}
 }

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -413,6 +414,302 @@ func TestColorSymbol_AllPieceTypes(t *testing.T) {
 		// Colors should be different
 		if whiteResult == blackResult {
 			t.Errorf("White and black %v should have different colors", pt)
+		}
+	}
+}
+
+// TestBoardRenderer_NoCoordinates_ASCII tests board rendering without coordinates in ASCII mode
+func TestBoardRenderer_NoCoordinates_ASCII(t *testing.T) {
+	// Create a new board with starting position
+	board := engine.NewBoard()
+
+	// Create a renderer with coordinates disabled
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      false, // Coordinates disabled
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	renderer := NewBoardRenderer(config)
+
+	// Render the board
+	result := renderer.Render(board)
+
+	// Verify that pieces are present
+	if !strings.Contains(result, "r n b q k b n r") {
+		t.Errorf("Expected to find black back rank pieces, got:\n%s", result)
+	}
+
+	if !strings.Contains(result, "R N B Q K B N R") {
+		t.Errorf("Expected to find white back rank pieces, got:\n%s", result)
+	}
+
+	// Verify that file labels are NOT present
+	if strings.Contains(result, "a b c d e f g h") {
+		t.Errorf("Should not find file labels when ShowCoords is false, got:\n%s", result)
+	}
+
+	// Verify that rank numbers are NOT present at the start of lines
+	// Check for rank numbers followed by a space (which is how they appear as labels)
+	for rank := 1; rank <= 8; rank++ {
+		rankLabel := fmt.Sprintf("%d ", rank)
+		if strings.Contains(result, rankLabel) {
+			t.Errorf("Should not find rank label '%s' when ShowCoords is false, got:\n%s", rankLabel, result)
+		}
+	}
+
+	// Verify the board still has 8 lines (one per rank)
+	lines := strings.Split(strings.TrimSpace(result), "\n")
+	if len(lines) != 8 {
+		t.Errorf("Expected 8 lines (one per rank), got %d lines:\n%s", len(lines), result)
+	}
+}
+
+// TestBoardRenderer_NoCoordinates_Unicode tests board rendering without coordinates in Unicode mode
+func TestBoardRenderer_NoCoordinates_Unicode(t *testing.T) {
+	// Create a new board with starting position
+	board := engine.NewBoard()
+
+	// Create a renderer with coordinates disabled and Unicode enabled
+	config := Config{
+		UseUnicode:      true,
+		ShowCoords:      false, // Coordinates disabled
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	renderer := NewBoardRenderer(config)
+
+	// Render the board
+	result := renderer.Render(board)
+
+	// Verify that Unicode pieces are present
+	if !strings.Contains(result, "♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜") {
+		t.Errorf("Expected to find black back rank pieces, got:\n%s", result)
+	}
+
+	if !strings.Contains(result, "♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖") {
+		t.Errorf("Expected to find white back rank pieces, got:\n%s", result)
+	}
+
+	// Verify that file labels are NOT present
+	if strings.Contains(result, "a b c d e f g h") {
+		t.Errorf("Should not find file labels when ShowCoords is false, got:\n%s", result)
+	}
+
+	// Verify that rank numbers are NOT present
+	for rank := 1; rank <= 8; rank++ {
+		rankLabel := fmt.Sprintf("%d ", rank)
+		if strings.Contains(result, rankLabel) {
+			t.Errorf("Should not find rank label '%s' when ShowCoords is false, got:\n%s", rankLabel, result)
+		}
+	}
+
+	// Verify the board still has 8 lines
+	lines := strings.Split(strings.TrimSpace(result), "\n")
+	if len(lines) != 8 {
+		t.Errorf("Expected 8 lines (one per rank), got %d lines:\n%s", len(lines), result)
+	}
+}
+
+// TestBoardRenderer_CoordinatesToggle_ASCII tests toggling coordinates on and off in ASCII mode
+func TestBoardRenderer_CoordinatesToggle_ASCII(t *testing.T) {
+	board := engine.NewBoard()
+
+	// First render with coordinates enabled
+	configWithCoords := Config{
+		UseUnicode:      false,
+		ShowCoords:      true,
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	rendererWithCoords := NewBoardRenderer(configWithCoords)
+	resultWithCoords := rendererWithCoords.Render(board)
+
+	// Verify coordinates are present
+	if !strings.Contains(resultWithCoords, "a b c d e f g h") {
+		t.Errorf("Expected file labels with ShowCoords=true, got:\n%s", resultWithCoords)
+	}
+	if !strings.Contains(resultWithCoords, "1 ") {
+		t.Errorf("Expected rank labels with ShowCoords=true, got:\n%s", resultWithCoords)
+	}
+
+	// Now render with coordinates disabled
+	configWithoutCoords := Config{
+		UseUnicode:      false,
+		ShowCoords:      false,
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	rendererWithoutCoords := NewBoardRenderer(configWithoutCoords)
+	resultWithoutCoords := rendererWithoutCoords.Render(board)
+
+	// Verify coordinates are absent
+	if strings.Contains(resultWithoutCoords, "a b c d e f g h") {
+		t.Errorf("Should not have file labels with ShowCoords=false, got:\n%s", resultWithoutCoords)
+	}
+
+	// Verify pieces are still present in both
+	if !strings.Contains(resultWithCoords, "R N B Q K B N R") {
+		t.Errorf("Expected pieces with coordinates enabled, got:\n%s", resultWithCoords)
+	}
+	if !strings.Contains(resultWithoutCoords, "R N B Q K B N R") {
+		t.Errorf("Expected pieces with coordinates disabled, got:\n%s", resultWithoutCoords)
+	}
+}
+
+// TestBoardRenderer_CoordinatesToggle_Unicode tests toggling coordinates on and off in Unicode mode
+func TestBoardRenderer_CoordinatesToggle_Unicode(t *testing.T) {
+	board := engine.NewBoard()
+
+	// First render with coordinates enabled
+	configWithCoords := Config{
+		UseUnicode:      true,
+		ShowCoords:      true,
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	rendererWithCoords := NewBoardRenderer(configWithCoords)
+	resultWithCoords := rendererWithCoords.Render(board)
+
+	// Verify coordinates are present
+	if !strings.Contains(resultWithCoords, "a b c d e f g h") {
+		t.Errorf("Expected file labels with ShowCoords=true, got:\n%s", resultWithCoords)
+	}
+	if !strings.Contains(resultWithCoords, "8 ") {
+		t.Errorf("Expected rank labels with ShowCoords=true, got:\n%s", resultWithCoords)
+	}
+
+	// Now render with coordinates disabled
+	configWithoutCoords := Config{
+		UseUnicode:      true,
+		ShowCoords:      false,
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	rendererWithoutCoords := NewBoardRenderer(configWithoutCoords)
+	resultWithoutCoords := rendererWithoutCoords.Render(board)
+
+	// Verify coordinates are absent
+	if strings.Contains(resultWithoutCoords, "a b c d e f g h") {
+		t.Errorf("Should not have file labels with ShowCoords=false, got:\n%s", resultWithoutCoords)
+	}
+
+	// Verify Unicode pieces are still present in both
+	if !strings.Contains(resultWithCoords, "♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖") {
+		t.Errorf("Expected Unicode pieces with coordinates enabled, got:\n%s", resultWithCoords)
+	}
+	if !strings.Contains(resultWithoutCoords, "♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖") {
+		t.Errorf("Expected Unicode pieces with coordinates disabled, got:\n%s", resultWithoutCoords)
+	}
+}
+
+// TestBoardRenderer_NoCoordinates_MidGamePosition tests board without coordinates in mid-game
+func TestBoardRenderer_NoCoordinates_MidGamePosition(t *testing.T) {
+	// Create a board and make some moves to get a mid-game position
+	board := engine.NewBoard()
+
+	// Make a few moves: 1. e4 e5 2. Nf3 Nc6
+	moves := []string{"e2e4", "e7e5", "g1f3", "b8c6"}
+	for _, moveStr := range moves {
+		move, err := engine.ParseMove(moveStr)
+		if err != nil {
+			t.Fatalf("Failed to parse move %s: %v", moveStr, err)
+		}
+		err = board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("Failed to make move %s: %v", moveStr, err)
+		}
+	}
+
+	// Render with coordinates disabled
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      false,
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	renderer := NewBoardRenderer(config)
+	result := renderer.Render(board)
+
+	// Verify no coordinates
+	if strings.Contains(result, "a b c d e f g h") {
+		t.Errorf("Should not have file labels in mid-game position, got:\n%s", result)
+	}
+
+	// Verify we have 8 lines
+	lines := strings.Split(strings.TrimSpace(result), "\n")
+	if len(lines) != 8 {
+		t.Errorf("Expected 8 lines in mid-game position, got %d:\n%s", len(lines), result)
+	}
+
+	// Verify pieces are present (should have moved pieces)
+	if !strings.Contains(result, "N") && !strings.Contains(result, "n") {
+		t.Errorf("Expected knights to be present in mid-game position, got:\n%s", result)
+	}
+}
+
+// TestBoardRenderer_WithCoordinates_Alignment tests that coordinates are properly aligned
+func TestBoardRenderer_WithCoordinates_Alignment(t *testing.T) {
+	board := engine.NewBoard()
+
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      true,
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	renderer := NewBoardRenderer(config)
+	result := renderer.Render(board)
+
+	lines := strings.Split(result, "\n")
+
+	// Each rank line should start with a rank number and space
+	// Lines 0-7 are the board ranks (8 down to 1)
+	expectedRanks := []string{"8 ", "7 ", "6 ", "5 ", "4 ", "3 ", "2 ", "1 "}
+	for i := 0; i < 8 && i < len(lines); i++ {
+		if !strings.HasPrefix(lines[i], expectedRanks[i]) {
+			t.Errorf("Line %d should start with rank label '%s', got: %s", i, expectedRanks[i], lines[i])
+		}
+	}
+
+	// The last line should be file labels with proper indentation
+	if len(lines) > 8 {
+		fileLabelsLine := lines[8]
+		if !strings.HasPrefix(fileLabelsLine, "  ") {
+			t.Errorf("File labels line should start with 2 spaces for alignment, got: %s", fileLabelsLine)
+		}
+		if !strings.Contains(fileLabelsLine, "a b c d e f g h") {
+			t.Errorf("File labels line should contain 'a b c d e f g h', got: %s", fileLabelsLine)
+		}
+	}
+}
+
+// TestBoardRenderer_NoCoordinates_NoExtraSpaces tests that no extra spaces appear without coordinates
+func TestBoardRenderer_NoCoordinates_NoExtraSpaces(t *testing.T) {
+	board := engine.NewBoard()
+
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      false,
+		UseColors:       false,
+		ShowMoveHistory: false,
+	}
+	renderer := NewBoardRenderer(config)
+	result := renderer.Render(board)
+
+	lines := strings.Split(strings.TrimSpace(result), "\n")
+
+	// Each line should start with a piece or empty square symbol, not with spaces or numbers
+	for i, line := range lines {
+		// Lines should not start with rank numbers
+		if len(line) > 0 && line[0] >= '1' && line[0] <= '8' {
+			t.Errorf("Line %d should not start with a rank number when ShowCoords is false, got: %s", i, line)
+		}
+
+		// Lines should not start with extra spaces (except natural spacing between pieces)
+		trimmed := strings.TrimLeft(line, " ")
+		if line != trimmed && strings.HasPrefix(line, "  ") {
+			t.Errorf("Line %d should not have leading spaces when ShowCoords is false, got: %s", i, line)
 		}
 	}
 }

@@ -1,7 +1,7 @@
 # Functional Specification: Terminal Interface
 
 - **Roadmap Item:** Terminal Interface
-- **Status:** Draft
+- **Status:** Complete
 - **Author:** Claude & User
 
 ---
@@ -27,112 +27,112 @@ This feature provides a clean, distraction-free chess experience that integrates
 **As a** user, **I want to** see the chess board rendered clearly in my terminal, **so that** I can understand the current game position at a glance.
 
 **Acceptance Criteria:**
-- [ ] The board displays all 64 squares in an 8x8 grid
-- [ ] Each piece is represented by a distinct symbol (either Unicode chess symbols ♔♕♖♗♘♙ or ASCII letters K, Q, R, B, N, P)
-- [ ] White pieces and black pieces are visually distinguishable (e.g., uppercase for white, lowercase for black, or color coding)
-- [ ] The board includes file labels (a-h) and rank labels (1-8) around the edges
-- [ ] The board displays from White's perspective (rank 1 at bottom, rank 8 at top)
-- [ ] Empty squares are clearly distinguishable from occupied squares
+- [x] The board displays all 64 squares in an 8x8 grid
+- [x] Each piece is represented by a distinct symbol (either Unicode chess symbols ♔♕♖♗♘♙ or ASCII letters K, Q, R, B, N, P)
+- [x] White pieces and black pieces are visually distinguishable (e.g., uppercase for white, lowercase for black, or color coding)
+- [x] The board includes file labels (a-h) and rank labels (1-8) around the edges
+- [x] The board displays from White's perspective (rank 1 at bottom, rank 8 at top)
+- [x] Empty squares are clearly distinguishable from occupied squares
 
 **Configuration Options:**
-- [ ] Users can configure whether to use Unicode symbols or ASCII letters for pieces
-- [ ] Users can configure whether coordinate labels (files/ranks) are shown or hidden
-- [ ] Users can configure whether colors are used to distinguish pieces
-- [ ] Users can configure whether help text (navigation keys and commands) is shown or hidden
+- [x] Users can configure whether to use Unicode symbols or ASCII letters for pieces
+- [x] Users can configure whether coordinate labels (files/ranks) are shown or hidden
+- [x] Users can configure whether colors are used to distinguish pieces
+- [x] Users can configure whether help text (navigation keys and commands) is shown or hidden
 
 ### 2.2. Move Input System
 
 **As a** user, **I want to** enter moves using standard algebraic notation, **so that** I can play chess using familiar notation without learning a custom input format.
 
 **Acceptance Criteria:**
-- [ ] The system accepts moves in Standard Algebraic Notation (SAN): `e4`, `Nf3`, `Bxc5`, `O-O`, `O-O-O`, `e8=Q`
-- [ ] When multiple pieces of the same type can move to the same square, the system accepts disambiguation by:
+- [x] The system accepts moves in Standard Algebraic Notation (SAN): `e4`, `Nf3`, `Bxc5`, `O-O`, `O-O-O`, `e8=Q`
+- [x] When multiple pieces of the same type can move to the same square, the system accepts disambiguation by:
   1. File first (preferred): `Nfd2` (knight from f-file to d2)
   2. Rank if needed: `N1d2` (knight from rank 1 to d2)
   3. Both if necessary: `Nf1d2`
-- [ ] The system validates each move before executing it
-- [ ] If a move is invalid, the system displays a specific error message explaining why (e.g., "No piece at that square", "That piece cannot move there", "Move would leave king in check")
-- [ ] The system does not allow illegal moves to be executed
-- [ ] Pawn promotion moves specify the promoted piece (e.g., `e8=Q`, `a1=N`)
-- [ ] Castling is entered as `O-O` (kingside) or `O-O-O` (queenside)
+- [x] The system validates each move before executing it
+- [x] If a move is invalid, the system displays a specific error message explaining why (e.g., "No piece at that square", "That piece cannot move there", "Move would leave king in check")
+- [x] The system does not allow illegal moves to be executed
+- [x] Pawn promotion moves specify the promoted piece (e.g., `e8=Q`, `a1=N`)
+- [x] Castling is entered as `O-O` (kingside) or `O-O-O` (queenside)
 
 **Explicitly NOT Included:**
-- [ ] Undo/takeback functionality (out of scope)
+- [x] Undo/takeback functionality (out of scope)
 
 ### 2.3. Move History Display
 
 **As a** user, **I want to** optionally see the history of moves played in the current game, **so that** I can review what has happened so far.
 
 **Acceptance Criteria:**
-- [ ] Move history display is configurable (can be enabled or disabled)
-- [ ] By default, move history is hidden (set to false)
-- [ ] When enabled, the system displays a list of moves in SAN format
-- [ ] Move history shows move numbers and both players' moves (e.g., "1. e4 e5 2. Nf3 Nc6")
+- [x] Move history display is configurable (can be enabled or disabled)
+- [x] By default, move history is hidden (set to false)
+- [x] When enabled, the system displays a list of moves in SAN format
+- [x] Move history shows move numbers and both players' moves (e.g., "1. e4 e5 2. Nf3 Nc6")
 
 ### 2.4. Turn Indicator
 
 **As a** user, **I want to** clearly see whose turn it is to move, **so that** I don't get confused during gameplay.
 
 **Acceptance Criteria:**
-- [ ] The interface displays a clear indicator showing whose turn it is (e.g., "White to move", "Black to move")
-- [ ] The turn indicator is visible on every board display
-- [ ] The turn indicator updates immediately after each move
+- [x] The interface displays a clear indicator showing whose turn it is (e.g., "White to move", "Black to move")
+- [x] The turn indicator is visible on every board display
+- [x] The turn indicator updates immediately after each move
 
 ### 2.5. Game Menu & Flow
 
 **As a** user, **I want to** navigate through menus to start games, configure options, and exit the application, **so that** I have full control over my chess experience.
 
 **Main Menu Acceptance Criteria:**
-- [ ] When the application starts, a main menu is displayed with the following options:
+- [x] When the application starts, a main menu is displayed with the following options:
   - "New Game"
   - "Load Game" (resume a saved game)
   - "Settings"
   - "Exit"
-- [ ] Users can select menu options using keyboard input
-- [ ] Selecting "Exit" closes the application gracefully
+- [x] Users can select menu options using keyboard input
+- [x] Selecting "Exit" closes the application gracefully
 
 **New Game Flow Acceptance Criteria:**
-- [ ] After selecting "New Game", the system prompts the user to choose a game type:
+- [x] After selecting "New Game", the system prompts the user to choose a game type:
   - "Player vs Player" (local two-player mode)
   - "Player vs Bot" (play against AI)
-- [ ] If "Player vs Bot" is selected, the system prompts the user to choose:
+- [x] If "Player vs Bot" is selected, the system prompts the user to choose:
   - Bot difficulty level (Easy, Medium, Hard)
   - Specific engine/bot type (if multiple bot types are available)
-- [ ] After all selections are made, the game begins with the board displayed and White to move
+- [x] After all selections are made, the game begins with the board displayed and White to move
 
 **Exit During Active Game Acceptance Criteria:**
-- [ ] If a user attempts to exit or return to menu during an active game, the system prompts: "Save current game before exiting?"
-- [ ] If the user chooses "Yes", the game is saved (using FEN) and can be resumed later
-- [ ] If the user chooses "No", the game is abandoned and the user returns to the main menu
-- [ ] When the user next launches the application, if a saved game exists, the system offers: "Resume last game?"
+- [x] If a user attempts to exit or return to menu during an active game, the system prompts: "Save current game before exiting?"
+- [x] If the user chooses "Yes", the game is saved (using FEN) and can be resumed later
+- [x] If the user chooses "No", the game is abandoned and the user returns to the main menu
+- [x] When the user next launches the application, if a saved game exists, the system offers: "Resume last game?"
 
 **Mid-Game Options Acceptance Criteria:**
-- [ ] During an active game, users can access the following commands/options:
+- [x] During an active game, users can access the following commands/options:
   - "Resign" (forfeit the game)
-  - "Offer Draw" (propose a draw to opponent, if applicable)
+  - [x] "Offer Draw" (propose a draw to opponent, if applicable)
   - "Show FEN" (display current position as FEN string)
   - "Menu" (return to main menu with save prompt)
-- [ ] These options are accessible via commands or a pause menu
+- [x] These options are accessible via commands or a pause menu
 
 ### 2.6. Screen Rendering
 
 **As a** user, **I want to** see the board update cleanly after each move, **so that** the interface feels responsive and professional.
 
 **Acceptance Criteria:**
-- [ ] After each move, the screen clears and the board redraws in place
-- [ ] The board does not append to scrolling terminal history (redraw in place for clean UX)
-- [ ] The redraw happens quickly enough to feel instantaneous to the user
+- [x] After each move, the screen clears and the board redraws in place
+- [x] The board does not append to scrolling terminal history (redraw in place for clean UX)
+- [x] The redraw happens quickly enough to feel instantaneous to the user
 
 ### 2.7. Game End Screen
 
 **As a** user, **I want to** see clear information when the game ends, **so that** I understand the outcome and can review the game.
 
 **Acceptance Criteria:**
-- [ ] When the game ends (checkmate, stalemate, draw, resignation), the system displays:
+- [x] When the game ends (checkmate, stalemate, draw, resignation), the system displays:
   - The result announcement (e.g., "Checkmate! White wins", "Stalemate - Draw", "Black resigned - White wins")
   - The final board position
   - Game summary including total move count
-- [ ] After displaying the end screen, the system offers options to:
+- [x] After displaying the end screen, the system offers options to:
   - "Start New Game"
   - "Return to Main Menu"
 
