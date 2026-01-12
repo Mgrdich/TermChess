@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -11,9 +12,9 @@ import (
 // are persisted to disk and loaded correctly on next app start
 func TestSettingsConfigPersistence(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
@@ -78,9 +79,9 @@ func TestSettingsConfigPersistence(t *testing.T) {
 // TestSettingsToggleAllOptions tests toggling all settings options
 func TestSettingsToggleAllOptions(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
@@ -125,9 +126,9 @@ func TestSettingsToggleAllOptions(t *testing.T) {
 // TestSettingsStatusMessages tests that status messages are displayed correctly
 func TestSettingsStatusMessages(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 

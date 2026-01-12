@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -141,9 +142,9 @@ func TestHelpTextVisibilityGameOver(t *testing.T) {
 // TestShowHelpTextPersistence tests that ShowHelpText setting persists across restarts
 func TestShowHelpTextPersistence(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
@@ -197,9 +198,9 @@ func TestShowHelpTextPersistence(t *testing.T) {
 // TestHelpTextToggleAffectsAllScreens tests that toggling help text affects all screens
 func TestHelpTextToggleAffectsAllScreens(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 

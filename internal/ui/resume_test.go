@@ -2,8 +2,10 @@ package ui
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
@@ -14,18 +16,18 @@ func TestResumeGameFunctionality(t *testing.T) {
 	move, _ := engine.ParseMove("e2e4")
 	_ = board.MakeMove(move)
 
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("Failed to save game: %v", err)
 	}
 
 	// Test 1: SaveGameExists should return true
-	if !SaveGameExists() {
-		t.Error("SaveGameExists() returned false, expected true")
+	if !config.SaveGameExists() {
+		t.Error("config.SaveGameExists() returned false, expected true")
 	}
 
 	// Test 2: LoadGame should load the saved position
-	loadedBoard, err := LoadGame()
+	loadedBoard, err := config.LoadGame()
 	if err != nil {
 		t.Fatalf("Failed to load game: %v", err)
 	}
@@ -37,8 +39,8 @@ func TestResumeGameFunctionality(t *testing.T) {
 	}
 
 	// Test 3: NewModel should start at ScreenMainMenu with Resume Game option when save exists
-	config := DefaultConfig()
-	model := NewModel(config)
+	testCfg := DefaultConfig()
+	model := NewModel(testCfg)
 	if model.screen != ScreenMainMenu {
 		t.Errorf("NewModel screen = %v, expected ScreenMainMenu (%v)", model.screen, ScreenMainMenu)
 	}
@@ -53,39 +55,39 @@ func TestResumeGameFunctionality(t *testing.T) {
 	}
 
 	// Test 4: DeleteSaveGame should remove the saved game
-	err = DeleteSaveGame()
+	err = config.DeleteSaveGame()
 	if err != nil {
 		t.Fatalf("Failed to delete save game: %v", err)
 	}
 
-	if SaveGameExists() {
-		t.Error("SaveGameExists() returned true after deletion, expected false")
+	if config.SaveGameExists() {
+		t.Error("config.SaveGameExists() returned true after deletion, expected false")
 	}
 
 	// Test 5: NewModel should start at ScreenMainMenu when no save exists
-	model = NewModel(config)
+	model = NewModel(testCfg)
 	if model.screen != ScreenMainMenu {
 		t.Errorf("NewModel screen = %v, expected ScreenMainMenu (%v)", model.screen, ScreenMainMenu)
 	}
 
 	// Cleanup
-	_ = DeleteSaveGame()
+	_ = config.DeleteSaveGame()
 }
 
 func TestResumePromptSelection(t *testing.T) {
 	// Create a saved game
 	board := engine.NewBoard()
-	_ = SaveGame(board)
-	defer DeleteSaveGame()
+	_ = config.SaveGame(board)
+	defer config.DeleteSaveGame()
 
-	config := DefaultConfig()
-	model := NewModel(config)
+	testCfg := DefaultConfig()
+	model := NewModel(testCfg)
 
 	// Test "Yes" selection - should load the game
 	model.resumePromptSelection = 0
 	// We can't easily test the key handler without running the full Bubbletea program,
 	// but we can verify the LoadGame function works
-	loadedBoard, err := LoadGame()
+	loadedBoard, err := config.LoadGame()
 	if err != nil {
 		t.Fatalf("Failed to load game: %v", err)
 	}
@@ -97,38 +99,38 @@ func TestResumePromptSelection(t *testing.T) {
 func TestDeleteSaveGameOnGameEnd(t *testing.T) {
 	// Create a saved game
 	board := engine.NewBoard()
-	_ = SaveGame(board)
+	_ = config.SaveGame(board)
 
 	// Verify it exists
-	if !SaveGameExists() {
-		t.Fatal("SaveGameExists() returned false, expected true")
+	if !config.SaveGameExists() {
+		t.Fatal("config.SaveGameExists() returned false, expected true")
 	}
 
 	// Simulate game end by calling DeleteSaveGame (this is what happens in handleGamePlayKeys)
-	err := DeleteSaveGame()
+	err := config.DeleteSaveGame()
 	if err != nil {
 		t.Fatalf("Failed to delete save game: %v", err)
 	}
 
 	// Verify it's gone
-	if SaveGameExists() {
-		t.Error("SaveGameExists() returned true after deletion, expected false")
+	if config.SaveGameExists() {
+		t.Error("config.SaveGameExists() returned true after deletion, expected false")
 	}
 }
 
 func TestCorruptedFENHandling(t *testing.T) {
 	// Create a corrupted save file
-	savePath, _ := SaveGamePath()
-	configDir, _ := getConfigDir()
+	savePath, _ := config.SaveGamePath()
+	configDir := filepath.Dir(savePath)
 	_ = os.MkdirAll(configDir, 0755)
 	_ = os.WriteFile(savePath, []byte("invalid fen string"), 0644)
 
 	// LoadGame should return an error
-	_, err := LoadGame()
+	_, err := config.LoadGame()
 	if err == nil {
 		t.Error("LoadGame should return error for corrupted FEN, got nil")
 	}
 
 	// Cleanup
-	_ = DeleteSaveGame()
+	_ = config.DeleteSaveGame()
 }

@@ -2,8 +2,10 @@ package ui
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -11,8 +13,8 @@ import (
 // TestResumeGameIntegrationFlow tests the complete resume game flow with new menu-based approach
 func TestResumeGameIntegrationFlow(t *testing.T) {
 	// Cleanup before and after
-	defer DeleteSaveGame()
-	DeleteSaveGame()
+	defer config.DeleteSaveGame()
+	config.DeleteSaveGame()
 
 	// Step 1: Create and save a game in progress
 	board := engine.NewBoard()
@@ -20,14 +22,14 @@ func TestResumeGameIntegrationFlow(t *testing.T) {
 	_ = board.MakeMove(move)
 	savedFEN := board.ToFEN()
 
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("Failed to save game: %v", err)
 	}
 
 	// Step 2: Start a new app instance - should show main menu with Resume Game option
-	config := DefaultConfig()
-	model := NewModel(config)
+	cfg := DefaultConfig()
+	model := NewModel(cfg)
 
 	if model.screen != ScreenMainMenu {
 		t.Errorf("Expected screen to be ScreenMainMenu, got %v", model.screen)
@@ -94,14 +96,14 @@ func TestResumeGameIntegrationFlow(t *testing.T) {
 
 	// Step 7: When game ends, save file should be deleted
 	// Simulate the handleGamePlayKeys behavior when game ends
-	_ = DeleteSaveGame()
+	_ = config.DeleteSaveGame()
 
-	if SaveGameExists() {
+	if config.SaveGameExists() {
 		t.Error("Save game should not exist after game ends")
 	}
 
 	// Step 8: Start a new app instance - should go to main menu without Resume Game option
-	model2 := NewModel(config)
+	model2 := NewModel(cfg)
 	if model2.screen != ScreenMainMenu {
 		t.Errorf("Expected screen to be ScreenMainMenu when no save exists, got %v", model2.screen)
 	}
@@ -121,16 +123,16 @@ func TestResumeGameIntegrationFlow(t *testing.T) {
 // TestResumeGameSelectNo tests navigating to a different menu option instead of Resume Game
 func TestResumeGameSelectNo(t *testing.T) {
 	// Cleanup before and after
-	defer DeleteSaveGame()
-	DeleteSaveGame()
+	defer config.DeleteSaveGame()
+	config.DeleteSaveGame()
 
 	// Create a saved game
 	board := engine.NewBoard()
-	_ = SaveGame(board)
+	_ = config.SaveGame(board)
 
 	// Start app - should show main menu with Resume Game option
-	config := DefaultConfig()
-	model := NewModel(config)
+	testCfg := DefaultConfig()
+	model := NewModel(testCfg)
 
 	if model.screen != ScreenMainMenu {
 		t.Errorf("Expected screen to be ScreenMainMenu, got %v", model.screen)
@@ -166,7 +168,7 @@ func TestResumeGameSelectNo(t *testing.T) {
 	}
 
 	// Save file should still exist (we only delete when game ends)
-	if !SaveGameExists() {
+	if !config.SaveGameExists() {
 		t.Error("Save game should still exist after selecting New Game")
 	}
 }
@@ -174,18 +176,18 @@ func TestResumeGameSelectNo(t *testing.T) {
 // TestResumeGameLoadError tests error handling when resuming a corrupted saved game
 func TestResumeGameLoadError(t *testing.T) {
 	// Cleanup before and after
-	defer DeleteSaveGame()
-	DeleteSaveGame()
+	defer config.DeleteSaveGame()
+	config.DeleteSaveGame()
 
 	// Create a corrupted save file
-	savePath, _ := SaveGamePath()
-	configDir, _ := getConfigDir()
+	savePath, _ := config.SaveGamePath()
+	configDir := filepath.Dir(savePath)
 	_ = os.MkdirAll(configDir, 0755)
 	_ = os.WriteFile(savePath, []byte("corrupted fen"), 0644)
 
 	// Start app - should show main menu with Resume Game option
-	config := DefaultConfig()
-	model := NewModel(config)
+	cfg := DefaultConfig()
+	model := NewModel(cfg)
 
 	if model.screen != ScreenMainMenu {
 		t.Errorf("Expected screen to be ScreenMainMenu, got %v", model.screen)

@@ -184,4 +184,3 @@ make snapshot
 4. Use stdlib `flag` — no Cobra unless subcommands emerge
 5. Config is just a JSON file in `~/.config/appname/`
 6. Handle errors at boundaries, return them from internal packages
-7. Support vim keys (hjkl) and arrow keys

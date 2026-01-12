@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/Mgrdich/TermChess/internal/util"
 	tea "github.com/charmbracelet/bubbletea"
@@ -112,7 +113,7 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 	switch selected {
 	case "Resume Game":
 		// Load the saved game and start gameplay
-		board, err := LoadGame()
+		board, err := config.LoadGame()
 		if err != nil {
 			// Failed to load - show error and stay on main menu
 			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
@@ -406,7 +407,7 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 	}
 
 	// Save the configuration immediately
-	err := SaveConfig(m.config)
+	err := config.SaveConfig(m.config)
 	if err != nil {
 		m.errorMsg = fmt.Sprintf("Failed to save settings: %v", err)
 	} else {
@@ -444,7 +445,7 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "y", "Y":
 		// Direct "Yes" - save the game
-		err := SaveGame(m.board)
+		err := config.SaveGame(m.board)
 		if err != nil {
 			m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
 			return m, nil
@@ -482,7 +483,7 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Execute the selected action
 		if m.savePromptSelection == 0 {
 			// User selected "Yes" - save the game
-			err := SaveGame(m.board)
+			err := config.SaveGame(m.board)
 			if err != nil {
 				m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
 				return m, nil
@@ -542,7 +543,7 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "y", "Y":
 		// Direct "Yes" - load the saved game
-		board, err := LoadGame()
+		board, err := config.LoadGame()
 		if err != nil {
 			// Failed to load - show error and go to main menu
 			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
@@ -578,7 +579,7 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Execute the selected action
 		if m.resumePromptSelection == 0 {
 			// User selected "Yes" - load the saved game
-			board, err := LoadGame()
+			board, err := config.LoadGame()
 			if err != nil {
 				// Failed to load - show error and go to main menu
 				m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
@@ -714,7 +715,7 @@ func (m Model) handleResignCommand() (tea.Model, tea.Cmd) {
 	m.statusMsg = ""
 
 	// Delete the save game file since the game is over
-	_ = DeleteSaveGame()
+	_ = config.DeleteSaveGame()
 
 	return m, nil
 }
@@ -793,7 +794,7 @@ func (m Model) handleMoveInput() (tea.Model, tea.Cmd) {
 	if m.board.IsGameOver() {
 		m.screen = ScreenGameOver
 		// Delete the save game file since the game is over
-		_ = DeleteSaveGame()
+		_ = config.DeleteSaveGame()
 	}
 
 	return m, nil
@@ -864,7 +865,7 @@ func (m Model) handleDrawPromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.errorMsg = ""
 			m.statusMsg = ""
 			// Delete the save game file since the game is over
-			_ = DeleteSaveGame()
+			_ = config.DeleteSaveGame()
 		} else {
 			// User selected "Decline" - return to game
 			m.screen = ScreenGamePlay

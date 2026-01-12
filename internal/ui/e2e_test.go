@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -435,12 +436,12 @@ func TestHandleSavePromptKeys(t *testing.T) {
 	}
 
 	// Verify the game was saved
-	if !SaveGameExists() {
+	if !config.SaveGameExists() {
 		t.Error("Expected game to be saved after pressing 'y'")
 	}
 
 	// Clean up
-	_ = DeleteSaveGame()
+	_ = config.DeleteSaveGame()
 }
 
 // TestFullGameFlow tests a complete game from start to finish

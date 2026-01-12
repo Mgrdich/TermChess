@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/charmbracelet/bubbles/textinput"
 )
@@ -166,7 +167,7 @@ func NewModel(config Config) Model {
 // buildMainMenuOptions constructs the main menu options array.
 // If a saved game exists, it includes "Resume Game" at the top of the menu.
 func buildMainMenuOptions() []string {
-	if SaveGameExists() {
+	if config.SaveGameExists() {
 		return []string{"Resume Game", "New Game", "Load Game", "Settings", "Exit"}
 	}
 	return []string{"New Game", "Load Game", "Settings", "Exit"}

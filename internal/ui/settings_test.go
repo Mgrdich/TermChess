@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -56,7 +57,7 @@ func TestSettingsNavigation(t *testing.T) {
 func TestSettingsToggle(t *testing.T) {
 	// Clean up any existing config file after test
 	defer func() {
-		configPath, _ := GetConfigPath()
+		configPath, _ := config.GetConfigPath()
 		os.Remove(configPath)
 	}()
 
