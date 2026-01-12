@@ -96,6 +96,7 @@ func TestSaveAndLoadConfig(t *testing.T) {
 		ShowCoords:      false,
 		UseColors:       false,
 		ShowMoveHistory: true,
+		ShowHelpText:    false,
 	}
 
 	// Save the config
@@ -128,6 +129,10 @@ func TestSaveAndLoadConfig(t *testing.T) {
 
 	if loadedConfig.ShowMoveHistory != testConfig.ShowMoveHistory {
 		t.Errorf("LoadConfig().ShowMoveHistory = %v, want %v", loadedConfig.ShowMoveHistory, testConfig.ShowMoveHistory)
+	}
+
+	if loadedConfig.ShowHelpText != testConfig.ShowHelpText {
+		t.Errorf("LoadConfig().ShowHelpText = %v, want %v", loadedConfig.ShowHelpText, testConfig.ShowHelpText)
 	}
 
 	// Clean up
@@ -183,6 +188,7 @@ func TestConfigPersistence(t *testing.T) {
 		ShowCoords:      true,
 		UseColors:       false,
 		ShowMoveHistory: true,
+		ShowHelpText:    false,
 	}
 
 	// Save it

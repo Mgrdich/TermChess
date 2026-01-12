@@ -31,6 +31,7 @@ func TestConfigPersistenceIntegration(t *testing.T) {
 		ShowCoords:      false,
 		UseColors:       false,
 		ShowMoveHistory: true,
+		ShowHelpText:    false,
 	}
 	if err := SaveConfig(customConfig); err != nil {
 		t.Fatalf("SaveConfig() failed: %v", err)
@@ -48,6 +49,7 @@ func TestConfigPersistenceIntegration(t *testing.T) {
 		ShowCoords:      true,
 		UseColors:       true,
 		ShowMoveHistory: false,
+		ShowHelpText:    true,
 	}
 	if err := SaveConfig(modifiedConfig); err != nil {
 		t.Fatalf("SaveConfig() second time failed: %v", err)
@@ -75,6 +77,7 @@ func TestNewModelLoadsConfig(t *testing.T) {
 		ShowCoords:      false,
 		UseColors:       true,
 		ShowMoveHistory: true,
+		ShowHelpText:    false,
 	}
 	if err := SaveConfig(testConfig); err != nil {
 		t.Fatalf("SaveConfig() failed: %v", err)
@@ -106,6 +109,7 @@ func TestConfigFileFormat(t *testing.T) {
 		ShowCoords:      false,
 		UseColors:       true,
 		ShowMoveHistory: false,
+		ShowHelpText:    true,
 	}
 	if err := SaveConfig(testConfig); err != nil {
 		t.Fatalf("SaveConfig() failed: %v", err)
@@ -125,6 +129,7 @@ func TestConfigFileFormat(t *testing.T) {
 		"show_coordinates",
 		"use_colors",
 		"show_move_history",
+		"show_help_text",
 		"[game]",
 		"default_game_type",
 		"default_bot_difficulty",

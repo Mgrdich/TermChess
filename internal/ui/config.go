@@ -97,13 +97,6 @@ func LoadConfig() Config {
 		ShowHelpText:    configFile.Display.ShowHelpText,
 	}
 
-	// Apply defaults for new fields if they're missing (backward compatibility)
-	// If ShowHelpText is false and all other fields are also false, it's likely
-	// an old config file without ShowHelpText, so we default it to true
-	if !config.ShowHelpText && !config.UseUnicode && !config.ShowCoords && !config.UseColors && !config.ShowMoveHistory {
-		config.ShowHelpText = true
-	}
-
 	return config
 }
 
