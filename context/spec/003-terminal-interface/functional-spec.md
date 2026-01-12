@@ -145,33 +145,33 @@ This feature provides a clean, distraction-free chess experience that integrates
 **As a** user, **I want to** be able to navigate back to the main menu from any screen, **so that** I never feel trapped in the interface and can easily change my mind or explore different options.
 
 **Acceptance Criteria:**
-- [ ] Every screen in the application provides a way to return to the previous screen or main menu
-- [ ] The ESC key is consistently used across all screens to navigate back:
+- [x] Every screen in the application provides a way to return to the previous screen or main menu
+- [x] The ESC key is consistently used across all screens to navigate back:
   - From Settings screen → Main Menu
   - From Game Type Selection → Main Menu
   - From FEN Input screen → Main Menu
   - From Bot Selection → Game Type Selection
   - From Game Over screen → Main Menu (via menu option)
-- [ ] During active gameplay, ESC key triggers a confirmation prompt before returning to menu
-- [ ] Alternative navigation keys are provided where appropriate (e.g., 'b' for back, 'q' for quit to menu)
-- [ ] Each screen displays help text showing the available navigation keys (e.g., "Press ESC to return to menu")
-- [ ] Navigation actions are instantaneous with no delay
-- [ ] Screen transitions are smooth and the user never loses context
+- [x] During active gameplay, ESC key triggers a confirmation prompt before returning to menu
+- [x] Alternative navigation keys are provided where appropriate (e.g., 'b' for back, 'q' for quit to menu)
+- [x] Each screen displays help text showing the available navigation keys (e.g., "Press ESC to return to menu")
+- [x] Navigation actions are instantaneous with no delay
+- [x] Screen transitions are smooth and the user never loses context
 
 **Exit During Active Game Navigation:**
-- [ ] When user presses ESC during an active game, system prompts: "Return to menu? Current game will be saved. (y/n)"
-- [ ] If user confirms (y), game is saved and user returns to Main Menu
-- [ ] If user cancels (n), gameplay continues without interruption
-- [ ] Ctrl+C always immediately exits the entire application from any screen
+- [x] When user presses ESC during an active game, system prompts: "Return to menu? Current game will be saved. (y/n)"
+- [x] If user confirms (y), game is saved and user returns to Main Menu
+- [x] If user cancels (n), gameplay continues without interruption
+- [x] Ctrl+C always immediately exits the entire application from any screen
 
 **Help Text Standards:**
-- [ ] Every screen includes a help line at the bottom showing navigation options (when enabled)
-- [ ] Help text follows consistent format: "ESC: back | q: quit | arrows: navigate"
-- [ ] Help text is visually distinct (e.g., dimmed color, separated by whitespace)
-- [ ] Help text is shown by default (enabled in default configuration)
-- [ ] Users can hide help text via Settings screen by toggling "Show Help Text" option
-- [ ] When help text is hidden, screens display only the primary content (board, menu, etc.)
-- [ ] Help text setting persists across application restarts (saved in config.toml)
+- [x] Every screen includes a help line at the bottom showing navigation options (when enabled)
+- [x] Help text follows consistent format: "ESC: back | q: quit | arrows: navigate"
+- [x] Help text is visually distinct (e.g., dimmed color, separated by whitespace)
+- [x] Help text is shown by default (enabled in default configuration)
+- [x] Users can hide help text via Settings screen by toggling "Show Help Text" option
+- [x] When help text is hidden, screens display only the primary content (board, menu, etc.)
+- [x] Help text setting persists across application restarts (saved in config.toml)
 
 ---
 
