@@ -2,14 +2,16 @@ package ui
 
 import (
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // TestSettingsNavigation tests that the settings screen navigation works correctly
 func TestSettingsNavigation(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
 	m.settingsSelection = 0
 
@@ -55,11 +57,11 @@ func TestSettingsNavigation(t *testing.T) {
 func TestSettingsToggle(t *testing.T) {
 	// Clean up any existing config file after test
 	defer func() {
-		configPath, _ := GetConfigPath()
+		configPath, _ := config.GetConfigPath()
 		os.Remove(configPath)
 	}()
 
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
 
 	// Test toggling UseUnicode (option 0)
@@ -121,7 +123,7 @@ func TestSettingsReturnToMenu(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		m := NewModel()
+		m := NewModel(DefaultConfig())
 		m.screen = ScreenSettings
 
 		model, _ := m.handleSettingsKeys(tc.key)
@@ -135,7 +137,7 @@ func TestSettingsReturnToMenu(t *testing.T) {
 
 // TestMainMenuToSettings tests navigation from main menu to settings
 func TestMainMenuToSettings(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenMainMenu
 	m.menuSelection = 2 // "Settings" is the 3rd option (index 2)
 
@@ -153,7 +155,7 @@ func TestMainMenuToSettings(t *testing.T) {
 
 // TestSettingsRender tests that the settings screen renders without errors
 func TestSettingsRender(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
 
 	// Test with different settings values
@@ -171,7 +173,7 @@ func TestSettingsRender(t *testing.T) {
 	// Check that output contains expected strings
 	expectedStrings := []string{"Settings", "Use Unicode Pieces", "Show Coordinates", "Use Colors", "Show Move History", "Show Help Text"}
 	for _, expected := range expectedStrings {
-		if !contains(output, expected) {
+		if !strings.Contains(output, expected) {
 			t.Errorf("Expected output to contain '%s'", expected)
 		}
 	}

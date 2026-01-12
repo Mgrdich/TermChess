@@ -1,183 +1,213 @@
 package ui
 
 import (
-	"os"
+	"strings"
 	"testing"
+
+	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
-// TestConfigPersistenceIntegration tests the complete config persistence flow:
-// 1. App starts with no config -> uses defaults
-// 2. Config is saved -> file is created
-// 3. App restarts -> config is loaded from file
-// 4. Config changes are persisted across restarts
-func TestConfigPersistenceIntegration(t *testing.T) {
-	// Clean up after test
-	configPath, err := GetConfigPath()
-	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
-	}
-	defer os.Remove(configPath)
-
-	// Phase 1: No config file exists
-	os.Remove(configPath)
-	config1 := LoadConfig()
-	if config1 != DefaultConfig() {
-		t.Errorf("LoadConfig() with no file should return defaults")
-	}
-
-	// Phase 2: Save custom config
-	customConfig := Config{
-		UseUnicode:      true,
-		ShowCoords:      false,
-		UseColors:       false,
-		ShowMoveHistory: true,
-		ShowHelpText:    false,
-	}
-	if err := SaveConfig(customConfig); err != nil {
-		t.Fatalf("SaveConfig() failed: %v", err)
-	}
-
-	// Phase 3: Restart simulation - load config again
-	config2 := LoadConfig()
-	if config2 != customConfig {
-		t.Errorf("LoadConfig() after save = %+v, want %+v", config2, customConfig)
-	}
-
-	// Phase 4: Modify and save again
-	modifiedConfig := Config{
+// TestMoveHistoryIntegration tests the full integration of move history display
+func TestMoveHistoryIntegration(t *testing.T) {
+	// Create a model with move history enabled
+	config := Config{
 		UseUnicode:      false,
 		ShowCoords:      true,
-		UseColors:       true,
-		ShowMoveHistory: false,
-		ShowHelpText:    true,
-	}
-	if err := SaveConfig(modifiedConfig); err != nil {
-		t.Fatalf("SaveConfig() second time failed: %v", err)
-	}
-
-	// Phase 5: Load modified config
-	config3 := LoadConfig()
-	if config3 != modifiedConfig {
-		t.Errorf("LoadConfig() after modification = %+v, want %+v", config3, modifiedConfig)
-	}
-}
-
-// TestNewModelLoadsConfig verifies that NewModel() loads config on initialization
-func TestNewModelLoadsConfig(t *testing.T) {
-	// Set up a known config
-	configPath, err := GetConfigPath()
-	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
-	}
-	defer os.Remove(configPath)
-
-	// Save a specific config
-	testConfig := Config{
-		UseUnicode:      true,
-		ShowCoords:      false,
-		UseColors:       true,
+		UseColors:       false,
 		ShowMoveHistory: true,
-		ShowHelpText:    false,
-	}
-	if err := SaveConfig(testConfig); err != nil {
-		t.Fatalf("SaveConfig() failed: %v", err)
 	}
 
-	// Create a new model (should load config internally)
-	_ = NewModel()
+	m := NewModel(config)
+	m.board = engine.NewBoard()
 
-	// Verify the config can be loaded and matches what we saved
-	// Note: Model.config is private, so we test indirectly by ensuring
-	// NewModel() doesn't panic and that LoadConfig() works correctly
-	loadedConfig := LoadConfig()
-	if loadedConfig != testConfig {
-		t.Errorf("NewModel should load same config as LoadConfig()")
-	}
-}
+	// Play a short game (Scholar's mate setup)
+	moves := []string{"e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6"}
 
-// TestConfigFileFormat verifies the TOML format is correct
-func TestConfigFileFormat(t *testing.T) {
-	configPath, err := GetConfigPath()
-	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
-	}
-	defer os.Remove(configPath)
+	for _, moveStr := range moves {
+		move, err := engine.ParseMove(moveStr)
+		if err != nil {
+			t.Fatalf("Failed to parse move %s: %v", moveStr, err)
+		}
 
-	// Save a config
-	testConfig := Config{
-		UseUnicode:      true,
-		ShowCoords:      false,
-		UseColors:       true,
-		ShowMoveHistory: false,
-		ShowHelpText:    true,
-	}
-	if err := SaveConfig(testConfig); err != nil {
-		t.Fatalf("SaveConfig() failed: %v", err)
+		err = m.board.MakeMove(move)
+		if err != nil {
+			t.Fatalf("Failed to make move %s: %v", moveStr, err)
+		}
+
+		m.moveHistory = append(m.moveHistory, move)
 	}
 
-	// Read the raw file content
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("Failed to read config file: %v", err)
+	// Format the move history
+	history := m.formatMoveHistory()
+
+	// Verify the history contains expected moves in SAN notation
+	expected := []string{
+		"1. e4 e5",
+		"2. Bc4 Nc6",
+		"3. Qh5 Nf6",
 	}
 
-	// Verify file contains expected TOML sections
-	contentStr := string(content)
-	requiredSections := []string{
-		"[display]",
-		"use_unicode",
-		"show_coordinates",
-		"use_colors",
-		"show_move_history",
-		"show_help_text",
-		"[game]",
-		"default_game_type",
-		"default_bot_difficulty",
-	}
-
-	for _, section := range requiredSections {
-		if !contains(contentStr, section) {
-			t.Errorf("Config file missing required section or field: %s", section)
+	for _, exp := range expected {
+		if !strings.Contains(history, exp) {
+			t.Errorf("Move history missing expected sequence: %s\nGot: %s", exp, history)
 		}
 	}
-}
 
-// TestConfigCorruptedFile verifies graceful handling of corrupted config
-func TestConfigCorruptedFile(t *testing.T) {
-	configPath, err := GetConfigPath()
-	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
-	}
-	defer os.Remove(configPath)
-
-	// Create directory
-	if err := os.MkdirAll(configPath[:len(configPath)-len("config.toml")], 0755); err != nil {
-		t.Fatalf("Failed to create config directory: %v", err)
+	// Test that rendering includes the move history when config is enabled
+	rendered := m.renderGamePlay()
+	if !strings.Contains(rendered, "Move History:") {
+		t.Errorf("renderGamePlay should include 'Move History:' when config.ShowMoveHistory is true")
 	}
 
-	// Write invalid TOML
-	if err := os.WriteFile(configPath, []byte("invalid toml content {{{"), 0644); err != nil {
-		t.Fatalf("Failed to write corrupted config: %v", err)
-	}
-
-	// LoadConfig should not panic and should return defaults
-	config := LoadConfig()
-	defaults := DefaultConfig()
-	if config != defaults {
-		t.Errorf("LoadConfig() with corrupted file should return defaults")
+	if !strings.Contains(rendered, "1. e4 e5") {
+		t.Errorf("renderGamePlay should include actual move history")
 	}
 }
 
-// Helper function to check if string contains substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
-}
+// TestMoveHistoryDisabled tests that move history is not shown when disabled
+func TestMoveHistoryDisabled(t *testing.T) {
+	// Create a model with move history DISABLED
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      true,
+		UseColors:       false,
+		ShowMoveHistory: false, // Disabled
+	}
 
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
+	m := NewModel(config)
+	m.board = engine.NewBoard()
+
+	// Play some moves
+	moves := []string{"e2e4", "e7e5", "g1f3"}
+
+	for _, moveStr := range moves {
+		move, err := engine.ParseMove(moveStr)
+		if err != nil {
+			t.Fatalf("Failed to parse move %s: %v", moveStr, err)
 		}
+
+		m.board.MakeMove(move)
+		m.moveHistory = append(m.moveHistory, move)
 	}
-	return false
+
+	// Test that rendering does NOT include the move history when config is disabled
+	rendered := m.renderGamePlay()
+	if strings.Contains(rendered, "Move History:") {
+		t.Errorf("renderGamePlay should NOT include 'Move History:' when config.ShowMoveHistory is false")
+	}
+}
+
+// TestMoveHistoryResetsOnNewGame tests that move history is cleared on new game
+func TestMoveHistoryResetsOnNewGame(t *testing.T) {
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      true,
+		UseColors:       false,
+		ShowMoveHistory: true,
+	}
+
+	m := NewModel(config)
+	m.board = engine.NewBoard()
+
+	// Play some moves
+	moves := []string{"e2e4", "e7e5", "g1f3"}
+
+	for _, moveStr := range moves {
+		move, _ := engine.ParseMove(moveStr)
+		m.board.MakeMove(move)
+		m.moveHistory = append(m.moveHistory, move)
+	}
+
+	// Verify move history has moves
+	if len(m.moveHistory) != 3 {
+		t.Errorf("Expected 3 moves in history, got %d", len(m.moveHistory))
+	}
+
+	// Start a new game (simulating what happens in update.go)
+	m.board = engine.NewBoard()
+	m.moveHistory = []engine.Move{}
+
+	// Verify move history is cleared
+	if len(m.moveHistory) != 0 {
+		t.Errorf("Move history should be cleared on new game, got %d moves", len(m.moveHistory))
+	}
+
+	history := m.formatMoveHistory()
+	if history != "" {
+		t.Errorf("Empty move history should return empty string, got: %s", history)
+	}
+}
+
+// TestCastlingInMoveHistory tests that castling is formatted correctly in history
+func TestCastlingInMoveHistory(t *testing.T) {
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      true,
+		UseColors:       false,
+		ShowMoveHistory: true,
+	}
+
+	m := NewModel(config)
+	m.board = engine.NewBoard()
+
+	// Set up for castling: 1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. O-O
+	moves := []string{"e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "e1g1"}
+
+	for _, moveStr := range moves {
+		move, err := engine.ParseMove(moveStr)
+		if err != nil {
+			t.Fatalf("Failed to parse move %s: %v", moveStr, err)
+		}
+
+		m.board.MakeMove(move)
+		m.moveHistory = append(m.moveHistory, move)
+	}
+
+	history := m.formatMoveHistory()
+
+	// Verify castling is shown as O-O
+	if !strings.Contains(history, "O-O") {
+		t.Errorf("Move history should contain 'O-O' for castling, got: %s", history)
+	}
+
+	// Verify it's in the correct position (move 4 for white)
+	if !strings.Contains(history, "4. O-O") {
+		t.Errorf("Castling should be move 4 for white, got: %s", history)
+	}
+}
+
+// TestPromotionInMoveHistory tests that promotions are formatted correctly
+func TestPromotionInMoveHistory(t *testing.T) {
+	config := Config{
+		UseUnicode:      false,
+		ShowCoords:      true,
+		UseColors:       false,
+		ShowMoveHistory: true,
+	}
+
+	m := NewModel(config)
+
+	// Set up a position where White can promote
+	fen := "8/P7/8/8/8/8/8/4K2k w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+	m.board = board
+
+	// Promote to queen
+	move, err := engine.ParseMove("a7a8q")
+	if err != nil {
+		t.Fatalf("Failed to parse move: %v", err)
+	}
+
+	m.board.MakeMove(move)
+	m.moveHistory = append(m.moveHistory, move)
+
+	history := m.formatMoveHistory()
+
+	// Verify promotion is shown with =Q
+	if !strings.Contains(history, "=Q") {
+		t.Errorf("Move history should contain '=Q' for queen promotion, got: %s", history)
+	}
 }

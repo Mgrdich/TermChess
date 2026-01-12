@@ -386,36 +386,170 @@ func parsePieceType(r rune) (engine.PieceType, error) {
 	}
 }
 
-// FormatSAN converts a Move to Standard Algebraic Notation (SAN) for display.
-// This is a simplified version that generates coordinate notation (e.g., "e2e4")
-// since full SAN generation with disambiguation is complex and requires board context.
-func FormatSAN(m engine.Move) string {
-	// Use coordinate notation (e.g., "e2e4")
-	moveStr := m.String() // Returns "e2e4" format or "e7e8q" for promotions
+// FormatSAN converts a Move to Standard Algebraic Notation (SAN).
+// Takes the board state BEFORE the move and the move to format.
+// Returns the SAN string (e.g., "e4", "Nf3", "Bxc5", "O-O", "e8=Q+").
+//
+// Algorithm:
+// 1. Check for castling (king moves 2 squares) -> "O-O" or "O-O-O"
+// 2. Get piece type (Pawn, Knight, Bishop, Rook, Queen, King)
+// 3. Check if it's a capture (destination square has enemy piece or en passant)
+// 4. For disambiguation: find all legal moves by same piece type to same destination
+// 5. Build string: Piece + disambiguation + capture marker + destination + promotion + check
+func FormatSAN(board *engine.Board, move engine.Move) string {
+	piece := board.PieceAt(move.From)
+	if piece.IsEmpty() {
+		return move.String() // Fallback to coordinate notation
+	}
 
-	// If there's a promotion, the Move.String() already includes it in lowercase (e.g., "e7e8q")
-	// We need to convert it to "=Q" format for better readability
-	if m.Promotion != engine.Empty {
-		// Remove the lowercase promotion letter and replace with "=X" format
-		moveStr = moveStr[:len(moveStr)-1] // Remove last character (lowercase promotion)
-
-		switch m.Promotion {
-		case engine.Queen:
-			moveStr += "=Q"
-		case engine.Rook:
-			moveStr += "=R"
-		case engine.Bishop:
-			moveStr += "=B"
-		case engine.Knight:
-			moveStr += "=N"
+	// Check for castling notation
+	if piece.Type() == engine.King {
+		fileDiff := move.To.File() - move.From.File()
+		if fileDiff == 2 {
+			return "O-O" // Kingside castling
+		} else if fileDiff == -2 {
+			return "O-O-O" // Queenside castling
 		}
 	}
 
-	return moveStr
+	var result strings.Builder
+
+	// Add piece letter (empty for pawns)
+	pieceType := piece.Type()
+	if pieceType != engine.Pawn {
+		result.WriteRune(pieceTypeToRune(pieceType))
+	}
+
+	// Check if this is a capture
+	targetPiece := board.PieceAt(move.To)
+	isCapture := !targetPiece.IsEmpty()
+
+	// Check for en passant capture
+	if pieceType == engine.Pawn && board.EnPassantSq >= 0 && move.To == engine.Square(board.EnPassantSq) {
+		isCapture = true
+	}
+
+	// Add disambiguation for non-pawn pieces
+	if pieceType != engine.Pawn {
+		disambiguation := getDisambiguation(board, move)
+		result.WriteString(disambiguation)
+	} else if isCapture {
+		// For pawn captures, always add the source file
+		result.WriteRune(rune('a' + move.From.File()))
+	}
+
+	// Add capture marker
+	if isCapture {
+		result.WriteRune('x')
+	}
+
+	// Add destination square
+	result.WriteString(move.To.String())
+
+	// Add promotion notation
+	if move.Promotion != engine.Empty {
+		result.WriteRune('=')
+		result.WriteRune(pieceTypeToRune(move.Promotion))
+	}
+
+	// Check for check or checkmate by making the move on a copy
+	boardCopy := board.Copy()
+	boardCopy.MakeMove(move)
+
+	if boardCopy.InCheck() {
+		// Check if it's checkmate
+		if len(boardCopy.LegalMoves()) == 0 {
+			result.WriteRune('#')
+		} else {
+			result.WriteRune('+')
+		}
+	}
+
+	return result.String()
 }
 
-// FormatMoveHistory formats the entire move history as a numbered, paired list.
-// Example: "1. e2e4 e7e5 2. g1f3 b8c6"
+// pieceTypeToRune converts a PieceType to its SAN character representation.
+func pieceTypeToRune(pt engine.PieceType) rune {
+	switch pt {
+	case engine.King:
+		return 'K'
+	case engine.Queen:
+		return 'Q'
+	case engine.Rook:
+		return 'R'
+	case engine.Bishop:
+		return 'B'
+	case engine.Knight:
+		return 'N'
+	default:
+		return '?'
+	}
+}
+
+// getDisambiguation returns the disambiguation string needed for a piece move.
+// This is necessary when multiple pieces of the same type can move to the same square.
+// Returns:
+// - "" if no disambiguation needed
+// - "a" (file) if file alone is sufficient to disambiguate
+// - "1" (rank) if rank alone is sufficient to disambiguate
+// - "a1" (both) if both file and rank are needed to disambiguate
+func getDisambiguation(board *engine.Board, move engine.Move) string {
+	piece := board.PieceAt(move.From)
+	pieceType := piece.Type()
+
+	// Find all legal moves by the same piece type to the same destination
+	legalMoves := board.LegalMoves()
+	var candidates []engine.Move
+
+	for _, m := range legalMoves {
+		if m.To == move.To && m.From != move.From {
+			candidatePiece := board.PieceAt(m.From)
+			if candidatePiece.Type() == pieceType {
+				candidates = append(candidates, m)
+			}
+		}
+	}
+
+	// No disambiguation needed if this is the only piece that can move there
+	if len(candidates) == 0 {
+		return ""
+	}
+
+	fromFile := move.From.File()
+	fromRank := move.From.Rank()
+
+	// Check if file alone is sufficient (no other candidate on same file)
+	fileUnique := true
+	for _, m := range candidates {
+		if m.From.File() == fromFile {
+			fileUnique = false
+			break
+		}
+	}
+
+	if fileUnique {
+		return string(rune('a' + fromFile))
+	}
+
+	// Check if rank alone is sufficient (no other candidate on same rank)
+	rankUnique := true
+	for _, m := range candidates {
+		if m.From.Rank() == fromRank {
+			rankUnique = false
+			break
+		}
+	}
+
+	if rankUnique {
+		return string(rune('1' + fromRank))
+	}
+
+	// Need both file and rank
+	return string(rune('a'+fromFile)) + string(rune('1'+fromRank))
+}
+
+// FormatMoveHistory formats a slice of moves into a numbered, paired list for display.
+// Example: "1. e2e4 e7e5 2. g1f3 b8c6 3. f1c4"
 // This format groups white and black moves together with move numbers.
 func FormatMoveHistory(moves []engine.Move) string {
 	if len(moves) == 0 {
@@ -427,16 +561,12 @@ func FormatMoveHistory(moves []engine.Move) string {
 	for i := 0; i < len(moves); i += 2 {
 		moveNum := (i / 2) + 1
 
-		// White's move
-		whiteMove := FormatSAN(moves[i])
+		// White's move (always exists for this iteration)
+		result.WriteString(fmt.Sprintf("%d. %s", moveNum, moves[i].String()))
 
 		// Black's move (if exists)
 		if i+1 < len(moves) {
-			blackMove := FormatSAN(moves[i+1])
-			result.WriteString(fmt.Sprintf("%d. %s %s ", moveNum, whiteMove, blackMove))
-		} else {
-			// Only white move (game in progress, black hasn't moved yet)
-			result.WriteString(fmt.Sprintf("%d. %s", moveNum, whiteMove))
+			result.WriteString(fmt.Sprintf(" %s ", moves[i+1].String()))
 		}
 	}
 

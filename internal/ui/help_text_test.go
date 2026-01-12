@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -30,68 +31,68 @@ func TestRenderHelpText(t *testing.T) {
 
 // TestHelpTextVisibilityMainMenu tests that help text is shown/hidden on main menu
 func TestHelpTextVisibilityMainMenu(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenMainMenu
 
 	// Test with help text enabled
 	m.config.ShowHelpText = true
 	output := m.renderMainMenu()
-	if !strings.Contains(output, "arrow keys") {
+	if !strings.Contains(output, "arrows/jk") && !strings.Contains(output, "navigate") {
 		t.Error("Expected help text to be visible on main menu when ShowHelpText is true")
 	}
 
 	// Test with help text disabled
 	m.config.ShowHelpText = false
 	output = m.renderMainMenu()
-	if strings.Contains(output, "arrow keys") {
+	if strings.Contains(output, "arrows/jk: navigate | enter: select | q: quit") {
 		t.Error("Expected help text to be hidden on main menu when ShowHelpText is false")
 	}
 }
 
 // TestHelpTextVisibilityGameTypeSelect tests that help text is shown/hidden on game type select
 func TestHelpTextVisibilityGameTypeSelect(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenGameTypeSelect
 	m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
 
 	// Test with help text enabled
 	m.config.ShowHelpText = true
 	output := m.renderGameTypeSelect()
-	if !strings.Contains(output, "arrow keys") {
+	if !strings.Contains(output, "ESC") && !strings.Contains(output, "back to menu") {
 		t.Error("Expected help text to be visible on game type select when ShowHelpText is true")
 	}
 
 	// Test with help text disabled
 	m.config.ShowHelpText = false
 	output = m.renderGameTypeSelect()
-	if strings.Contains(output, "arrow keys") {
+	if strings.Contains(output, "ESC: back to menu | arrows/jk: navigate | enter: select") {
 		t.Error("Expected help text to be hidden on game type select when ShowHelpText is false")
 	}
 }
 
 // TestHelpTextVisibilitySettings tests that help text is shown/hidden on settings screen
 func TestHelpTextVisibilitySettings(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
 
 	// Test with help text enabled
 	m.config.ShowHelpText = true
 	output := m.renderSettings()
-	if !strings.Contains(output, "arrow keys") {
+	if !strings.Contains(output, "ESC") && !strings.Contains(output, "back") {
 		t.Error("Expected help text to be visible on settings screen when ShowHelpText is true")
 	}
 
 	// Test with help text disabled
 	m.config.ShowHelpText = false
 	output = m.renderSettings()
-	if strings.Contains(output, "arrow keys") {
+	if strings.Contains(output, "ESC: back | arrows/jk: navigate | enter/space: toggle") {
 		t.Error("Expected help text to be hidden on settings screen when ShowHelpText is false")
 	}
 }
 
 // TestHelpTextVisibilityGamePlay tests that help text is shown/hidden on gameplay screen
 func TestHelpTextVisibilityGamePlay(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenGamePlay
 	// Start a new game so we have a board
 	m.board = engine.NewBoard()
@@ -114,7 +115,7 @@ func TestHelpTextVisibilityGamePlay(t *testing.T) {
 
 // TestHelpTextVisibilityGameOver tests that help text is shown/hidden on game over screen
 func TestHelpTextVisibilityGameOver(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenGameOver
 	// Create a board in checkmate state for testing
 	m.board = engine.NewBoard()
@@ -141,9 +142,9 @@ func TestHelpTextVisibilityGameOver(t *testing.T) {
 // TestShowHelpTextPersistence tests that ShowHelpText setting persists across restarts
 func TestShowHelpTextPersistence(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
@@ -151,7 +152,7 @@ func TestShowHelpTextPersistence(t *testing.T) {
 	os.Remove(configPath)
 
 	// Phase 1: Start app with default config
-	m1 := NewModel()
+	m1 := NewModel(LoadConfig())
 	if !m1.config.ShowHelpText {
 		t.Error("Expected ShowHelpText to be true by default")
 	}
@@ -169,7 +170,7 @@ func TestShowHelpTextPersistence(t *testing.T) {
 	}
 
 	// Phase 3: "Restart" the app by creating a new model
-	m2 := NewModel()
+	m2 := NewModel(LoadConfig())
 
 	// Verify the config was loaded from disk with ShowHelpText = false
 	if m2.config.ShowHelpText {
@@ -188,7 +189,7 @@ func TestShowHelpTextPersistence(t *testing.T) {
 	}
 
 	// Phase 5: Restart again and verify it's true
-	m3 := NewModel()
+	m3 := NewModel(LoadConfig())
 	if !m3.config.ShowHelpText {
 		t.Error("After second restart, ShowHelpText should be true")
 	}
@@ -197,13 +198,13 @@ func TestShowHelpTextPersistence(t *testing.T) {
 // TestHelpTextToggleAffectsAllScreens tests that toggling help text affects all screens
 func TestHelpTextToggleAffectsAllScreens(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
 	// Start with help text enabled
 	m.config.ShowHelpText = true
@@ -269,5 +270,145 @@ func TestHelpTextToggleAffectsAllScreens(t *testing.T) {
 
 		// Output with help disabled should be shorter or equal (help text removed)
 		// Note: This isn't always guaranteed due to formatting, so we just check it renders
+	}
+}
+
+// TestHelpTextVisibilityFENInput tests that help text is shown/hidden on FEN input screen
+func TestHelpTextVisibilityFENInput(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenFENInput
+
+	// Test with help text enabled
+	m.config.ShowHelpText = true
+	output := m.renderFENInput()
+	if !strings.Contains(output, "ESC") || !strings.Contains(output, "enter") {
+		t.Error("Expected help text to be visible on FEN input screen when ShowHelpText is true")
+	}
+
+	// Test with help text disabled
+	m.config.ShowHelpText = false
+	output = m.renderFENInput()
+	// The main content should still be there, but help text should be hidden
+	if strings.Contains(output, "ESC: back to menu") {
+		t.Error("Expected help text to be hidden on FEN input screen when ShowHelpText is false")
+	}
+}
+
+// TestHelpTextVisibilitySavePrompt tests that help text is shown/hidden on save prompt screen
+func TestHelpTextVisibilitySavePrompt(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenSavePrompt
+	m.board = engine.NewBoard()
+
+	// Test with help text enabled
+	m.config.ShowHelpText = true
+	output := m.renderSavePrompt()
+	if !strings.Contains(output, "y:") || !strings.Contains(output, "ESC") {
+		t.Error("Expected help text to be visible on save prompt screen when ShowHelpText is true")
+	}
+
+	// Test with help text disabled
+	m.config.ShowHelpText = false
+	output = m.renderSavePrompt()
+	// Options should still be visible, but the help text at the bottom should be hidden
+	if strings.Contains(output, "y: save and exit | n: exit without saving | ESC: cancel") {
+		t.Error("Expected help text to be hidden on save prompt screen when ShowHelpText is false")
+	}
+}
+
+// TestHelpTextVisibilityResumePrompt tests that help text is shown/hidden on resume prompt screen
+func TestHelpTextVisibilityResumePrompt(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenResumePrompt
+
+	// Test with help text enabled
+	m.config.ShowHelpText = true
+	output := m.renderResumePrompt()
+	if !strings.Contains(output, "y:") || !strings.Contains(output, "n:") {
+		t.Error("Expected help text to be visible on resume prompt screen when ShowHelpText is true")
+	}
+
+	// Test with help text disabled
+	m.config.ShowHelpText = false
+	output = m.renderResumePrompt()
+	// Options should still be visible, but the help text at the bottom should be hidden
+	if strings.Contains(output, "y: resume game | n: go to main menu") {
+		t.Error("Expected help text to be hidden on resume prompt screen when ShowHelpText is false")
+	}
+}
+
+// TestHelpTextContentMatchesSpec tests that help text content matches the specification
+func TestHelpTextContentMatchesSpec(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.config.ShowHelpText = true
+
+	tests := []struct {
+		name           string
+		screen         Screen
+		setup          func(*Model)
+		render         func(Model) string
+		expectedPhrase string
+	}{
+		{
+			"MainMenu",
+			ScreenMainMenu,
+			func(m *Model) { m.screen = ScreenMainMenu },
+			func(m Model) string { return m.renderMainMenu() },
+			"arrows/jk: navigate | enter: select | q: quit",
+		},
+		{
+			"GameTypeSelect",
+			ScreenGameTypeSelect,
+			func(m *Model) {
+				m.screen = ScreenGameTypeSelect
+				m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
+			},
+			func(m Model) string { return m.renderGameTypeSelect() },
+			"ESC: back to menu",
+		},
+		{
+			"FENInput",
+			ScreenFENInput,
+			func(m *Model) { m.screen = ScreenFENInput },
+			func(m Model) string { return m.renderFENInput() },
+			"ESC: back to menu | enter: load position",
+		},
+		{
+			"GamePlay",
+			ScreenGamePlay,
+			func(m *Model) {
+				m.screen = ScreenGamePlay
+				m.board = engine.NewBoard()
+			},
+			func(m Model) string { return m.renderGamePlay() },
+			"ESC: menu (with save)",
+		},
+		{
+			"GameOver",
+			ScreenGameOver,
+			func(m *Model) {
+				m.screen = ScreenGameOver
+				m.board = engine.NewBoard()
+			},
+			func(m Model) string { return m.renderGameOver() },
+			"ESC/m: menu",
+		},
+		{
+			"Settings",
+			ScreenSettings,
+			func(m *Model) { m.screen = ScreenSettings },
+			func(m Model) string { return m.renderSettings() },
+			"ESC: back",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup(&m)
+			output := tt.render(m)
+			if !strings.Contains(output, tt.expectedPhrase) {
+				t.Errorf("Expected help text to contain '%s', output:\n%s", tt.expectedPhrase, output)
+			}
+		})
 	}
 }

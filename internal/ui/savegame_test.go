@@ -6,13 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // TestSaveGamePath tests that SaveGamePath returns a valid path
 func TestSaveGamePath(t *testing.T) {
-	path, err := SaveGamePath()
+	path, err := config.SaveGamePath()
 	if err != nil {
 		t.Fatalf("SaveGamePath returned error: %v", err)
 	}
@@ -38,13 +39,13 @@ func TestSaveGame(t *testing.T) {
 	board := engine.NewBoard()
 
 	// Save the board
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Verify file exists
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		t.Fatalf("Savegame file was not created at %s", path)
 	}
@@ -73,7 +74,7 @@ func TestSaveGame(t *testing.T) {
 // TestSaveGameCreatesDirectory tests that SaveGame creates the .termchess directory
 func TestSaveGameCreatesDirectory(t *testing.T) {
 	// Get the .termchess directory path
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	saveDir := filepath.Dir(path)
 
 	// Remove the directory if it exists (to test creation)
@@ -81,7 +82,7 @@ func TestSaveGameCreatesDirectory(t *testing.T) {
 
 	// Create a board and save it
 	board := engine.NewBoard()
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
@@ -103,13 +104,13 @@ func TestLoadGame(t *testing.T) {
 	originalBoard.MakeMove(move)
 
 	// Save the board
-	err := SaveGame(originalBoard)
+	err := config.SaveGame(originalBoard)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Load the board
-	loadedBoard, err := LoadGame()
+	loadedBoard, err := config.LoadGame()
 	if err != nil {
 		t.Fatalf("LoadGame failed: %v", err)
 	}
@@ -121,18 +122,18 @@ func TestLoadGame(t *testing.T) {
 	}
 
 	// Clean up
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 }
 
 // TestLoadGameNonExistent tests loading when no save file exists
 func TestLoadGameNonExistent(t *testing.T) {
 	// Ensure no save file exists
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 
 	// Try to load - should return error
-	_, err := LoadGame()
+	_, err := config.LoadGame()
 	if err == nil {
 		t.Fatal("LoadGame should return error when file doesn't exist")
 	}
@@ -141,7 +142,7 @@ func TestLoadGameNonExistent(t *testing.T) {
 // TestLoadGameInvalidFEN tests loading a file with invalid FEN
 func TestLoadGameInvalidFEN(t *testing.T) {
 	// Write invalid FEN to save file
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	saveDir := filepath.Dir(path)
 	os.MkdirAll(saveDir, 0755)
 
@@ -151,7 +152,7 @@ func TestLoadGameInvalidFEN(t *testing.T) {
 	}
 
 	// Try to load - should return error
-	_, err = LoadGame()
+	_, err = config.LoadGame()
 	if err == nil {
 		t.Fatal("LoadGame should return error for invalid FEN")
 	}
@@ -180,13 +181,13 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	originalFEN := board.ToFEN()
 
 	// Save the board
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Load the board
-	loadedBoard, err := LoadGame()
+	loadedBoard, err := config.LoadGame()
 	if err != nil {
 		t.Fatalf("LoadGame failed: %v", err)
 	}
@@ -226,7 +227,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	}
 
 	// Clean up
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 }
 
@@ -234,19 +235,19 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 func TestDeleteSaveGame(t *testing.T) {
 	// Create and save a game
 	board := engine.NewBoard()
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Verify file exists
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		t.Fatal("Savegame file was not created")
 	}
 
 	// Delete the save
-	err = DeleteSaveGame()
+	err = config.DeleteSaveGame()
 	if err != nil {
 		t.Fatalf("DeleteSaveGame failed: %v", err)
 	}
@@ -260,11 +261,11 @@ func TestDeleteSaveGame(t *testing.T) {
 // TestDeleteSaveGameNonExistent tests deleting when no save file exists
 func TestDeleteSaveGameNonExistent(t *testing.T) {
 	// Ensure no save file exists
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 
 	// Delete should not return error
-	err := DeleteSaveGame()
+	err := config.DeleteSaveGame()
 	if err != nil {
 		t.Fatalf("DeleteSaveGame should not error when file doesn't exist: %v", err)
 	}
@@ -273,23 +274,23 @@ func TestDeleteSaveGameNonExistent(t *testing.T) {
 // TestSaveGameExists tests checking if a save file exists
 func TestSaveGameExists(t *testing.T) {
 	// Ensure no save file exists initially
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 
 	// Should return false
-	if SaveGameExists() {
+	if config.SaveGameExists() {
 		t.Fatal("SaveGameExists should return false when no save file exists")
 	}
 
 	// Create a save file
 	board := engine.NewBoard()
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Should return true
-	if !SaveGameExists() {
+	if !config.SaveGameExists() {
 		t.Fatal("SaveGameExists should return true when save file exists")
 	}
 
@@ -301,13 +302,13 @@ func TestSaveGameExists(t *testing.T) {
 func TestSaveGameFilePermissions(t *testing.T) {
 	// Create and save a game
 	board := engine.NewBoard()
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Check file permissions
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("Failed to stat save file: %v", err)
@@ -329,32 +330,40 @@ func TestNewModel_WithSavedGame(t *testing.T) {
 	board := engine.NewBoard()
 	move, _ := engine.ParseMove("e2e4")
 	board.MakeMove(move)
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Create a new model (simulates app startup)
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
-	// Verify screen is ScreenResumePrompt
-	if m.screen != ScreenResumePrompt {
-		t.Errorf("NewModel with saved game should start at ScreenResumePrompt, got %v", m.screen)
+	// Verify screen is ScreenMainMenu (new behavior: always start at main menu)
+	if m.screen != ScreenMainMenu {
+		t.Errorf("NewModel with saved game should start at ScreenMainMenu, got %v", m.screen)
+	}
+
+	// Verify "Resume Game" option is present in menu
+	if len(m.menuOptions) != 5 {
+		t.Errorf("Expected 5 menu options with saved game, got %d", len(m.menuOptions))
+	}
+	if m.menuOptions[0] != "Resume Game" {
+		t.Errorf("Expected first option to be 'Resume Game', got '%s'", m.menuOptions[0])
 	}
 
 	// Clean up
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 }
 
 // TestNewModel_WithoutSavedGame tests that NewModel shows main menu when no saved game exists
 func TestNewModel_WithoutSavedGame(t *testing.T) {
 	// Ensure no save file exists
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 
 	// Create a new model (simulates app startup)
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
 	// Verify screen is ScreenMainMenu
 	if m.screen != ScreenMainMenu {
@@ -362,23 +371,23 @@ func TestNewModel_WithoutSavedGame(t *testing.T) {
 	}
 }
 
-// TestHandleResumePromptKeys_Yes tests resuming a saved game
+// TestHandleResumePromptKeys_Yes tests resuming a saved game via the resume prompt handler
+// Note: This tests the handler function directly, even though the screen is deprecated
 func TestHandleResumePromptKeys_Yes(t *testing.T) {
 	// Create and save a game with a specific position
 	board := engine.NewBoard()
 	move, _ := engine.ParseMove("e2e4")
 	board.MakeMove(move)
 	originalFEN := board.ToFEN()
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
-	// Create a model at the resume prompt screen
-	m := NewModel()
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("Model should start at ScreenResumePrompt")
-	}
+	// Create a model and manually set it to the resume prompt screen
+	// (even though this screen is deprecated, we test the handler for backwards compatibility)
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenResumePrompt
 
 	// Simulate pressing 'y' to resume
 	keyMsg := KeyMsg("y")
@@ -411,24 +420,24 @@ func TestHandleResumePromptKeys_Yes(t *testing.T) {
 	}
 
 	// Clean up
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 }
 
-// TestHandleResumePromptKeys_No tests declining to resume
+// TestHandleResumePromptKeys_No tests declining to resume via the resume prompt handler
+// Note: This tests the handler function directly, even though the screen is deprecated
 func TestHandleResumePromptKeys_No(t *testing.T) {
 	// Create and save a game
 	board := engine.NewBoard()
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
-	// Create a model at the resume prompt screen
-	m := NewModel()
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("Model should start at ScreenResumePrompt")
-	}
+	// Create a model and manually set it to the resume prompt screen
+	// (even though this screen is deprecated, we test the handler for backwards compatibility)
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenResumePrompt
 
 	// Simulate pressing 'n' to decline resume
 	keyMsg := KeyMsg("n")
@@ -446,19 +455,20 @@ func TestHandleResumePromptKeys_No(t *testing.T) {
 	}
 
 	// Verify savegame still exists (not deleted)
-	if !SaveGameExists() {
+	if !config.SaveGameExists() {
 		t.Error("Savegame should still exist after declining resume")
 	}
 
 	// Clean up
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 }
 
-// TestHandleResumePromptKeys_CorruptSavegame tests error handling for corrupt savegame
+// TestHandleResumePromptKeys_CorruptSavegame tests error handling for corrupt savegame via resume prompt handler
+// Note: This tests the handler function directly, even though the screen is deprecated
 func TestHandleResumePromptKeys_CorruptSavegame(t *testing.T) {
 	// Write invalid FEN to save file
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	saveDir := filepath.Dir(path)
 	os.MkdirAll(saveDir, 0755)
 	err := os.WriteFile(path, []byte("invalid fen data!!!"), 0644)
@@ -466,11 +476,10 @@ func TestHandleResumePromptKeys_CorruptSavegame(t *testing.T) {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
-	// Create a model at the resume prompt screen
-	m := NewModel()
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("Model should start at ScreenResumePrompt")
-	}
+	// Create a model and manually set it to the resume prompt screen
+	// (even though this screen is deprecated, we test the handler for backwards compatibility)
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenResumePrompt
 
 	// Simulate pressing 'y' to resume
 	keyMsg := KeyMsg("y")
@@ -503,13 +512,13 @@ func TestGameEnd_DeletesSavegame(t *testing.T) {
 	board := engine.NewBoard()
 
 	// Save the game
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Verify savegame exists
-	if !SaveGameExists() {
+	if !config.SaveGameExists() {
 		t.Fatal("Savegame should exist before game ends")
 	}
 
@@ -536,7 +545,7 @@ func TestGameEnd_DeletesSavegame(t *testing.T) {
 		// Check if game is over
 		if m.board.IsGameOver() {
 			// Delete savegame (simulating what happens in handleGamePlayKeys)
-			DeleteSaveGame()
+			config.DeleteSaveGame()
 			m.screen = ScreenGameOver
 			break
 		}
@@ -548,12 +557,12 @@ func TestGameEnd_DeletesSavegame(t *testing.T) {
 	}
 
 	// Verify savegame is deleted
-	if SaveGameExists() {
+	if config.SaveGameExists() {
 		t.Error("Savegame should be deleted when game ends")
 	}
 
 	// Clean up (just in case)
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 }
 
@@ -575,22 +584,26 @@ func TestResumeGame_Integration(t *testing.T) {
 	originalFEN := board.ToFEN()
 
 	// Phase 2: Save the game
-	err := SaveGame(board)
+	err := config.SaveGame(board)
 	if err != nil {
 		t.Fatalf("SaveGame failed: %v", err)
 	}
 
 	// Phase 3: Simulate app restart
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
-	// Phase 4: Verify resume prompt appears
-	if m.screen != ScreenResumePrompt {
-		t.Fatalf("After restart with saved game, screen should be ScreenResumePrompt, got %v", m.screen)
+	// Phase 4: Verify main menu appears with Resume Game option
+	if m.screen != ScreenMainMenu {
+		t.Fatalf("After restart with saved game, screen should be ScreenMainMenu, got %v", m.screen)
 	}
 
-	// Phase 5: Resume the game
-	keyMsg := KeyMsg("y")
-	updatedModel, _ := m.handleResumePromptKeys(keyMsg)
+	if m.menuOptions[0] != "Resume Game" {
+		t.Fatalf("Expected first menu option to be 'Resume Game', got '%s'", m.menuOptions[0])
+	}
+
+	// Phase 5: Select Resume Game from menu
+	m.menuSelection = 0
+	updatedModel, _ := m.handleMainMenuSelection()
 	m = updatedModel.(Model)
 
 	// Phase 6: Verify game state is restored
@@ -615,7 +628,7 @@ func TestResumeGame_Integration(t *testing.T) {
 	}
 
 	// Clean up
-	path, _ := SaveGamePath()
+	path, _ := config.SaveGamePath()
 	os.Remove(path)
 }
 

@@ -83,6 +83,8 @@ func (m Model) View() string {
 		return m.renderSavePrompt()
 	case ScreenResumePrompt:
 		return m.renderResumePrompt()
+	case ScreenDrawPrompt:
+		return m.renderDrawPrompt()
 	default:
 		return "Unknown screen"
 	}
@@ -90,6 +92,7 @@ func (m Model) View() string {
 
 // renderMainMenu renders the main menu screen with title, menu options,
 // cursor indicator, help text, and any error or status messages.
+// The "Resume Game" option (if present) is visually distinct with a special indicator and color.
 func (m Model) renderMainMenu() string {
 	var b strings.Builder
 
@@ -103,20 +106,42 @@ func (m Model) renderMainMenu() string {
 		cursor := "  " // Two spaces for non-selected items
 		optionText := option
 
+		// Check if this is the "Resume Game" option
+		isResumeGame := option == "Resume Game"
+
 		if i == m.menuSelection {
 			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			if isResumeGame {
+				// Special styling for selected Resume Game option
+				cursor = cursorStyle.Render("▶ ")
+				resumeStyle := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#50FA7B")).
+					Bold(true).
+					Padding(0, 2)
+				optionText = resumeStyle.Render(option)
+			} else {
+				cursor = cursorStyle.Render("> ")
+				optionText = selectedItemStyle.Render(option)
+			}
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			if isResumeGame {
+				// Special styling for unselected Resume Game option
+				resumeStyle := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#50FA7B")).
+					Padding(0, 2)
+				optionText = resumeStyle.Render("▶ " + option)
+				cursor = "" // No cursor needed, indicator is part of the text
+			} else {
+				optionText = menuItemStyle.Render(option)
+			}
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	helpText := renderHelpText("arrows/jk: navigate | enter: select | q: quit", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -176,7 +201,7 @@ func (m Model) renderGameTypeSelect() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("Use arrow keys to navigate, Enter to select, q to quit", m.config)
+	helpText := renderHelpText("ESC: back to menu | arrows/jk: navigate | enter: select", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -199,6 +224,7 @@ func (m Model) renderGameTypeSelect() string {
 	return b.String()
 }
 
+
 // renderGamePlay renders the GamePlay screen showing the chess board.
 // Displays the title, board, turn indicator, input prompt, help text, and messages.
 func (m Model) renderGamePlay() string {
@@ -213,6 +239,16 @@ func (m Model) renderGamePlay() string {
 	renderer := NewBoardRenderer(m.config)
 	boardStr := renderer.Render(m.board)
 	b.WriteString(boardStr)
+
+	// Render move history if enabled
+	if m.config.ShowMoveHistory && len(m.moveHistory) > 0 {
+		b.WriteString("\n\n")
+		moveHistoryText := m.formatMoveHistory()
+		moveHistoryStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFDF5")).
+			Padding(0, 2)
+		b.WriteString(moveHistoryStyle.Render(moveHistoryText))
+	}
 
 	// Render turn indicator
 	b.WriteString("\n\n")
@@ -237,7 +273,7 @@ func (m Model) renderGamePlay() string {
 	b.WriteString(inputPrompt + inputText)
 
 	// Add help text
-	helpText := renderHelpText("Type move (e.g. e4, Nf3) | ESC: menu | q: quit", m.config)
+	helpText := renderHelpText("ESC: menu (with save) | type move (e.g. e4, Nf3) | Commands: resign, offerdraw, showfen, menu", m.config)
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -283,7 +319,23 @@ func (m Model) renderGamePlay() string {
 
 // getGameResultMessage returns a human-readable message describing the game result.
 // It analyzes the game status and winner to generate an appropriate message.
-func getGameResultMessage(board *engine.Board) string {
+// If resignedBy is not -1, it indicates which player resigned.
+// If drawByAgreement is true, the game ended by mutual agreement.
+func getGameResultMessage(board *engine.Board, resignedBy int8, drawByAgreement bool) string {
+	// Check for draw by agreement first
+	if drawByAgreement {
+		return "Draw by agreement"
+	}
+
+	// Check for resignation
+	if resignedBy != -1 {
+		if resignedBy == int8(engine.White) {
+			return "White resigned - Black wins"
+		}
+		return "Black resigned - White wins"
+	}
+
+	// Otherwise, check the board status
 	status := board.Status()
 
 	switch status {
@@ -325,7 +377,7 @@ func (m Model) renderGameOver() string {
 	b.WriteString("\n\n")
 
 	// Render game result message
-	resultMsg := getGameResultMessage(m.board)
+	resultMsg := getGameResultMessage(m.board, m.resignedBy, m.drawByAgreement)
 	resultStyle := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#FFD700")).
@@ -356,7 +408,7 @@ func (m Model) renderGameOver() string {
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := renderHelpText("n: new game | m: main menu | q: quit", m.config)
+	helpText := renderHelpText("ESC/m: menu | n: new game | q: quit", m.config)
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -423,7 +475,7 @@ func (m Model) renderSettings() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("Use arrow keys to navigate, Enter to toggle, ESC/q to return to menu", m.config)
+	helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -566,11 +618,8 @@ func (m Model) renderFENInput() string {
 	b.WriteString(instructions)
 
 	// Input field with cursor
-	inputStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
-		Bold(true)
-	inputLine := inputStyle.Render(m.fenInput + "█")
-	b.WriteString(inputLine)
+	// Render the text input component
+	b.WriteString(m.fenInput.View())
 	b.WriteString("\n\n")
 
 	// Example
@@ -581,7 +630,7 @@ func (m Model) renderFENInput() string {
 	b.WriteString("\n\n")
 
 	// Help text
-	helpText := renderHelpText("Enter: load position | ESC: back to menu", m.config)
+	helpText := renderHelpText("ESC: back to menu | enter: load position", m.config)
 	if helpText != "" {
 		b.WriteString(helpText)
 	}
@@ -593,5 +642,119 @@ func (m Model) renderFENInput() string {
 		b.WriteString(errorText)
 	}
 
+	return b.String()
+}
+
+// renderDrawPrompt renders the Draw Prompt screen asking the opponent to accept or decline a draw offer.
+// Displays a title, message indicating which player offered the draw, two options (Accept/Decline), and help text.
+func (m Model) renderDrawPrompt() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render prompt title
+	promptTitle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFD700")).
+		Align(lipgloss.Center).
+		Padding(1, 0).
+		Render("Draw Offer")
+	b.WriteString(promptTitle)
+	b.WriteString("\n\n")
+
+	// Render prompt message based on who offered the draw
+	offerMessage := "White offers a draw. Accept?"
+	if m.drawOfferedBy == int8(engine.Black) {
+		offerMessage = "Black offers a draw. Accept?"
+	}
+	promptMessage := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFDF5")).
+		Padding(0, 2).
+		Render(offerMessage)
+	b.WriteString(promptMessage)
+	b.WriteString("\n\n")
+
+	// Define the draw prompt options
+	options := []string{"Accept", "Decline"}
+
+	// Render each option with cursor indicator
+	for i, option := range options {
+		cursor := "  " // Two spaces for non-selected items
+		optionText := option
+
+		if i == m.drawPromptSelection {
+			// Highlight the selected item
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(option)
+		} else {
+			// Regular menu item styling
+			optionText = menuItemStyle.Render(option)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Render help text
+	b.WriteString("\n")
+	helpText := helpStyle.Render("Use arrow keys to select, Enter to confirm, ESC to cancel")
+	b.WriteString(helpText)
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// formatMoveHistory formats the move history for display with a header.
+// Returns an empty string if there are no moves to display.
+// Format: "Move History: 1. e4 e5 2. Nf3 Nc6"
+func (m Model) formatMoveHistory() string {
+	if len(m.moveHistory) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString("Move History: ")
+	
+	// We need to replay moves on a board to format them as SAN
+	board := engine.NewBoard()
+	
+	for i := 0; i < len(m.moveHistory); i += 2 {
+		moveNum := (i / 2) + 1
+
+		// Format white's move
+		whiteSAN := FormatSAN(board, m.moveHistory[i])
+		board.MakeMove(m.moveHistory[i])
+
+		// Format black's move (if exists)
+		if i+1 < len(m.moveHistory) {
+			blackSAN := FormatSAN(board, m.moveHistory[i+1])
+			board.MakeMove(m.moveHistory[i+1])
+			b.WriteString(fmt.Sprintf("%d. %s %s", moveNum, whiteSAN, blackSAN))
+
+			// Add space only if there are more moves to come
+			if i+2 < len(m.moveHistory) {
+				b.WriteString(" ")
+			}
+		} else {
+			// Only white's move (game in progress)
+			b.WriteString(fmt.Sprintf("%d. %s", moveNum, whiteSAN))
+		}
+	}
+	
 	return b.String()
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -11,9 +12,9 @@ import (
 // are persisted to disk and loaded correctly on next app start
 func TestSettingsConfigPersistence(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
@@ -21,7 +22,7 @@ func TestSettingsConfigPersistence(t *testing.T) {
 	os.Remove(configPath)
 
 	// Phase 1: Start app (loads default config)
-	m1 := NewModel()
+	m1 := NewModel(DefaultConfig())
 	initialUseUnicode := m1.config.UseUnicode
 	initialShowCoords := m1.config.ShowCoords
 	initialUseColors := m1.config.UseColors
@@ -50,7 +51,7 @@ func TestSettingsConfigPersistence(t *testing.T) {
 	}
 
 	// Phase 4: "Restart" the app by creating a new model (simulates app restart)
-	m2 := NewModel()
+	m2 := NewModel(LoadConfig())
 
 	// Verify the config was loaded from disk with the toggled values
 	if m2.config.UseUnicode != m1.config.UseUnicode {
@@ -78,16 +79,16 @@ func TestSettingsConfigPersistence(t *testing.T) {
 // TestSettingsToggleAllOptions tests toggling all settings options
 func TestSettingsToggleAllOptions(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
 	// Start with fresh config
 	os.Remove(configPath)
 
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
 
 	// Toggle all options
@@ -116,7 +117,7 @@ func TestSettingsToggleAllOptions(t *testing.T) {
 	}
 
 	// Verify persistence
-	m2 := NewModel()
+	m2 := NewModel(LoadConfig())
 	if m2.config != m.config {
 		t.Errorf("Config after restart = %+v, want %+v", m2.config, m.config)
 	}
@@ -125,13 +126,13 @@ func TestSettingsToggleAllOptions(t *testing.T) {
 // TestSettingsStatusMessages tests that status messages are displayed correctly
 func TestSettingsStatusMessages(t *testing.T) {
 	// Clean up after test
-	configPath, err := GetConfigPath()
+	configPath, err := config.GetConfigPath()
 	if err != nil {
-		t.Fatalf("GetConfigPath() failed: %v", err)
+		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
 	defer os.Remove(configPath)
 
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
 	m.settingsSelection = 0
 
@@ -157,7 +158,7 @@ func TestSettingsStatusMessages(t *testing.T) {
 
 // TestSettingsNavigationAndReturn tests navigating to Settings and returning to main menu
 func TestSettingsNavigationAndReturn(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
 	// Navigate from main menu to settings
 	m.screen = ScreenMainMenu

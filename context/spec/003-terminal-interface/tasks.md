@@ -199,46 +199,63 @@
 
 **Goal:** During gameplay, user can type commands to resign, show FEN, or return to menu.
 
-- [ ] Recognize special input commands: `resign`, `showfen`, `menu`
-- [ ] `resign`: Transition to GameOver screen with resignation message
-- [ ] `showfen`: Display current FEN string (copy to clipboard if possible)
-- [ ] `menu`: Prompt to save, then return to MainMenu
-- [ ] Test: Play game, type `resign`, see game over; type `showfen`, see FEN displayed
+- [x] Recognize special input commands: `resign`, `showfen`, `menu`
+- [x] `resign`: Transition to GameOver screen with resignation message
+- [x] `showfen`: Display current FEN string (copy to clipboard if possible)
+- [x] `menu`: Prompt to save, then return to MainMenu
+- [x] Test: Play game, type `resign`, see game over; type `showfen`, see FEN displayed
 
 ## Slice 19: Add Coordinate Label Toggle
 
 **Goal:** User can hide file/rank labels via config.
 
-- [ ] Update BoardRenderer to check `config.ShowCoords`
-- [ ] If false, render board without file/rank labels
-- [ ] Test: Toggle show_coordinates in config, see labels appear/disappear
+- [x] Update BoardRenderer to check `config.ShowCoords`
+- [x] If false, render board without file/rank labels
+- [x] Test: Toggle show_coordinates in config, see labels appear/disappear
 
 ## Slice 20: Final Polish and Testing
 
 **Goal:** Ensure all features work together, fix bugs, add final touches.
 
-- [ ] Run full game test: main menu → new game → play full game → game over → new game
-- [ ] Test all screen transitions
-- [ ] Test save/resume flow multiple times
-- [ ] Test FEN load with various positions
-- [ ] Ensure error messages are clear and helpful
-- [ ] Run `golangci-lint` and fix any issues
-- [ ] Verify test coverage > 70% for UI logic
-- [ ] Test on macOS, Linux, and Windows (if possible)
-- [ ] Ensure no terminal scrollback pollution (clean redraws)
+- [x] Run full game test: main menu → new game → play full game → game over → new game
+- [x] Test all screen transitions
+- [x] Test save/resume flow multiple times
+- [x] Test FEN load with various positions
+- [x] Ensure error messages are clear and helpful
+- [x] Run `golangci-lint` and fix any issues
+- [x] Verify test coverage > 70% for UI logic
+- [x] Test on macOS, Linux, and Windows (if possible)
+- [x] Ensure no terminal scrollback pollution (clean redraws)
 
-## Slice 21: Implement Universal Navigation (ESC to Exit)
+---
+
+## Slice 21: Add Draw Offer Command
+
+**Goal:** Allow players to offer a draw during gameplay in Player vs Player mode.
+
+- [x] Add `offerdraw` command recognition during gameplay
+- [x] When player types "offerdraw", show prompt to opponent: "Opponent offers a draw. Accept? (y/n)"
+- [x] If opponent accepts (y), transition to GameOver screen with draw message
+- [x] If opponent declines (n), display "Draw offer declined" and continue game
+- [x] Track draw offer state to prevent spamming (limit one offer per player per game, or cooldown)
+- [x] Add draw offer to help text display
+- [x] Test: Offer draw, accept it, verify game ends in draw
+- [x] Test: Offer draw, decline it, verify game continues
+
+---
+
+## Slice 22: Implement Universal Navigation (ESC to Exit)
 
 **Goal:** Every screen provides consistent navigation back to previous screen or main menu.
 
-- [ ] Audit all existing screens for ESC key handling
-- [ ] Implement ESC key navigation for GameTypeSelect screen → Main Menu
-- [ ] Implement ESC key navigation for FENInput screen → Main Menu
-- [ ] Implement ESC key navigation for BotSelect screen → GameTypeSelect
-- [ ] Add save prompt when ESC pressed during active GamePlay (already exists for 'q')
-- [ ] Ensure Settings screen ESC navigation is working (already implemented in Slice 13)
-- [ ] Add consistent help text to all screens showing navigation options (respects ShowHelpText config)
-- [ ] Update view.go to conditionally display help text for each screen based on config.ShowHelpText:
+- [x] Audit all existing screens for ESC key handling
+- [x] Implement ESC key navigation for GameTypeSelect screen → Main Menu
+- [x] Implement ESC key navigation for FENInput screen → Main Menu
+- [x] Implement ESC key navigation for BotSelect screen → GameTypeSelect
+- [x] Add save prompt when ESC pressed during active GamePlay (already exists for 'q')
+- [x] Ensure Settings screen ESC navigation is working (already implemented in Slice 13)
+- [x] Add consistent help text to all screens showing navigation options (respects ShowHelpText config)
+- [x] Update view.go to conditionally display help text for each screen based on config.ShowHelpText:
   - MainMenu: "arrows/jk: navigate | enter: select | q: quit"
   - GameTypeSelect: "ESC: back to menu | arrows: navigate | enter: select"
   - FENInput: "ESC: back to menu | enter: load position"
@@ -246,11 +263,33 @@
   - GamePlay: "ESC: menu (with save) | type move (e.g. e4, Nf3)"
   - GameOver: "ESC: menu | arrows: navigate | enter: select"
   - Settings: "ESC: back | arrows: navigate | enter: toggle"
-- [ ] Create helper function `renderHelpText(text string, config Config) string` that returns empty string if ShowHelpText is false
-- [ ] Ensure help text is visually distinct (dimmed color, bottom of screen, separated by whitespace)
-- [ ] Ensure Ctrl+C always exits application immediately from any screen
-- [ ] Add unit tests for ESC key handling on each screen
-- [ ] Add unit tests for help text display/hide based on config
-- [ ] Test navigation flow: verify user can navigate from any screen back to menu
-- [ ] Test that ESC during gameplay prompts for save before returning to menu
-- [ ] Test that toggling ShowHelpText in Settings immediately affects next screen render
+- [x] Create helper function `renderHelpText(text string, config Config) string` that returns empty string if ShowHelpText is false
+- [x] Ensure help text is visually distinct (dimmed color, bottom of screen, separated by whitespace)
+- [x] Ensure Ctrl+C always exits application immediately from any screen
+- [x] Add unit tests for ESC key handling on each screen
+- [x] Add unit tests for help text display/hide based on config
+- [x] Test navigation flow: verify user can navigate from any screen back to menu
+- [x] Test that ESC during gameplay prompts for save before returning to menu
+- [x] Test that toggling ShowHelpText in Settings immediately affects next screen render
+
+---
+
+## Slice 23: Add Resume Game Option to Main Menu
+
+**Goal:** Show "Resume Game" option in main menu when a saved game exists, providing easier access to continue interrupted games.
+
+- [x] Add function to check if saved game file exists (`~/.termchess/savegame.fen`)
+- [x] Modify main menu to dynamically include "Resume Game" option when saved game exists
+- [x] Update menu option indices to accommodate dynamic menu items
+- [x] Implement "Resume Game" selection handler to load saved game and start gameplay
+- [x] Ensure "Resume Game" option appears at the top of the menu (after title, before "New Game")
+- [x] Update main menu rendering to highlight the "Resume Game" option distinctly (e.g., different color or indicator)
+- [x] Remove or deprecate the startup resume prompt (Slice 15) in favor of menu-based approach
+- [x] Update menu navigation tests to handle dynamic menu options
+- [x] Add unit tests for saved game detection logic
+- [x] Add unit tests for menu option ordering with/without saved game
+- [x] Add integration test: save game → return to menu → verify "Resume Game" appears
+- [x] Add integration test: select "Resume Game" → verify game state restored correctly
+- [x] Add integration test: complete resumed game → verify "Resume Game" option disappears from menu
+- [x] Update help text to reflect "Resume Game" option availability
+- [x] Test full flow: play game → save → quit → restart → see "Resume Game" in menu → select → continue game
