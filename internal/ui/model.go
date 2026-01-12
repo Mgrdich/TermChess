@@ -96,14 +96,6 @@ type Model struct {
 	// drawPromptSelection tracks the currently selected option in the draw prompt (0=Accept, 1=Decline)
 	drawPromptSelection int
 
-	// Settings state
-	// settingsSelection tracks the currently selected setting option index
-	settingsSelection int
-
-	// Save prompt state
-	// savePromptAction indicates what action to take after save prompt ("exit" or "menu")
-	savePromptAction string
-
 	// Game metadata
 	// gameType indicates whether this is PvP or PvBot
 	gameType GameType

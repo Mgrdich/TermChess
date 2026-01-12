@@ -30,7 +30,7 @@ func TestRenderHelpText(t *testing.T) {
 
 // TestHelpTextVisibilityMainMenu tests that help text is shown/hidden on main menu
 func TestHelpTextVisibilityMainMenu(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenMainMenu
 
 	// Test with help text enabled
@@ -50,7 +50,7 @@ func TestHelpTextVisibilityMainMenu(t *testing.T) {
 
 // TestHelpTextVisibilityGameTypeSelect tests that help text is shown/hidden on game type select
 func TestHelpTextVisibilityGameTypeSelect(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenGameTypeSelect
 	m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
 
@@ -71,7 +71,7 @@ func TestHelpTextVisibilityGameTypeSelect(t *testing.T) {
 
 // TestHelpTextVisibilitySettings tests that help text is shown/hidden on settings screen
 func TestHelpTextVisibilitySettings(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
 
 	// Test with help text enabled
@@ -91,7 +91,7 @@ func TestHelpTextVisibilitySettings(t *testing.T) {
 
 // TestHelpTextVisibilityGamePlay tests that help text is shown/hidden on gameplay screen
 func TestHelpTextVisibilityGamePlay(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenGamePlay
 	// Start a new game so we have a board
 	m.board = engine.NewBoard()
@@ -114,7 +114,7 @@ func TestHelpTextVisibilityGamePlay(t *testing.T) {
 
 // TestHelpTextVisibilityGameOver tests that help text is shown/hidden on game over screen
 func TestHelpTextVisibilityGameOver(t *testing.T) {
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	m.screen = ScreenGameOver
 	// Create a board in checkmate state for testing
 	m.board = engine.NewBoard()
@@ -151,7 +151,7 @@ func TestShowHelpTextPersistence(t *testing.T) {
 	os.Remove(configPath)
 
 	// Phase 1: Start app with default config
-	m1 := NewModel()
+	m1 := NewModel(LoadConfig())
 	if !m1.config.ShowHelpText {
 		t.Error("Expected ShowHelpText to be true by default")
 	}
@@ -169,7 +169,7 @@ func TestShowHelpTextPersistence(t *testing.T) {
 	}
 
 	// Phase 3: "Restart" the app by creating a new model
-	m2 := NewModel()
+	m2 := NewModel(LoadConfig())
 
 	// Verify the config was loaded from disk with ShowHelpText = false
 	if m2.config.ShowHelpText {
@@ -188,7 +188,7 @@ func TestShowHelpTextPersistence(t *testing.T) {
 	}
 
 	// Phase 5: Restart again and verify it's true
-	m3 := NewModel()
+	m3 := NewModel(LoadConfig())
 	if !m3.config.ShowHelpText {
 		t.Error("After second restart, ShowHelpText should be true")
 	}
@@ -203,7 +203,7 @@ func TestHelpTextToggleAffectsAllScreens(t *testing.T) {
 	}
 	defer os.Remove(configPath)
 
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
 	// Start with help text enabled
 	m.config.ShowHelpText = true

@@ -149,7 +149,7 @@ func TestResumeGameLoadError(t *testing.T) {
 	DeleteSaveGame()
 
 	// Create a corrupted save file
-	savePath, _ := getSaveGamePath()
+	savePath, _ := SaveGamePath()
 	configDir, _ := getConfigDir()
 	_ = os.MkdirAll(configDir, 0755)
 	_ = os.WriteFile(savePath, []byte("corrupted fen"), 0644)

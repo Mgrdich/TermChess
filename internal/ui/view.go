@@ -201,63 +201,6 @@ func (m Model) renderGameTypeSelect() string {
 	return b.String()
 }
 
-// renderGameTypeSelect renders the game type selection screen.
-// Displays options for Player vs Player and Player vs Bot with cursor indicator.
-func (m Model) renderGameTypeSelect() string {
-	var b strings.Builder
-
-	// Render the application title
-	title := titleStyle.Render("TermChess")
-	b.WriteString(title)
-	b.WriteString("\n\n")
-
-	// Render section header
-	sectionHeader := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Padding(0, 2).
-		Render("Select Game Type")
-	b.WriteString(sectionHeader)
-	b.WriteString("\n\n")
-
-	// Render game type options with cursor indicator for selected item
-	for i, option := range m.menuOptions {
-		cursor := "  " // Two spaces for non-selected items
-		optionText := option
-
-		if i == m.menuSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
-		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
-		}
-
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
-	}
-
-	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to select, Enter to confirm, ESC to go back")
-	b.WriteString(helpText)
-
-	// Render error message if present
-	if m.errorMsg != "" {
-		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
-		b.WriteString(errorText)
-	}
-
-	// Render status message if present
-	if m.statusMsg != "" {
-		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
-		b.WriteString(statusText)
-	}
-
-	return b.String()
-}
 
 // renderGamePlay renders the GamePlay screen showing the chess board.
 // Displays the title, board, turn indicator, input prompt, help text, and messages.
@@ -509,7 +452,7 @@ func (m Model) renderSettings() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("Use arrow keys to navigate, Enter to toggle, ESC/q to return to menu", m.config)
+	helpText := renderHelpText("Use arrow keys to navigate, Space/Enter to toggle, ESC to return to menu", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -652,11 +595,8 @@ func (m Model) renderFENInput() string {
 	b.WriteString(instructions)
 
 	// Input field with cursor
-	inputStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
-		Bold(true)
-	inputLine := inputStyle.Render(m.fenInput + "█")
-	b.WriteString(inputLine)
+	// Render the text input component
+	b.WriteString(m.fenInput.View())
 	b.WriteString("\n\n")
 
 	// Example
@@ -680,344 +620,6 @@ func (m Model) renderFENInput() string {
 	}
 
 	return b.String()
-}
-
-// renderSettings renders the Settings screen showing all configurable display options.
-// Each setting can be toggled on/off using Space or Enter keys.
-// The selected setting is highlighted with a cursor indicator.
-func (m Model) renderSettings() string {
-	var b strings.Builder
-
-	// Render the application title
-	title := titleStyle.Render("TermChess")
-	b.WriteString(title)
-	b.WriteString("\n\n")
-
-	// Render section header
-	sectionHeader := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Padding(0, 2).
-		Render("Settings")
-	b.WriteString(sectionHeader)
-	b.WriteString("\n\n")
-
-	// Define the settings with their current values
-	settings := []struct {
-		name  string
-		value bool
-	}{
-		{"Use Unicode Pieces", m.config.UseUnicode},
-		{"Show Coordinates", m.config.ShowCoords},
-		{"Use Colors", m.config.UseColors},
-		{"Show Move History", m.config.ShowMoveHistory},
-	}
-
-	// Render each setting with checkbox and cursor indicator
-	for i, setting := range settings {
-		cursor := "  " // Two spaces for non-selected items
-
-		// Checkbox indicator
-		checkbox := "[ ]"
-		if setting.value {
-			checkbox = "[X]"
-		}
-
-		// Format the option text
-		optionText := fmt.Sprintf("%s: %s", setting.name, checkbox)
-
-		if i == m.settingsSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(optionText)
-		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(optionText)
-		}
-
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
-	}
-
-	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to navigate, Space/Enter to toggle, ESC to go back")
-	b.WriteString(helpText)
-
-	// Render error message if present
-	if m.errorMsg != "" {
-		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
-		b.WriteString(errorText)
-	}
-
-	// Render status message if present
-	if m.statusMsg != "" {
-		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
-		b.WriteString(statusText)
-	}
-
-	return b.String()
-}
-
-// renderSavePrompt renders the Save Prompt screen asking the user if they want to save the game.
-// Displays a title, message, two options (Yes/No), and help text.
-func (m Model) renderSavePrompt() string {
-	var b strings.Builder
-
-	// Render the application title
-	title := titleStyle.Render("TermChess")
-	b.WriteString(title)
-	b.WriteString("\n\n")
-
-	// Render prompt title
-	promptTitle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FFD700")).
-		Align(lipgloss.Center).
-		Padding(1, 0).
-		Render("Save Game?")
-	b.WriteString(promptTitle)
-	b.WriteString("\n\n")
-
-	// Render prompt message
-	promptMessage := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Padding(0, 2).
-		Render("Save current game before exiting?")
-	b.WriteString(promptMessage)
-	b.WriteString("\n\n")
-
-	// Define the save prompt options
-	options := []string{"Yes", "No"}
-
-	// Render each option with cursor indicator
-	for i, option := range options {
-		cursor := "  " // Two spaces for non-selected items
-		optionText := option
-
-		if i == m.savePromptSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
-		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
-		}
-
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
-	}
-
-	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to select, Enter to confirm, ESC to cancel")
-	b.WriteString(helpText)
-
-	// Render error message if present
-	if m.errorMsg != "" {
-		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
-		b.WriteString(errorText)
-	}
-
-	// Render status message if present
-	if m.statusMsg != "" {
-		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
-		b.WriteString(statusText)
-	}
-
-	return b.String()
-}
-
-// renderResumePrompt renders the Resume Prompt screen asking the user if they want to resume a saved game.
-// Displays a title, message, two options (Yes/No), and help text.
-func (m Model) renderResumePrompt() string {
-	var b strings.Builder
-
-	// Render the application title
-	title := titleStyle.Render("TermChess")
-	b.WriteString(title)
-	b.WriteString("\n\n")
-
-	// Render prompt title
-	promptTitle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#50FA7B")).
-		Align(lipgloss.Center).
-		Padding(1, 0).
-		Render("Saved Game Found")
-	b.WriteString(promptTitle)
-	b.WriteString("\n\n")
-
-	// Render prompt message
-	promptMessage := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Padding(0, 2).
-		Render("Resume last game?")
-	b.WriteString(promptMessage)
-	b.WriteString("\n\n")
-
-	// Define the resume prompt options
-	options := []string{"Yes", "No"}
-
-	// Render each option with cursor indicator
-	for i, option := range options {
-		cursor := "  " // Two spaces for non-selected items
-		optionText := option
-
-		if i == m.resumePromptSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
-		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
-		}
-
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
-	}
-
-	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to select, Enter to confirm")
-	b.WriteString(helpText)
-
-	// Render error message if present
-	if m.errorMsg != "" {
-		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
-		b.WriteString(errorText)
-	}
-
-	// Render status message if present
-	if m.statusMsg != "" {
-		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
-		b.WriteString(statusText)
-	}
-
-	return b.String()
-}
-
-// renderFENInput renders the FEN Input screen allowing the user to enter a FEN string.
-// Displays a title, instructions, text input field, example FEN strings, and help text.
-func (m Model) renderFENInput() string {
-	var b strings.Builder
-
-	// Render the application title
-	title := titleStyle.Render("TermChess")
-	b.WriteString(title)
-	b.WriteString("\n\n")
-
-	// Render section header
-	sectionHeader := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Padding(0, 2).
-		Render("Load Game from FEN")
-	b.WriteString(sectionHeader)
-	b.WriteString("\n\n")
-
-	// Render instructions
-	instructions := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
-		Padding(0, 2).
-		Render("Enter a FEN string to load a chess position:")
-	b.WriteString(instructions)
-	b.WriteString("\n\n")
-
-	// Render the text input field
-	b.WriteString("  ")
-	b.WriteString(m.fenInput.View())
-	b.WriteString("\n\n")
-
-	// Render example FEN strings
-	examplesTitle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#7D56F4")).
-		Padding(0, 2).
-		Render("Example FEN strings:")
-	b.WriteString(examplesTitle)
-	b.WriteString("\n")
-
-	examples := []string{
-		"Starting position:",
-		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-		"",
-		"Mid-game position:",
-		"r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
-	}
-
-	exampleStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#626262")).
-		Padding(0, 2)
-
-	for _, example := range examples {
-		b.WriteString(exampleStyle.Render(example))
-		b.WriteString("\n")
-	}
-
-	// Render help text
-	b.WriteString("\n")
-	helpText := helpStyle.Render("Press Enter to load, ESC to go back")
-	b.WriteString(helpText)
-
-	// Render error message if present
-	if m.errorMsg != "" {
-		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
-		b.WriteString(errorText)
-	}
-
-	// Render status message if present
-	if m.statusMsg != "" {
-		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
-		b.WriteString(statusText)
-	}
-
-	return b.String()
-}
-
-// formatMoveHistory formats the move history as numbered move pairs.
-// Format: "1. e4 e5 2. Nf3 Nc6 3. Bc4"
-// The function reconstructs the board state for each move to format it correctly.
-func (m Model) formatMoveHistory() string {
-	if len(m.moveHistory) == 0 {
-		return ""
-	}
-
-	var result strings.Builder
-	result.WriteString("Move History: ")
-
-	// Create a fresh board to replay moves
-	board := engine.NewBoard()
-
-	for i, move := range m.moveHistory {
-		// Calculate move number (starts at 1)
-		moveNum := i/2 + 1
-		isWhiteMove := i%2 == 0
-
-		// Add move number before White's move
-		if isWhiteMove {
-			result.WriteString(fmt.Sprintf("%d. ", moveNum))
-		}
-
-		// Format the move in SAN notation
-		san := FormatSAN(board, move)
-		result.WriteString(san)
-
-		// Add space after each move (except the last one)
-		if i < len(m.moveHistory)-1 {
-			result.WriteString(" ")
-		}
-
-		// Apply the move to the board for the next iteration
-		board.MakeMove(move)
-	}
-
-	return result.String()
 }
 
 // renderDrawPrompt renders the Draw Prompt screen asking the opponent to accept or decline a draw offer.
@@ -1091,5 +693,45 @@ func (m Model) renderDrawPrompt() string {
 		b.WriteString(statusText)
 	}
 
+	return b.String()
+}
+
+// formatMoveHistory formats the move history for display with a header.
+// Returns an empty string if there are no moves to display.
+// Format: "Move History: 1. e4 e5 2. Nf3 Nc6"
+func (m Model) formatMoveHistory() string {
+	if len(m.moveHistory) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString("Move History: ")
+	
+	// We need to replay moves on a board to format them as SAN
+	board := engine.NewBoard()
+	
+	for i := 0; i < len(m.moveHistory); i += 2 {
+		moveNum := (i / 2) + 1
+
+		// Format white's move
+		whiteSAN := FormatSAN(board, m.moveHistory[i])
+		board.MakeMove(m.moveHistory[i])
+
+		// Format black's move (if exists)
+		if i+1 < len(m.moveHistory) {
+			blackSAN := FormatSAN(board, m.moveHistory[i+1])
+			board.MakeMove(m.moveHistory[i+1])
+			b.WriteString(fmt.Sprintf("%d. %s %s", moveNum, whiteSAN, blackSAN))
+
+			// Add space only if there are more moves to come
+			if i+2 < len(m.moveHistory) {
+				b.WriteString(" ")
+			}
+		} else {
+			// Only white's move (game in progress)
+			b.WriteString(fmt.Sprintf("%d. %s", moveNum, whiteSAN))
+		}
+	}
+	
 	return b.String()
 }

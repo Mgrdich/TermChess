@@ -3,8 +3,6 @@ package ui
 import (
 	"os"
 	"path/filepath"
-
-	"github.com/BurntSushi/toml"
 )
 
 // Config holds display configuration options that control how the UI is rendered.
@@ -63,90 +61,4 @@ func GetConfigPath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(homeDir, ".termchess", "config.toml"), nil
-}
-
-// LoadConfig reads the configuration from ~/.termchess/config.toml.
-// If the file doesn't exist or cannot be parsed, it returns the default configuration.
-// This ensures the application always has valid configuration values.
-func LoadConfig() Config {
-	configPath, err := GetConfigPath()
-	if err != nil {
-		// Cannot determine config path, return defaults
-		return DefaultConfig()
-	}
-
-	// Check if config file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Config file doesn't exist, return defaults
-		return DefaultConfig()
-	}
-
-	// Read the config file
-	var configFile ConfigFile
-	if _, err := toml.DecodeFile(configPath, &configFile); err != nil {
-		// Failed to parse config file, return defaults
-		return DefaultConfig()
-	}
-
-	// Convert ConfigFile to Config
-	config := Config{
-		UseUnicode:      configFile.Display.UseUnicode,
-		ShowCoords:      configFile.Display.ShowCoordinates,
-		UseColors:       configFile.Display.UseColors,
-		ShowMoveHistory: configFile.Display.ShowMoveHistory,
-		ShowHelpText:    configFile.Display.ShowHelpText,
-	}
-
-	return config
-}
-
-// SaveConfig writes the current configuration to ~/.termchess/config.toml.
-// It creates the ~/.termchess/ directory if it doesn't exist.
-// Returns an error if the file cannot be written.
-func SaveConfig(config Config) error {
-	configPath, err := GetConfigPath()
-	if err != nil {
-		return err
-	}
-
-	// Create the .termchess directory if it doesn't exist
-	configDir := filepath.Dir(configPath)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return err
-	}
-
-	// Convert Config to ConfigFile for TOML serialization
-	configFile := ConfigFile{
-		Display: DisplayConfig{
-			UseUnicode:      config.UseUnicode,
-			ShowCoordinates: config.ShowCoords,
-			UseColors:       config.UseColors,
-			ShowMoveHistory: config.ShowMoveHistory,
-			ShowHelpText:    config.ShowHelpText,
-		},
-		Game: GameConfig{
-			DefaultGameType:      "pvp",
-			DefaultBotDifficulty: "medium",
-		},
-	}
-
-	// Create the config file
-	file, err := os.Create(configPath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// Set proper file permissions
-	if err := file.Chmod(0644); err != nil {
-		return err
-	}
-
-	// Encode the config to TOML and write to file
-	encoder := toml.NewEncoder(file)
-	if err := encoder.Encode(configFile); err != nil {
-		return err
-	}
-
-	return nil
 }

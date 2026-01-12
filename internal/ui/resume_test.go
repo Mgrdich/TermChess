@@ -109,7 +109,7 @@ func TestDeleteSaveGameOnGameEnd(t *testing.T) {
 
 func TestCorruptedFENHandling(t *testing.T) {
 	// Create a corrupted save file
-	savePath, _ := getSaveGamePath()
+	savePath, _ := SaveGamePath()
 	configDir, _ := getConfigDir()
 	_ = os.MkdirAll(configDir, 0755)
 	_ = os.WriteFile(savePath, []byte("invalid fen string"), 0644)

@@ -335,7 +335,7 @@ func TestNewModel_WithSavedGame(t *testing.T) {
 	}
 
 	// Create a new model (simulates app startup)
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
 	// Verify screen is ScreenResumePrompt
 	if m.screen != ScreenResumePrompt {
@@ -354,7 +354,7 @@ func TestNewModel_WithoutSavedGame(t *testing.T) {
 	os.Remove(path)
 
 	// Create a new model (simulates app startup)
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
 	// Verify screen is ScreenMainMenu
 	if m.screen != ScreenMainMenu {
@@ -375,7 +375,7 @@ func TestHandleResumePromptKeys_Yes(t *testing.T) {
 	}
 
 	// Create a model at the resume prompt screen
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	if m.screen != ScreenResumePrompt {
 		t.Fatalf("Model should start at ScreenResumePrompt")
 	}
@@ -425,7 +425,7 @@ func TestHandleResumePromptKeys_No(t *testing.T) {
 	}
 
 	// Create a model at the resume prompt screen
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	if m.screen != ScreenResumePrompt {
 		t.Fatalf("Model should start at ScreenResumePrompt")
 	}
@@ -467,7 +467,7 @@ func TestHandleResumePromptKeys_CorruptSavegame(t *testing.T) {
 	}
 
 	// Create a model at the resume prompt screen
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 	if m.screen != ScreenResumePrompt {
 		t.Fatalf("Model should start at ScreenResumePrompt")
 	}
@@ -581,7 +581,7 @@ func TestResumeGame_Integration(t *testing.T) {
 	}
 
 	// Phase 3: Simulate app restart
-	m := NewModel()
+	m := NewModel(DefaultConfig())
 
 	// Phase 4: Verify resume prompt appears
 	if m.screen != ScreenResumePrompt {

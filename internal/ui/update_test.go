@@ -355,8 +355,8 @@ func TestHandleSettingsKeys_Navigation(t *testing.T) {
 		t.Errorf("Expected settingsSelection to be 1 after up, got %d", m.settingsSelection)
 	}
 
-	// Test wrapping at bottom (move to index 3, then down should wrap to 0)
-	m.settingsSelection = 3
+	// Test wrapping at bottom (move to index 4, then down should wrap to 0)
+	m.settingsSelection = 4
 	msg = tea.KeyMsg{Type: tea.KeyDown}
 	result, _ = m.handleSettingsKeys(msg)
 	m = result.(Model)
@@ -365,13 +365,13 @@ func TestHandleSettingsKeys_Navigation(t *testing.T) {
 		t.Errorf("Expected settingsSelection to wrap to 0, got %d", m.settingsSelection)
 	}
 
-	// Test wrapping at top (at index 0, up should wrap to 3)
+	// Test wrapping at top (at index 0, up should wrap to 4)
 	msg = tea.KeyMsg{Type: tea.KeyUp}
 	result, _ = m.handleSettingsKeys(msg)
 	m = result.(Model)
 
-	if m.settingsSelection != 3 {
-		t.Errorf("Expected settingsSelection to wrap to 3, got %d", m.settingsSelection)
+	if m.settingsSelection != 4 {
+		t.Errorf("Expected settingsSelection to wrap to 4, got %d", m.settingsSelection)
 	}
 }
 

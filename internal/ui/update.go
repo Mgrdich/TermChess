@@ -319,7 +319,7 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.statusMsg = ""
 
 	// Number of settings options
-	numSettings := 4
+	numSettings := 5 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText
 
 	switch msg.String() {
 	case "up", "k":
@@ -344,7 +344,7 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Toggle the selected setting
 		return m.toggleSelectedSetting()
 
-	case "esc":
+	case "esc", "q", "b", "backspace":
 		// Return to main menu
 		m.screen = ScreenMainMenu
 		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
@@ -368,6 +368,8 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 		m.config.UseColors = !m.config.UseColors
 	case 3: // Show Move History
 		m.config.ShowMoveHistory = !m.config.ShowMoveHistory
+	case 4: // Show Help Text
+		m.config.ShowHelpText = !m.config.ShowHelpText
 	}
 
 	// Save the configuration immediately
@@ -375,7 +377,7 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 	if err != nil {
 		m.errorMsg = fmt.Sprintf("Failed to save settings: %v", err)
 	} else {
-		m.statusMsg = "Settings saved"
+		m.statusMsg = "Setting saved successfully"
 	}
 
 	return m, nil
@@ -469,6 +471,40 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.resumePromptSelection = 0
 		}
 
+	case "y", "Y":
+		// Direct "Yes" - load the saved game
+		board, err := LoadGame()
+		if err != nil {
+			// Failed to load - show error and go to main menu
+			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
+			m.screen = ScreenMainMenu
+			m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+			m.menuSelection = 0
+			return m, nil
+		}
+
+		// Successfully loaded - start gameplay with loaded board
+		m.board = board
+		m.moveHistory = []engine.Move{}
+		m.screen = ScreenGamePlay
+		m.input = ""
+		m.errorMsg = ""
+		m.statusMsg = "Game resumed"
+		m.resignedBy = -1
+		// Reset draw offer state
+		m.drawOfferedBy = -1
+		m.drawOfferedByWhite = false
+		m.drawOfferedByBlack = false
+		m.drawByAgreement = false
+
+	case "n", "N":
+		// Direct "No" - go to main menu
+		m.screen = ScreenMainMenu
+		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		m.menuSelection = 0
+		m.errorMsg = ""
+		m.statusMsg = ""
+
 	case "enter":
 		// Execute the selected action
 		if m.resumePromptSelection == 0 {
@@ -489,7 +525,7 @@ func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.screen = ScreenGamePlay
 			m.input = ""
 			m.errorMsg = ""
-			m.statusMsg = ""
+			m.statusMsg = "Game resumed"
 			m.resignedBy = -1
 			// Reset draw offer state
 			m.drawOfferedBy = -1

@@ -547,3 +547,28 @@ func getDisambiguation(board *engine.Board, move engine.Move) string {
 	// Need both file and rank
 	return string(rune('a'+fromFile)) + string(rune('1'+fromRank))
 }
+
+// FormatMoveHistory formats a slice of moves into a numbered, paired list for display.
+// Example: "1. e2e4 e7e5 2. g1f3 b8c6 3. f1c4"
+// This format groups white and black moves together with move numbers.
+func FormatMoveHistory(moves []engine.Move) string {
+	if len(moves) == 0 {
+		return ""
+	}
+
+	var result strings.Builder
+
+	for i := 0; i < len(moves); i += 2 {
+		moveNum := (i / 2) + 1
+
+		// White's move (always exists for this iteration)
+		result.WriteString(fmt.Sprintf("%d. %s", moveNum, moves[i].String()))
+
+		// Black's move (if exists)
+		if i+1 < len(moves) {
+			result.WriteString(fmt.Sprintf(" %s ", moves[i+1].String()))
+		}
+	}
+
+	return result.String()
+}

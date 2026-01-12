@@ -9,27 +9,6 @@ import (
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
-// ConfigFile represents the structure of the TOML configuration file.
-// It organizes settings into logical sections: display and game.
-type ConfigFile struct {
-	Display DisplayConfig `toml:"display"`
-	Game    GameConfig    `toml:"game"`
-}
-
-// DisplayConfig holds display-related configuration options.
-type DisplayConfig struct {
-	UseUnicode      bool `toml:"use_unicode"`
-	ShowCoordinates bool `toml:"show_coordinates"`
-	UseColors       bool `toml:"use_colors"`
-	ShowMoveHistory bool `toml:"show_move_history"`
-}
-
-// GameConfig holds game-related configuration options.
-type GameConfig struct {
-	DefaultGameType      string `toml:"default_game_type"`
-	DefaultBotDifficulty string `toml:"default_bot_difficulty"`
-}
-
 // getConfigDir returns the path to the TermChess configuration directory.
 // It returns ~/.termchess/ or an error if the home directory cannot be determined.
 func getConfigDir() (string, error) {
@@ -72,6 +51,7 @@ func configFileToConfig(cf ConfigFile) Config {
 		ShowCoords:      cf.Display.ShowCoordinates,
 		UseColors:       cf.Display.UseColors,
 		ShowMoveHistory: cf.Display.ShowMoveHistory,
+		ShowHelpText:    cf.Display.ShowHelpText,
 	}
 }
 
@@ -83,6 +63,7 @@ func configToConfigFile(c Config) ConfigFile {
 			ShowCoordinates: c.ShowCoords,
 			UseColors:       c.UseColors,
 			ShowMoveHistory: c.ShowMoveHistory,
+			ShowHelpText:    c.ShowHelpText,
 		},
 		Game: GameConfig{
 			DefaultGameType:      "pvp",    // Preserve default
@@ -158,8 +139,9 @@ func SaveConfig(config Config) error {
 	return nil
 }
 
-// getSaveGamePath returns the full path to the save game file.
-func getSaveGamePath() (string, error) {
+// SaveGamePath returns the full path to the save game file.
+// Exported for testing purposes.
+func SaveGamePath() (string, error) {
 	configDir, err := getConfigDir()
 	if err != nil {
 		return "", err
@@ -172,7 +154,7 @@ func getSaveGamePath() (string, error) {
 // Returns an error if the file cannot be written.
 func SaveGame(board *engine.Board) error {
 	// Get the save game file path
-	savePath, err := getSaveGamePath()
+	savePath, err := SaveGamePath()
 	if err != nil {
 		return fmt.Errorf("failed to get save game path: %w", err)
 	}
@@ -204,7 +186,7 @@ func SaveGame(board *engine.Board) error {
 // Returns an error if the file cannot be read or the FEN is invalid.
 func LoadGame() (*engine.Board, error) {
 	// Get the save game file path
-	savePath, err := getSaveGamePath()
+	savePath, err := SaveGamePath()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get save game path: %w", err)
 	}
@@ -229,7 +211,7 @@ func LoadGame() (*engine.Board, error) {
 // Returns an error only if deletion fails.
 func DeleteSaveGame() error {
 	// Get the save game file path
-	savePath, err := getSaveGamePath()
+	savePath, err := SaveGamePath()
 	if err != nil {
 		return fmt.Errorf("failed to get save game path: %w", err)
 	}
@@ -251,7 +233,7 @@ func DeleteSaveGame() error {
 // SaveGameExists checks if a saved game file exists at ~/.termchess/savegame.fen.
 // Returns true if the file exists, false otherwise.
 func SaveGameExists() bool {
-	savePath, err := getSaveGamePath()
+	savePath, err := SaveGamePath()
 	if err != nil {
 		return false
 	}
