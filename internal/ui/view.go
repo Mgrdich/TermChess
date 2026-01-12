@@ -257,6 +257,27 @@ func (m Model) renderGamePlay() string {
 		b.WriteString(statusText)
 	}
 
+	// Render move history if enabled
+	if m.config.ShowMoveHistory && len(m.moveHistory) > 0 {
+		b.WriteString("\n\n")
+
+		// Move history header
+		historyHeaderStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FAFAFA"))
+		historyHeader := historyHeaderStyle.Render("Move History:")
+		b.WriteString(historyHeader)
+		b.WriteString("\n")
+
+		// Format and display move history
+		historyText := FormatMoveHistory(m.moveHistory)
+		historyStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4"))
+		history := historyStyle.Render(historyText)
+		b.WriteString(history)
+		b.WriteString("\n")
+	}
+
 	return b.String()
 }
 

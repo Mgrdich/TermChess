@@ -385,3 +385,60 @@ func parsePieceType(r rune) (engine.PieceType, error) {
 		return engine.Empty, fmt.Errorf("invalid piece type: %c (expected K, Q, R, B, or N)", r)
 	}
 }
+
+// FormatSAN converts a Move to Standard Algebraic Notation (SAN) for display.
+// This is a simplified version that generates coordinate notation (e.g., "e2e4")
+// since full SAN generation with disambiguation is complex and requires board context.
+func FormatSAN(m engine.Move) string {
+	// Use coordinate notation (e.g., "e2e4")
+	moveStr := m.String() // Returns "e2e4" format or "e7e8q" for promotions
+
+	// If there's a promotion, the Move.String() already includes it in lowercase (e.g., "e7e8q")
+	// We need to convert it to "=Q" format for better readability
+	if m.Promotion != engine.Empty {
+		// Remove the lowercase promotion letter and replace with "=X" format
+		moveStr = moveStr[:len(moveStr)-1] // Remove last character (lowercase promotion)
+
+		switch m.Promotion {
+		case engine.Queen:
+			moveStr += "=Q"
+		case engine.Rook:
+			moveStr += "=R"
+		case engine.Bishop:
+			moveStr += "=B"
+		case engine.Knight:
+			moveStr += "=N"
+		}
+	}
+
+	return moveStr
+}
+
+// FormatMoveHistory formats the entire move history as a numbered, paired list.
+// Example: "1. e2e4 e7e5 2. g1f3 b8c6"
+// This format groups white and black moves together with move numbers.
+func FormatMoveHistory(moves []engine.Move) string {
+	if len(moves) == 0 {
+		return ""
+	}
+
+	var result strings.Builder
+
+	for i := 0; i < len(moves); i += 2 {
+		moveNum := (i / 2) + 1
+
+		// White's move
+		whiteMove := FormatSAN(moves[i])
+
+		// Black's move (if exists)
+		if i+1 < len(moves) {
+			blackMove := FormatSAN(moves[i+1])
+			result.WriteString(fmt.Sprintf("%d. %s %s ", moveNum, whiteMove, blackMove))
+		} else {
+			// Only white move (game in progress, black hasn't moved yet)
+			result.WriteString(fmt.Sprintf("%d. %s", moveNum, whiteMove))
+		}
+	}
+
+	return result.String()
+}

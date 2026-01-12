@@ -207,6 +207,8 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 		m.gameType = GameTypePvP
 		// Create a new board with the standard starting position
 		m.board = engine.NewBoard()
+		// Clear move history when starting a new game
+		m.moveHistory = []engine.Move{}
 		// Switch to the GamePlay screen
 		m.screen = ScreenGamePlay
 		// Clear any previous status messages
@@ -505,6 +507,7 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		// Load succeeded, start gameplay with the loaded position
 		m.board = board
+		m.moveHistory = []engine.Move{} // Clear move history when loading FEN
 		m.screen = ScreenGamePlay
 		m.fenInput = "" // Clear input
 		m.errorMsg = ""

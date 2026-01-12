@@ -188,12 +188,12 @@
 
 **Goal:** When enabled in config, user sees move history during game.
 
-- [ ] Add `moveHistory []engine.Move` to model
-- [ ] After each move, append to moveHistory
-- [ ] Create `FormatSAN()` function to convert Move to SAN for display
-- [ ] In View, if `config.ShowMoveHistory = true`, render move history
-- [ ] Format as "1. e4 e5 2. Nf3 Nc6" (numbered pairs)
-- [ ] Test: Enable show_move_history in config, play moves, see history displayed
+- [x] Add `moveHistory []engine.Move` to model
+- [x] After each move, append to moveHistory
+- [x] Create `FormatSAN()` function to convert Move to SAN for display
+- [x] In View, if `config.ShowMoveHistory = true`, render move history
+- [x] Format as "1. e4 e5 2. Nf3 Nc6" (numbered pairs)
+- [x] Test: Enable show_move_history in config, play moves, see history displayed
 
 ## Slice 18: Add Mid-Game Commands (Resign, Show FEN, Menu)
 
