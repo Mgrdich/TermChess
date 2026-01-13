@@ -239,6 +239,12 @@ func TestRandomEngine_Info(t *testing.T) {
 	if !info.Features["random_selection"] {
 		t.Error("Expected 'random_selection' feature to be true")
 	}
+	if !info.Features["tactical_awareness"] {
+		t.Error("Expected 'tactical_awareness' feature to be true")
+	}
+	if !info.Features["weighted_selection"] {
+		t.Error("Expected 'weighted_selection' feature to be true")
+	}
 }
 
 func TestNewRandomEngine_DefaultConfig(t *testing.T) {
@@ -402,5 +408,163 @@ func TestRandomEngine_SelectMove_VariousPositions(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRandomEngine_SelectMove_CapturesBias(t *testing.T) {
+	// Create a position with captures available
+	// Example: position after 1.e4 e5 2.Nf3 Nc6 3.Bc4 - White can capture on e5
+	fen := "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 3"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to create board: %v", err)
+	}
+
+	eng, _ := NewRandomEngine()
+	defer eng.Close()
+
+	// Run 100 trials
+	captureCount := 0
+	trials := 100
+
+	for i := 0; i < trials; i++ {
+		move, err := eng.SelectMove(context.Background(), board)
+		if err != nil {
+			t.Fatalf("SelectMove failed: %v", err)
+		}
+
+		// Check if the move is a capture (e.g., Nxe5 or Bxe5)
+		targetPiece := board.PieceAt(move.To)
+		if !targetPiece.IsEmpty() {
+			captureCount++
+		}
+	}
+
+	// Should favor captures ~70% of the time
+	// Note: In this position, one capture (Bxf7+) is also a check, so it gets
+	// selected both in the 70% capture path AND the 50% check path, leading to
+	// higher overall capture rate (~86%). This is correct behavior.
+	// Allow some variance: expect 75-95%
+	capturePercent := float64(captureCount) / float64(trials) * 100
+	if capturePercent < 75 || capturePercent > 95 {
+		t.Errorf("Capture bias = %.1f%%, want ~86%% (75-95%% range) - note: one capture is also a check", capturePercent)
+	}
+}
+
+func TestRandomEngine_SelectMove_ChecksBias(t *testing.T) {
+	// Create a position where check is available
+	// Example: White queen can check on multiple squares
+	fen := "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to create board: %v", err)
+	}
+
+	eng, _ := NewRandomEngine()
+	defer eng.Close()
+
+	// Run 100 trials
+	checkCount := 0
+	trials := 100
+
+	for i := 0; i < trials; i++ {
+		move, err := eng.SelectMove(context.Background(), board)
+		if err != nil {
+			t.Fatalf("SelectMove failed: %v", err)
+		}
+
+		// Check if the move gives check
+		boardCopy := board.Copy()
+		boardCopy.MakeMove(move)
+		if boardCopy.InCheck() {
+			checkCount++
+		}
+	}
+
+	// Should favor checks ~50% of the time when available
+	// Allow some variance: expect 40-60%
+	checkPercent := float64(checkCount) / float64(trials) * 100
+	if checkPercent < 40 || checkPercent > 60 {
+		t.Errorf("Check bias = %.1f%%, want ~50%% (40-60%% range)", checkPercent)
+	}
+}
+
+func TestRandomEngine_SelectMove_RandomFallback(t *testing.T) {
+	// Test that bot still makes random moves when no captures/checks available
+	// Use starting position where no captures/checks are possible
+	board := engine.NewBoard()
+
+	eng, _ := NewRandomEngine()
+	defer eng.Close()
+
+	// Run 50 trials
+	movesSeen := make(map[string]int)
+	trials := 50
+
+	for i := 0; i < trials; i++ {
+		move, err := eng.SelectMove(context.Background(), board)
+		if err != nil {
+			t.Fatalf("SelectMove failed: %v", err)
+		}
+
+		movesSeen[move.String()]++
+	}
+
+	// Should see variety of moves (not always the same move)
+	if len(movesSeen) < 10 {
+		t.Errorf("Only saw %d unique moves in %d trials, want more variety", len(movesSeen), trials)
+	}
+}
+
+func TestFilterCaptures(t *testing.T) {
+	// Test the filterCaptures helper function
+	// Create position with some captures available
+	fen := "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 3"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to create board: %v", err)
+	}
+
+	moves := board.LegalMoves()
+	captures := filterCaptures(board, moves)
+
+	// Should find at least one capture (Nxe5 or Bxe5)
+	if len(captures) == 0 {
+		t.Error("filterCaptures found 0 captures, expected at least 1")
+	}
+
+	// Verify all returned moves are actually captures
+	for _, move := range captures {
+		targetPiece := board.PieceAt(move.To)
+		if targetPiece.IsEmpty() {
+			t.Errorf("filterCaptures returned non-capture move: %v", move)
+		}
+	}
+}
+
+func TestFilterChecks(t *testing.T) {
+	// Test the filterChecks helper function
+	// Create position where check is available
+	fen := "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 5"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to create board: %v", err)
+	}
+
+	moves := board.LegalMoves()
+	checks := filterChecks(board, moves)
+
+	// Should find at least one check
+	if len(checks) == 0 {
+		t.Error("filterChecks found 0 checks, expected at least 1")
+	}
+
+	// Verify all returned moves actually give check
+	for _, move := range checks {
+		boardCopy := board.Copy()
+		boardCopy.MakeMove(move)
+		if !boardCopy.InCheck() {
+			t.Errorf("filterChecks returned non-check move: %v", move)
+		}
 	}
 }

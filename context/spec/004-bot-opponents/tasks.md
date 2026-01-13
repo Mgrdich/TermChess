@@ -89,19 +89,19 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 4: Add Weighted Move Selection to Easy Bot
 **Goal:** Make Easy bot favor captures/checks (70% tactical bias) while remaining beatable by novices.
 
-- [ ] Update `internal/bot/random.go`:
-  - [ ] Add `filterCaptures()` helper function
-  - [ ] Add `filterChecks()` helper function
-  - [ ] Update `SelectMove()` to use weighted selection:
-    - [ ] 70% chance to pick capture if available
-    - [ ] 50% chance to pick check if available
-    - [ ] Fallback to random legal move
-- [ ] Update `internal/bot/random_test.go`:
-  - [ ] Test capture bias (statistical test over 100 positions)
-  - [ ] Test check bias (statistical test over 100 positions)
-  - [ ] Test fallback to random moves works
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Easy bot has tactical awareness but makes mistakes
+- [x] Update `internal/bot/random.go`:
+  - [x] Add `filterCaptures()` helper function
+  - [x] Add `filterChecks()` helper function
+  - [x] Update `SelectMove()` to use weighted selection:
+    - [x] 70% chance to pick capture if available
+    - [x] 50% chance to pick check if available
+    - [x] Fallback to random legal move
+- [x] Update `internal/bot/random_test.go`:
+  - [x] Test capture bias (statistical test over 100 positions)
+  - [x] Test check bias (statistical test over 100 positions)
+  - [x] Test fallback to random moves works
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Easy bot has tactical awareness but makes mistakes
 
 **Deliverable:** Easy bot with personality. Favors captures/checks but remains beatable.
 
