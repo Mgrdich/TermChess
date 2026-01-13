@@ -45,6 +45,20 @@ _Once the foundational features are complete, we will move on to these high-valu
 
 ### Phase 3
 
+_Automated gameplay for testing, entertainment, and analysis._
+
+- [ ] **Bot vs Bot Mode**
+  - [ ] **Bot Selection:** Allow users to select two bot difficulties to play against each other (e.g., Easy vs Hard, Medium vs Medium).
+  - [ ] **Automated Gameplay:** Bots play a complete game autonomously while the user watches.
+  - [ ] **Playback Speed Control:** Users can adjust move speed (instant, fast, normal, slow) to control pacing.
+  - [ ] **Pause/Resume:** Users can pause the game at any point to examine the position, then resume play.
+  - [ ] **Multi-Game Mode:** Users can run multiple games in sequence (e.g., 10 games) between two bots.
+  - [ ] **Aggregate Statistics:** After multi-game runs, display results summary (wins, losses, draws, average moves, average duration).
+
+---
+
+### Phase 4
+
 _Enhanced user interaction and visual experience._
 
 - [ ] **Mouse Interaction & UI/UX Enhancements**
@@ -59,7 +73,7 @@ _Enhanced user interaction and visual experience._
 
 ---
 
-### Phase 4
+### Phase 5
 
 _Make the application accessible to users via simple command-line installation._
 
@@ -71,7 +85,7 @@ _Make the application accessible to users via simple command-line installation._
 
 ---
 
-### Phase 5
+### Phase 6
 
 _Features planned for future consideration. Their priority and scope may be refined based on feedback from earlier phases._
 
