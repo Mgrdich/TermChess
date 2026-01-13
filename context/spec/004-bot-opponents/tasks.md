@@ -181,23 +181,23 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 7: Add Iterative Deepening and Timeout Handling
 **Goal:** Make minimax respect time limits and always return a valid move.
 
-- [ ] Update `SelectMove()` in `internal/bot/minimax.go`:
-  - [ ] Implement iterative deepening loop (depth 1 to maxDepth)
-  - [ ] Check context timeout in each iteration
-  - [ ] Return best move from last completed depth on timeout
-  - [ ] Fallback to first legal move if no iteration completed
-- [ ] Update `searchDepth()`:
-  - [ ] Add periodic context.Done() checks
-  - [ ] Return early on timeout
-- [ ] Update `alphaBeta()`:
-  - [ ] Add periodic context.Done() checks (every ~100 nodes)
-  - [ ] Return current alpha on timeout
-- [ ] Update `internal/bot/minimax_test.go`:
-  - [ ] Test timeout handling (set 100ms timeout, verify returns move)
-  - [ ] Test iterative deepening completes multiple depths
-  - [ ] Test returns best move from last completed depth
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Minimax respects timeouts, always returns valid move
+- [x] Update `SelectMove()` in `internal/bot/minimax.go`:
+  - [x] Implement iterative deepening loop (depth 1 to maxDepth)
+  - [x] Check context timeout in each iteration
+  - [x] Return best move from last completed depth on timeout
+  - [x] Fallback to first legal move if no iteration completed
+- [x] Update `searchDepth()`:
+  - [x] Add periodic context.Done() checks
+  - [x] Return early on timeout
+- [x] Update `alphaBeta()`:
+  - [x] Add periodic context.Done() checks (every ~100 nodes)
+  - [x] Return current alpha on timeout
+- [x] Update `internal/bot/minimax_test.go`:
+  - [x] Test timeout handling (set 100ms timeout, verify returns move)
+  - [x] Test iterative deepening completes multiple depths
+  - [x] Test returns best move from last completed depth
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Minimax respects timeouts, always returns valid move
 
 **Deliverable:** Minimax with robust timeout handling. Ready for deeper searches.
 

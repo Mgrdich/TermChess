@@ -76,9 +76,10 @@ func (e *minimaxEngine) Info() Info {
 		Type:       TypeInternal,
 		Difficulty: e.difficulty,
 		Features: map[string]bool{
-			"minimax":       true,
-			"alpha_beta":    true,
-			"move_ordering": true,
+			"minimax":             true,
+			"alpha_beta":          true,
+			"move_ordering":       true,
+			"iterative_deepening": true,
 		},
 	}
 }
@@ -104,13 +105,37 @@ func (e *minimaxEngine) SelectMove(ctx context.Context, board *engine.Board) (en
 		return moves[0], nil
 	}
 
-	// For Task 6, we hardcode depth 2 search
-	// Task 7 will replace this with iterative deepening
-	bestMove, _, err := e.searchDepth(ctx, board, 2)
-	if err != nil {
-		return engine.Move{}, err
+	// Iterative deepening: start at depth 1, increment to maxDepth
+	var bestMove engine.Move
+
+	for depth := 1; depth <= e.maxDepth; depth++ {
+		// Check timeout before starting new depth
+		select {
+		case <-ctx.Done():
+			// Timeout reached, return best move from previous iteration
+			if bestMove == (engine.Move{}) {
+				// Fallback: no iteration completed, return first legal move
+				return moves[0], nil
+			}
+			return bestMove, nil
+		default:
+		}
+
+		// Search at current depth
+		move, _, err := e.searchDepth(ctx, board, depth)
+		if err != nil {
+			// Timeout during search, return best move found so far
+			if bestMove == (engine.Move{}) {
+				return moves[0], nil
+			}
+			return bestMove, nil
+		}
+
+		// Update best move from this completed iteration
+		bestMove = move
 	}
 
+	// All depths completed within timeout
 	return bestMove, nil
 }
 
@@ -174,10 +199,11 @@ func (e *minimaxEngine) searchDepth(ctx context.Context, board *engine.Board, de
 // alphaBeta performs recursive negamax search with alpha-beta pruning.
 // Returns the score from the perspective of the side to move.
 func (e *minimaxEngine) alphaBeta(ctx context.Context, board *engine.Board, depth int, alpha, beta float64) float64 {
-	// Check for timeout periodically (this is a simplified check for Task 6)
+	// Check for timeout at the start of each node
 	select {
 	case <-ctx.Done():
 		// Return a neutral score on timeout
+		// This ensures the partial search doesn't corrupt the iterative deepening results
 		return 0.0
 	default:
 	}
