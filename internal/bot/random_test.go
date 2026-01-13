@@ -55,7 +55,7 @@ func TestRandomEngine_SelectMove_NoLegalMoves(t *testing.T) {
 	// Create board in checkmate position (no legal moves)
 	// FEN: 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1
 	// Black king on h8, White queen on f7, White king on g6 - Black is in checkmate
-	board, err := engine.ParseFEN("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1")
+	board, err := engine.FromFEN("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1")
 	if err != nil {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestRandomEngine_SelectMove_ForcedMove(t *testing.T) {
 	// Create board with only one legal move
 	// FEN: 7k/8/6K1/8/8/8/8/7R b - - 0 1
 	// Black king on h8 can only move to g8
-	board, err := engine.ParseFEN("7k/8/6K1/8/8/8/8/7R b - - 0 1")
+	board, err := engine.FromFEN("7k/8/6K1/8/8/8/8/7R b - - 0 1")
 	if err != nil {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
@@ -378,7 +378,7 @@ func TestRandomEngine_SelectMove_VariousPositions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			board, err := engine.ParseFEN(tc.fen)
+			board, err := engine.FromFEN(tc.fen)
 			if err != nil {
 				t.Fatalf("Failed to parse FEN: %v", err)
 			}
@@ -420,7 +420,10 @@ func TestRandomEngine_SelectMove_CapturesBias(t *testing.T) {
 		t.Fatalf("Failed to create board: %v", err)
 	}
 
-	eng, _ := NewRandomEngine()
+	eng, err := NewRandomEngine()
+	if err != nil {
+		t.Fatalf("Failed to create engine: %v", err)
+	}
 	defer eng.Close()
 
 	// Run 100 trials
@@ -460,7 +463,10 @@ func TestRandomEngine_SelectMove_ChecksBias(t *testing.T) {
 		t.Fatalf("Failed to create board: %v", err)
 	}
 
-	eng, _ := NewRandomEngine()
+	eng, err := NewRandomEngine()
+	if err != nil {
+		t.Fatalf("Failed to create engine: %v", err)
+	}
 	defer eng.Close()
 
 	// Run 100 trials
@@ -494,7 +500,10 @@ func TestRandomEngine_SelectMove_RandomFallback(t *testing.T) {
 	// Use starting position where no captures/checks are possible
 	board := engine.NewBoard()
 
-	eng, _ := NewRandomEngine()
+	eng, err := NewRandomEngine()
+	if err != nil {
+		t.Fatalf("Failed to create engine: %v", err)
+	}
 	defer eng.Close()
 
 	// Run 50 trials

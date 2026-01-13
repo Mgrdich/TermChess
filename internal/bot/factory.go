@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -62,7 +63,8 @@ func NewRandomEngine(opts ...EngineOption) (Engine, error) {
 	return &randomEngine{
 		name:      "Easy Bot",
 		timeLimit: cfg.timeLimit,
-		closed:    false,
+		closed:    0, // atomic: 0 = open
+		rng:       rand.New(rand.NewSource(time.Now().UnixNano())),
 	}, nil
 }
 

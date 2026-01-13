@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
+	"sync/atomic"
 	"time"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
@@ -13,12 +14,13 @@ import (
 type randomEngine struct {
 	name      string
 	timeLimit time.Duration
-	closed    bool
+	closed    int32 // atomic: 0 = open, 1 = closed
+	rng       *rand.Rand
 }
 
 // SelectMove returns a move using weighted selection (70% tactical bias).
 func (e *randomEngine) SelectMove(ctx context.Context, board *engine.Board) (engine.Move, error) {
-	if e.closed {
+	if atomic.LoadInt32(&e.closed) == 1 {
 		return engine.Move{}, errors.New("engine is closed")
 	}
 
@@ -48,27 +50,35 @@ func (e *randomEngine) SelectMove(ctx context.Context, board *engine.Board) (eng
 		return engine.Move{}, ctx.Err()
 	default:
 		// 70% chance to pick a capture if available
-		if rand.Float64() < 0.7 && len(captures) > 0 {
-			return captures[rand.Intn(len(captures))], nil
+		if e.rng.Float64() < 0.7 && len(captures) > 0 {
+			return captures[e.rng.Intn(len(captures))], nil
 		}
 
 		// 50% chance to pick a check if available
-		if rand.Float64() < 0.5 && len(checks) > 0 {
-			return checks[rand.Intn(len(checks))], nil
+		if e.rng.Float64() < 0.5 && len(checks) > 0 {
+			return checks[e.rng.Intn(len(checks))], nil
 		}
 
 		// Fallback: any random legal move
-		return moves[rand.Intn(len(moves))], nil
+		return moves[e.rng.Intn(len(moves))], nil
 	}
 }
 
 // filterCaptures returns all moves that capture an opponent's piece.
+// This includes both normal captures and en passant captures.
 func filterCaptures(board *engine.Board, moves []engine.Move) []engine.Move {
 	var captures []engine.Move
 	for _, m := range moves {
-		// Check if destination square has an opponent piece
+		// Check if destination square has an opponent piece (normal capture)
 		targetPiece := board.PieceAt(m.To)
 		if !targetPiece.IsEmpty() {
+			captures = append(captures, m)
+			continue
+		}
+
+		// Check for en passant capture: pawn moves to en passant target square
+		movingPiece := board.PieceAt(m.From)
+		if movingPiece.Type() == engine.Pawn && board.EnPassantSq >= 0 && m.To == engine.Square(board.EnPassantSq) {
 			captures = append(captures, m)
 		}
 	}
@@ -98,7 +108,7 @@ func (e *randomEngine) Name() string {
 
 // Close releases resources held by the engine.
 func (e *randomEngine) Close() error {
-	e.closed = true
+	atomic.StoreInt32(&e.closed, 1)
 	return nil
 }
 
