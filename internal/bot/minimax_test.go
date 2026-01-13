@@ -2,12 +2,11 @@ package bot
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestMinimaxEngine_Name(t *testing.T) {
@@ -31,41 +30,69 @@ func TestMinimaxEngine_Name(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eng, err := NewMinimaxEngine(tt.difficulty)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, eng.Name())
+			if err != nil {
+				t.Fatalf("NewMinimaxEngine() error = %v", err)
+			}
+			if got := eng.Name(); got != tt.expected {
+				t.Errorf("Name() = %q, want %q", got, tt.expected)
+			}
 		})
 	}
 }
 
 func TestMinimaxEngine_Close(t *testing.T) {
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 
 	// Close should succeed
 	err = eng.Close()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("Close() error = %v", err)
+	}
 
 	// SelectMove should fail after close
 	board := engine.NewBoard()
 	_, err = eng.SelectMove(context.Background(), board)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "closed")
+	if err == nil {
+		t.Error("SelectMove() after Close() should return error, got nil")
+	}
+	if !strings.Contains(err.Error(), "closed") {
+		t.Errorf("error should contain 'closed', got %q", err.Error())
+	}
 }
 
 func TestMinimaxEngine_Info(t *testing.T) {
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 
 	inspectable, ok := eng.(Inspectable)
-	require.True(t, ok, "engine should implement Inspectable")
+	if !ok {
+		t.Fatal("engine should implement Inspectable")
+	}
 
 	info := inspectable.Info()
-	assert.Equal(t, "Medium Bot", info.Name)
-	assert.Equal(t, "TermChess", info.Author)
-	assert.Equal(t, TypeInternal, info.Type)
-	assert.Equal(t, Medium, info.Difficulty)
-	assert.True(t, info.Features["minimax"])
-	assert.True(t, info.Features["alpha_beta"])
+	if info.Name != "Medium Bot" {
+		t.Errorf("Info.Name = %q, want 'Medium Bot'", info.Name)
+	}
+	if info.Author != "TermChess" {
+		t.Errorf("Info.Author = %q, want 'TermChess'", info.Author)
+	}
+	if info.Type != TypeInternal {
+		t.Errorf("Info.Type = %v, want TypeInternal", info.Type)
+	}
+	if info.Difficulty != Medium {
+		t.Errorf("Info.Difficulty = %v, want Medium", info.Difficulty)
+	}
+	if !info.Features["minimax"] {
+		t.Error("Info.Features['minimax'] should be true")
+	}
+	if !info.Features["alpha_beta"] {
+		t.Error("Info.Features['alpha_beta'] should be true")
+	}
 }
 
 func TestMinimaxEngine_ForcedMove(t *testing.T) {
@@ -78,15 +105,21 @@ func TestMinimaxEngine_ForcedMove(t *testing.T) {
 	fen := "4k3/8/8/8/8/8/4r3/4K2R w - - 0 1"
 
 	board, err := engine.ParseFEN(fen)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
 
 	moves := board.LegalMoves()
-	require.Greater(t, len(moves), 0, "expected at least one legal move")
+	if len(moves) == 0 {
+		t.Fatal("expected at least one legal move")
+	}
 
 	// If there's only 1 move, test the early return path
 	if len(moves) == 1 {
 		eng, err := NewMinimaxEngine(Medium)
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("NewMinimaxEngine() error = %v", err)
+		}
 		defer eng.Close()
 
 		start := time.Now()
@@ -94,18 +127,30 @@ func TestMinimaxEngine_ForcedMove(t *testing.T) {
 		elapsed := time.Since(start)
 
 		// Should return immediately
-		assert.NoError(t, err)
-		assert.Equal(t, moves[0], move)
-		assert.Less(t, elapsed, 100*time.Millisecond, "forced move should return very quickly")
+		if err != nil {
+			t.Errorf("SelectMove() error = %v", err)
+		}
+		if move != moves[0] {
+			t.Errorf("SelectMove() = %v, want %v", move, moves[0])
+		}
+		if elapsed >= 100*time.Millisecond {
+			t.Errorf("forced move took %v, should return quickly (< 100ms)", elapsed)
+		}
 	} else {
 		// Otherwise, just verify normal move selection works
 		eng, err := NewMinimaxEngine(Medium)
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatalf("NewMinimaxEngine() error = %v", err)
+		}
 		defer eng.Close()
 
 		move, err := eng.SelectMove(context.Background(), board)
-		assert.NoError(t, err)
-		assert.Contains(t, moves, move)
+		if err != nil {
+			t.Errorf("SelectMove() error = %v", err)
+		}
+		if !containsMove(moves, move) {
+			t.Errorf("SelectMove() returned illegal move %v", move)
+		}
 	}
 }
 
@@ -135,24 +180,34 @@ func TestMinimaxEngine_FindsMateInOne(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			board, err := engine.ParseFEN(tt.fen)
-			require.NoError(t, err, "failed to parse FEN")
+			if err != nil {
+				t.Fatalf("ParseFEN() error = %v", err)
+			}
 
 			eng, err := NewMinimaxEngine(Medium)
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatalf("NewMinimaxEngine() error = %v", err)
+			}
 			defer eng.Close()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
 			move, err := eng.SelectMove(ctx, board)
-			require.NoError(t, err, "SelectMove failed")
+			if err != nil {
+				t.Fatalf("SelectMove() error = %v", err)
+			}
 
 			// Verify the move delivers checkmate
 			boardCopy := board.Copy()
 			err = boardCopy.MakeMove(move)
-			require.NoError(t, err, "failed to make move")
+			if err != nil {
+				t.Fatalf("MakeMove() error = %v", err)
+			}
 
-			assert.Equal(t, engine.Checkmate, boardCopy.Status(), "engine should find mate-in-1: %s", tt.description)
+			if boardCopy.Status() != engine.Checkmate {
+				t.Errorf("engine should find mate-in-1: %s, got status %v", tt.description, boardCopy.Status())
+			}
 		})
 	}
 }
@@ -163,26 +218,36 @@ func TestMinimaxEngine_AvoidBlunder(t *testing.T) {
 	fen := "4k3/3r4/8/8/8/8/8/3Q1K2 w - - 0 1"
 
 	board, err := engine.ParseFEN(fen)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
 
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 	defer eng.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	move, err := eng.SelectMove(ctx, board)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
 
 	// The move should NOT be Qd8 (hanging the queen)
 	blunderMove, _ := engine.ParseMove("d1d8")
-	assert.NotEqual(t, blunderMove, move, "engine should not hang the queen")
+	if move == blunderMove {
+		t.Error("engine should not hang the queen with Qd8")
+	}
 
 	// Verify the move doesn't lose the queen
 	boardCopy := board.Copy()
 	err = boardCopy.MakeMove(move)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("MakeMove() error = %v", err)
+	}
 
 	// After opponent's best response, White's queen should still be on the board
 	// (This is a simplified check - we're not doing full move analysis here)
@@ -195,21 +260,29 @@ func TestMinimaxEngine_CapturePriority(t *testing.T) {
 	fen := "6k1/8/5q2/4P3/8/8/8/6K1 w - - 0 1"
 
 	board, err := engine.ParseFEN(fen)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
 
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 	defer eng.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	move, err := eng.SelectMove(ctx, board)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
 
 	// Engine should capture the queen
 	captureMove, _ := engine.ParseMove("e5f6")
-	assert.Equal(t, captureMove, move, "engine should capture hanging queen")
+	if move != captureMove {
+		t.Errorf("engine should capture hanging queen with exf6, got %v", move)
+	}
 }
 
 func TestMinimaxEngine_Timeout(t *testing.T) {
@@ -218,7 +291,9 @@ func TestMinimaxEngine_Timeout(t *testing.T) {
 
 	// Create engine with very short timeout
 	eng, err := NewMinimaxEngine(Medium, WithTimeLimit(1*time.Nanosecond))
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 	defer eng.Close()
 
 	ctx := context.Background()
@@ -230,11 +305,15 @@ func TestMinimaxEngine_Timeout(t *testing.T) {
 	// Either it succeeds or times out gracefully
 	if err != nil {
 		// If it errors, it should be a timeout or context error
-		assert.Contains(t, err.Error(), "context deadline exceeded")
+		if !strings.Contains(err.Error(), "context deadline exceeded") {
+			t.Errorf("expected timeout error, got %v", err)
+		}
 	} else {
 		// If it succeeds, move should be legal
 		moves := board.LegalMoves()
-		assert.Contains(t, moves, move)
+		if !containsMove(moves, move) {
+			t.Errorf("returned illegal move %v", move)
+		}
 	}
 }
 
@@ -243,19 +322,29 @@ func TestMinimaxEngine_NoLegalMoves(t *testing.T) {
 	fen := "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"
 
 	board, err := engine.ParseFEN(fen)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
 
 	// Verify it's checkmate
-	assert.Equal(t, engine.Checkmate, board.Status())
+	if board.Status() != engine.Checkmate {
+		t.Errorf("position should be checkmate, got %v", board.Status())
+	}
 
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 	defer eng.Close()
 
 	// Shouldn't be able to select a move in checkmate position
 	_, err = eng.SelectMove(context.Background(), board)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no legal moves")
+	if err == nil {
+		t.Error("SelectMove() in checkmate position should return error, got nil")
+	}
+	if !strings.Contains(err.Error(), "no legal moves") {
+		t.Errorf("error should contain 'no legal moves', got %q", err.Error())
+	}
 }
 
 func TestMinimaxEngine_Depth2Search(t *testing.T) {
@@ -264,21 +353,29 @@ func TestMinimaxEngine_Depth2Search(t *testing.T) {
 	fen := "6k1/8/3r1r2/8/4P3/8/8/6K1 w - - 0 1"
 
 	board, err := engine.ParseFEN(fen)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
 
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 	defer eng.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	move, err := eng.SelectMove(ctx, board)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
 
 	// The engine should find e4-e5, which sets up a fork
 	forkMove, _ := engine.ParseMove("e4e5")
-	assert.Equal(t, forkMove, move, "engine should find the pawn fork")
+	if move != forkMove {
+		t.Errorf("engine should find the pawn fork e4-e5, got %v", move)
+	}
 }
 
 func TestMinimaxEngine_AlphaBetaPruning(t *testing.T) {
@@ -287,7 +384,9 @@ func TestMinimaxEngine_AlphaBetaPruning(t *testing.T) {
 	board := engine.NewBoard()
 
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 	defer eng.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -297,12 +396,18 @@ func TestMinimaxEngine_AlphaBetaPruning(t *testing.T) {
 	move, err := eng.SelectMove(ctx, board)
 	elapsed := time.Since(start)
 
-	require.NoError(t, err)
-	assert.NotEmpty(t, move)
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
+	if move == (engine.Move{}) {
+		t.Error("SelectMove() returned empty move")
+	}
 
 	// Depth-2 search with alpha-beta should complete in well under 1 second
 	// even from the starting position
-	assert.Less(t, elapsed, 1*time.Second, "search should complete quickly with pruning")
+	if elapsed >= 1*time.Second {
+		t.Errorf("search took %v, should complete quickly with pruning (< 1s)", elapsed)
+	}
 }
 
 func TestGetDefaultWeights(t *testing.T) {
@@ -346,7 +451,9 @@ func TestGetDefaultWeights(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			weights := getDefaultWeights(tt.difficulty)
-			assert.Equal(t, tt.expected, weights)
+			if weights != tt.expected {
+				t.Errorf("getDefaultWeights() = %+v, want %+v", weights, tt.expected)
+			}
 		})
 	}
 }
@@ -357,10 +464,14 @@ func TestMinimaxEngine_MoveOrdering(t *testing.T) {
 	fen := "6k1/8/3p1p2/4P3/8/8/8/6K1 w - - 0 1"
 
 	board, err := engine.ParseFEN(fen)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
 
 	eng, err := NewMinimaxEngine(Medium)
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
 	defer eng.Close()
 
 	me := eng.(*minimaxEngine)
@@ -378,8 +489,106 @@ func TestMinimaxEngine_MoveOrdering(t *testing.T) {
 			capturePhase = false
 		}
 
-		if isCapture {
-			assert.True(t, capturePhase, "all captures should come before non-captures")
+		if isCapture && !capturePhase {
+			t.Error("all captures should come before non-captures")
 		}
 	}
+}
+
+func TestMinimaxEngine_IterativeDeepening_Timeout(t *testing.T) {
+	// Create engine with very short timeout
+	eng, err := NewMinimaxEngine(Medium, WithTimeLimit(100*time.Millisecond))
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+	defer eng.Close()
+
+	// Start from complex middlegame position
+	board, err := engine.ParseFEN("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1")
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
+
+	// Should return valid move even with short timeout
+	move, err := eng.SelectMove(context.Background(), board)
+
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
+	if move == (engine.Move{}) {
+		t.Error("SelectMove() returned empty move")
+	}
+	// Verify move is legal
+	legalMoves := board.LegalMoves()
+	if !containsMove(legalMoves, move) {
+		t.Errorf("SelectMove() returned illegal move %v", move)
+	}
+}
+
+func TestMinimaxEngine_IterativeDeepening_MultipleDepths(t *testing.T) {
+	// Create engine with generous timeout
+	eng, err := NewMinimaxEngine(Medium, WithTimeLimit(5*time.Second))
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+	defer eng.Close()
+
+	// Simple position where depth 4 is achievable
+	board, err := engine.ParseFEN("8/8/8/4k3/8/8/4K3/4R3 w - - 0 1")
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
+
+	move, err := eng.SelectMove(context.Background(), board)
+
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
+	if move == (engine.Move{}) {
+		t.Error("SelectMove() returned empty move")
+	}
+	// Should find a good move at deeper depth
+	legalMoves := board.LegalMoves()
+	if !containsMove(legalMoves, move) {
+		t.Errorf("SelectMove() returned illegal move %v", move)
+	}
+}
+
+func TestMinimaxEngine_ReturnsLastCompletedDepth(t *testing.T) {
+	// Create engine with moderate timeout
+	eng, err := NewMinimaxEngine(Hard, WithTimeLimit(500*time.Millisecond))
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+	defer eng.Close()
+
+	// Complex position
+	board, err := engine.ParseFEN("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1")
+	if err != nil {
+		t.Fatalf("ParseFEN() error = %v", err)
+	}
+
+	move, err := eng.SelectMove(context.Background(), board)
+
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
+	if move == (engine.Move{}) {
+		t.Error("SelectMove() returned empty move")
+	}
+	// Should return valid move from last completed depth (likely depth 2 or 3)
+	legalMoves := board.LegalMoves()
+	if !containsMove(legalMoves, move) {
+		t.Errorf("SelectMove() returned illegal move %v", move)
+	}
+}
+
+// Helper function to check if a slice contains a move
+func containsMove(moves []engine.Move, move engine.Move) bool {
+	for _, m := range moves {
+		if m == move {
+			return true
+		}
+	}
+	return false
 }
