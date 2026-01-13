@@ -41,20 +41,20 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 2: Create Factory Pattern with Functional Options
 **Goal:** Implement the factory pattern and functional options for flexible engine configuration.
 
-- [ ] Create `internal/bot/factory.go`:
-  - [ ] Define `EngineOption` type (functional option pattern)
-  - [ ] Define `engineConfig` struct with configuration fields
-  - [ ] Implement `WithTimeLimit(duration)` option
-  - [ ] Implement `WithSearchDepth(depth)` option
-  - [ ] Implement `WithOptions(map)` option
-  - [ ] Create placeholder factories (return nil for now):
-    - [ ] `NewRandomEngine(opts ...EngineOption) (Engine, error)`
-    - [ ] `NewMinimaxEngine(difficulty, opts ...) (Engine, error)`
-- [ ] Create `internal/bot/factory_test.go`:
-  - [ ] Test option parsing and validation
-  - [ ] Test error handling for invalid options
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Factory pattern works, options validated correctly
+- [x] Create `internal/bot/factory.go`:
+  - [x] Define `EngineOption` type (functional option pattern)
+  - [x] Define `engineConfig` struct with configuration fields
+  - [x] Implement `WithTimeLimit(duration)` option
+  - [x] Implement `WithSearchDepth(depth)` option
+  - [x] Implement `WithOptions(map)` option
+  - [x] Create placeholder factories (return nil for now):
+    - [x] `NewRandomEngine(opts ...EngineOption) (Engine, error)`
+    - [x] `NewMinimaxEngine(difficulty, opts ...) (Engine, error)`
+- [x] Create `internal/bot/factory_test.go`:
+  - [x] Test option parsing and validation
+  - [x] Test error handling for invalid options
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Factory pattern works, options validated correctly
 
 **Deliverable:** Factory infrastructure ready. Can create engines with custom configuration (once implementations exist).
 
