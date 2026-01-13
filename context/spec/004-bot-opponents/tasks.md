@@ -112,24 +112,24 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 5: Implement Material-Only Evaluation Function
 **Goal:** Create basic position evaluation. Foundation for minimax bots.
 
-- [ ] Create `internal/bot/eval.go`:
-  - [ ] Define `pieceValues` map (Pawn=1, Knight=3, Bishop=3.25, Rook=5, Queen=9)
-  - [ ] Implement `evaluate(board, difficulty) float64` function:
-    - [ ] Return ±10000 for checkmate
-    - [ ] Return 0 for stalemate/draws
-    - [ ] Call `countMaterial()` for ongoing games
-  - [ ] Implement `countMaterial(board) float64`:
-    - [ ] Iterate all squares
-    - [ ] Sum piece values (positive for White, negative for Black)
-    - [ ] Return total material score
-- [ ] Create `internal/bot/eval_test.go`:
-  - [ ] Test checkmate positions return ±10000
-  - [ ] Test stalemate returns 0
-  - [ ] Test material counting (e.g., extra queen = +9)
-  - [ ] Test starting position evaluates to ~0
-  - [ ] Test symmetry: eval(pos) = -eval(flipped_pos)
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Material evaluation works correctly
+- [x] Create `internal/bot/eval.go`:
+  - [x] Define `pieceValues` map (Pawn=1, Knight=3, Bishop=3.25, Rook=5, Queen=9)
+  - [x] Implement `evaluate(board, difficulty) float64` function:
+    - [x] Return ±10000 for checkmate
+    - [x] Return 0 for stalemate/draws
+    - [x] Call `countMaterial()` for ongoing games
+  - [x] Implement `countMaterial(board) float64`:
+    - [x] Iterate all squares
+    - [x] Sum piece values (positive for White, negative for Black)
+    - [x] Return total material score
+- [x] Create `internal/bot/eval_test.go`:
+  - [x] Test checkmate positions return ±10000
+  - [x] Test stalemate returns 0
+  - [x] Test material counting (e.g., extra queen = +9)
+  - [x] Test starting position evaluates to ~0
+  - [x] Test symmetry: eval(pos) = -eval(flipped_pos)
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Material evaluation works correctly
 
 **Deliverable:** Working evaluation function. Can score positions by material. Ready for minimax.
 
@@ -140,39 +140,39 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 6: Implement Basic Minimax with Alpha-Beta Pruning (Depth 2)
 **Goal:** Create a working minimax engine. Start with shallow depth for quick testing.
 
-- [ ] Create `internal/bot/minimax.go`:
-  - [ ] Define `minimaxEngine` struct (difficulty, maxDepth, timeLimit, evalWeights, closed)
-  - [ ] Define `evalWeights` struct (material, pieceSquare, mobility, kingSafety)
-  - [ ] Implement `getDefaultWeights(difficulty)` function
-  - [ ] Implement `Name()` - returns "Medium Bot" or "Hard Bot"
-  - [ ] Implement `Close()` - sets closed flag
-  - [ ] Implement `SelectMove()` - basic version:
-    - [ ] Check if closed
-    - [ ] Create timeout context
-    - [ ] Handle forced moves (only 1 legal move)
-    - [ ] Call `searchDepth()` at depth 2 (hardcoded for now)
-  - [ ] Implement `searchDepth()`:
-    - [ ] Get legal moves
-    - [ ] Basic move ordering (captures first)
-    - [ ] Alpha-beta search on each move
-    - [ ] Return best move and score
-  - [ ] Implement `alphaBeta()` recursive function:
-    - [ ] Base case: depth 0 or game over → evaluate
-    - [ ] Get legal moves
-    - [ ] Order moves (captures first)
-    - [ ] Negamax with alpha-beta cutoffs
-    - [ ] Return best score
-  - [ ] Implement `orderMoves()` helper (simple MVV-LVA)
-- [ ] Update `NewMinimaxEngine()` in `factory.go`:
-  - [ ] Set defaults based on difficulty (Medium: depth 4, Hard: depth 6)
-  - [ ] Parse options
-  - [ ] Create and return `minimaxEngine` instance
-- [ ] Create `internal/bot/minimax_test.go`:
-  - [ ] Test forced move returns immediately
-  - [ ] Test finds mate-in-1 (use simple FEN position)
-  - [ ] Test doesn't make obvious blunder (hanging queen)
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Basic minimax works at depth 2
+- [x] Create `internal/bot/minimax.go`:
+  - [x] Define `minimaxEngine` struct (difficulty, maxDepth, timeLimit, evalWeights, closed)
+  - [x] Define `evalWeights` struct (material, pieceSquare, mobility, kingSafety)
+  - [x] Implement `getDefaultWeights(difficulty)` function
+  - [x] Implement `Name()` - returns "Medium Bot" or "Hard Bot"
+  - [x] Implement `Close()` - sets closed flag
+  - [x] Implement `SelectMove()` - basic version:
+    - [x] Check if closed
+    - [x] Create timeout context
+    - [x] Handle forced moves (only 1 legal move)
+    - [x] Call `searchDepth()` at depth 2 (hardcoded for now)
+  - [x] Implement `searchDepth()`:
+    - [x] Get legal moves
+    - [x] Basic move ordering (captures first)
+    - [x] Alpha-beta search on each move
+    - [x] Return best move and score
+  - [x] Implement `alphaBeta()` recursive function:
+    - [x] Base case: depth 0 or game over → evaluate
+    - [x] Get legal moves
+    - [x] Order moves (captures first)
+    - [x] Negamax with alpha-beta cutoffs
+    - [x] Return best score
+  - [x] Implement `orderMoves()` helper (simple MVV-LVA)
+- [x] Update `NewMinimaxEngine()` in `factory.go`:
+  - [x] Set defaults based on difficulty (Medium: depth 4, Hard: depth 6)
+  - [x] Parse options
+  - [x] Create and return `minimaxEngine` instance
+- [x] Create `internal/bot/minimax_test.go`:
+  - [x] Test forced move returns immediately
+  - [x] Test finds mate-in-1 (use simple FEN position)
+  - [x] Test doesn't make obvious blunder (hanging queen)
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Basic minimax works at depth 2
 
 **Deliverable:** Working minimax bot (shallow depth). Can find simple tactics.
 

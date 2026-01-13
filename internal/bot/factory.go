@@ -67,7 +67,6 @@ func NewRandomEngine(opts ...EngineOption) (Engine, error) {
 }
 
 // NewMinimaxEngine creates a Medium or Hard bot using minimax with alpha-beta pruning.
-// This is a PLACEHOLDER that returns nil until Task 6 implements the actual bot.
 func NewMinimaxEngine(difficulty Difficulty, opts ...EngineOption) (Engine, error) {
 	cfg := &engineConfig{difficulty: difficulty}
 
@@ -90,6 +89,15 @@ func NewMinimaxEngine(difficulty Difficulty, opts ...EngineOption) (Engine, erro
 		}
 	}
 
-	// TODO: Task 6 will implement the actual minimaxEngine
-	return nil, fmt.Errorf("not implemented: minimax engine will be created in Task 6")
+	// Create the minimax engine
+	name := fmt.Sprintf("%s Bot", difficulty.String())
+
+	return &minimaxEngine{
+		name:        name,
+		difficulty:  cfg.difficulty,
+		maxDepth:    cfg.searchDepth,
+		timeLimit:   cfg.timeLimit,
+		evalWeights: getDefaultWeights(cfg.difficulty),
+		closed:      false,
+	}, nil
 }

@@ -277,35 +277,73 @@ func TestNewMinimaxEngine(t *testing.T) {
 	t.Run("MediumDifficulty", func(t *testing.T) {
 		engine, err := NewMinimaxEngine(Medium)
 
-		// Verify returns "not implemented" error (placeholder)
-		if err == nil {
-			t.Error("NewMinimaxEngine(Medium) error = nil, want 'not implemented' error")
+		// Verify engine is created successfully
+		if err != nil {
+			t.Errorf("NewMinimaxEngine(Medium) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewMinimaxEngine(Medium) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewMinimaxEngine(Medium) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewMinimaxEngine(Medium) engine = %v, want nil (placeholder)", engine)
+		// Verify engine name
+		if engine.Name() != "Medium Bot" {
+			t.Errorf("engine.Name() = %q, want 'Medium Bot'", engine.Name())
 		}
+
+		// Verify it's a minimax engine with correct settings
+		minimaxEng, ok := engine.(*minimaxEngine)
+		if !ok {
+			t.Fatal("Expected engine to be *minimaxEngine")
+		}
+		if minimaxEng.difficulty != Medium {
+			t.Errorf("difficulty = %v, want Medium", minimaxEng.difficulty)
+		}
+		if minimaxEng.maxDepth != 4 {
+			t.Errorf("maxDepth = %d, want 4", minimaxEng.maxDepth)
+		}
+		if minimaxEng.timeLimit != 4*time.Second {
+			t.Errorf("timeLimit = %v, want 4s", minimaxEng.timeLimit)
+		}
+
+		// Clean up
+		engine.Close()
 	})
 
 	t.Run("HardDifficulty", func(t *testing.T) {
 		engine, err := NewMinimaxEngine(Hard)
 
-		// Verify returns "not implemented" error (placeholder)
-		if err == nil {
-			t.Error("NewMinimaxEngine(Hard) error = nil, want 'not implemented' error")
+		// Verify engine is created successfully
+		if err != nil {
+			t.Errorf("NewMinimaxEngine(Hard) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewMinimaxEngine(Hard) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewMinimaxEngine(Hard) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewMinimaxEngine(Hard) engine = %v, want nil (placeholder)", engine)
+		// Verify engine name
+		if engine.Name() != "Hard Bot" {
+			t.Errorf("engine.Name() = %q, want 'Hard Bot'", engine.Name())
 		}
+
+		// Verify it's a minimax engine with correct settings
+		minimaxEng, ok := engine.(*minimaxEngine)
+		if !ok {
+			t.Fatal("Expected engine to be *minimaxEngine")
+		}
+		if minimaxEng.difficulty != Hard {
+			t.Errorf("difficulty = %v, want Hard", minimaxEng.difficulty)
+		}
+		if minimaxEng.maxDepth != 6 {
+			t.Errorf("maxDepth = %d, want 6", minimaxEng.maxDepth)
+		}
+		if minimaxEng.timeLimit != 8*time.Second {
+			t.Errorf("timeLimit = %v, want 8s", minimaxEng.timeLimit)
+		}
+
+		// Clean up
+		engine.Close()
 	})
 
 	t.Run("EasyDifficultyInvalid", func(t *testing.T) {
@@ -328,35 +366,51 @@ func TestNewMinimaxEngine(t *testing.T) {
 	t.Run("CustomSearchDepth", func(t *testing.T) {
 		engine, err := NewMinimaxEngine(Medium, WithSearchDepth(8))
 
-		// Should still return "not implemented" but accept the option
-		if err == nil {
-			t.Error("NewMinimaxEngine(Medium, depth) error = nil, want 'not implemented' error")
+		// Should create engine successfully with custom search depth
+		if err != nil {
+			t.Errorf("NewMinimaxEngine(Medium, depth) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewMinimaxEngine(Medium, depth) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewMinimaxEngine(Medium, depth) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewMinimaxEngine(Medium, depth) engine = %v, want nil (placeholder)", engine)
+		// Verify custom search depth
+		minimaxEng, ok := engine.(*minimaxEngine)
+		if !ok {
+			t.Fatal("Expected engine to be *minimaxEngine")
 		}
+		if minimaxEng.maxDepth != 8 {
+			t.Errorf("maxDepth = %d, want 8", minimaxEng.maxDepth)
+		}
+
+		// Clean up
+		engine.Close()
 	})
 
 	t.Run("CustomTimeLimit", func(t *testing.T) {
 		engine, err := NewMinimaxEngine(Hard, WithTimeLimit(10*time.Second))
 
-		// Should still return "not implemented" but accept the option
-		if err == nil {
-			t.Error("NewMinimaxEngine(Hard, time) error = nil, want 'not implemented' error")
+		// Should create engine successfully with custom time limit
+		if err != nil {
+			t.Errorf("NewMinimaxEngine(Hard, time) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewMinimaxEngine(Hard, time) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewMinimaxEngine(Hard, time) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewMinimaxEngine(Hard, time) engine = %v, want nil (placeholder)", engine)
+		// Verify custom time limit
+		minimaxEng, ok := engine.(*minimaxEngine)
+		if !ok {
+			t.Fatal("Expected engine to be *minimaxEngine")
 		}
+		if minimaxEng.timeLimit != 10*time.Second {
+			t.Errorf("timeLimit = %v, want 10s", minimaxEng.timeLimit)
+		}
+
+		// Clean up
+		engine.Close()
 	})
 
 	t.Run("InvalidSearchDepth", func(t *testing.T) {
@@ -401,18 +455,29 @@ func TestNewMinimaxEngine(t *testing.T) {
 			WithOptions(map[string]any{"transposition_table": true}),
 		)
 
-		// Should still return "not implemented"
-		if err == nil {
-			t.Error("NewMinimaxEngine(multiple opts) error = nil, want 'not implemented' error")
+		// Should create engine successfully with multiple options
+		if err != nil {
+			t.Errorf("NewMinimaxEngine(multiple opts) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewMinimaxEngine(multiple opts) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewMinimaxEngine(multiple opts) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewMinimaxEngine(multiple opts) engine = %v, want nil (placeholder)", engine)
+		// Verify all custom settings were applied
+		minimaxEng, ok := engine.(*minimaxEngine)
+		if !ok {
+			t.Fatal("Expected engine to be *minimaxEngine")
 		}
+		if minimaxEng.timeLimit != 5*time.Second {
+			t.Errorf("timeLimit = %v, want 5s", minimaxEng.timeLimit)
+		}
+		if minimaxEng.maxDepth != 10 {
+			t.Errorf("maxDepth = %d, want 10", minimaxEng.maxDepth)
+		}
+
+		// Clean up
+		engine.Close()
 	})
 }
 
