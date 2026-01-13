@@ -65,22 +65,22 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 3: Implement Easy Bot with Legal Move Selection
 **Goal:** Create a working Easy bot that makes random legal moves. First playable bot!
 
-- [ ] Create `internal/bot/random.go`:
-  - [ ] Define `randomEngine` struct with fields (name, timeLimit, closed)
-  - [ ] Implement `SelectMove()` - returns random legal move
-  - [ ] Implement `Name()` - returns "Easy Bot"
-  - [ ] Implement `Close()` - sets closed flag
-  - [ ] Implement `Info()` - returns metadata
-- [ ] Update `NewRandomEngine()` in `factory.go`:
-  - [ ] Parse options (timeLimit)
-  - [ ] Create and return `randomEngine` instance
-- [ ] Create `internal/bot/random_test.go`:
-  - [ ] Test SelectMove returns legal moves (100 iterations)
-  - [ ] Test SelectMove returns error when no legal moves
-  - [ ] Test Close prevents further use
-  - [ ] Test single forced move returned immediately
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Easy bot makes valid random moves
+- [x] Create `internal/bot/random.go`:
+  - [x] Define `randomEngine` struct with fields (name, timeLimit, closed)
+  - [x] Implement `SelectMove()` - returns random legal move
+  - [x] Implement `Name()` - returns "Easy Bot"
+  - [x] Implement `Close()` - sets closed flag
+  - [x] Implement `Info()` - returns metadata
+- [x] Update `NewRandomEngine()` in `factory.go`:
+  - [x] Parse options (timeLimit)
+  - [x] Create and return `randomEngine` instance
+- [x] Create `internal/bot/random_test.go`:
+  - [x] Test SelectMove returns legal moves (100 iterations)
+  - [x] Test SelectMove returns error when no legal moves
+  - [x] Test Close prevents further use
+  - [x] Test single forced move returned immediately
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Easy bot makes valid random moves
 
 **Deliverable:** Easy bot functional. Can select random legal moves. Not yet integrated with UI.
 

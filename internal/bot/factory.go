@@ -46,8 +46,7 @@ func WithOptions(opts map[string]any) EngineOption {
 	}
 }
 
-// NewRandomEngine creates an Easy bot with weighted random selection.
-// This is a PLACEHOLDER that returns nil until Task 3 implements the actual bot.
+// NewRandomEngine creates an Easy bot with random move selection.
 func NewRandomEngine(opts ...EngineOption) (Engine, error) {
 	cfg := &engineConfig{
 		difficulty: Easy,
@@ -60,8 +59,11 @@ func NewRandomEngine(opts ...EngineOption) (Engine, error) {
 		}
 	}
 
-	// TODO: Task 3 will implement the actual randomEngine
-	return nil, fmt.Errorf("not implemented: random engine will be created in Task 3")
+	return &randomEngine{
+		name:      "Easy Bot",
+		timeLimit: cfg.timeLimit,
+		closed:    false,
+	}, nil
 }
 
 // NewMinimaxEngine creates a Medium or Hard bot using minimax with alpha-beta pruning.

@@ -175,41 +175,53 @@ func TestNewRandomEngine(t *testing.T) {
 	t.Run("DefaultConfig", func(t *testing.T) {
 		engine, err := NewRandomEngine()
 
-		// Verify returns "not implemented" error (placeholder)
-		if err == nil {
-			t.Error("NewRandomEngine() error = nil, want 'not implemented' error")
+		// Verify engine is created successfully
+		if err != nil {
+			t.Errorf("NewRandomEngine() error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewRandomEngine() error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewRandomEngine() engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewRandomEngine() engine = %v, want nil (placeholder)", engine)
+		// Verify engine name
+		if engine.Name() != "Easy Bot" {
+			t.Errorf("engine.Name() = %q, want 'Easy Bot'", engine.Name())
 		}
+
+		// Clean up
+		engine.Close()
 	})
 
 	t.Run("CustomTimeLimit", func(t *testing.T) {
 		engine, err := NewRandomEngine(WithTimeLimit(3 * time.Second))
 
-		// Should still return "not implemented" but accept the option
-		if err == nil {
-			t.Error("NewRandomEngine(WithTimeLimit) error = nil, want 'not implemented' error")
+		// Should create engine successfully with custom time limit
+		if err != nil {
+			t.Errorf("NewRandomEngine(WithTimeLimit) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewRandomEngine(WithTimeLimit) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewRandomEngine(WithTimeLimit) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewRandomEngine(WithTimeLimit) engine = %v, want nil (placeholder)", engine)
+		// Verify custom time limit
+		randomEng, ok := engine.(*randomEngine)
+		if !ok {
+			t.Fatal("Expected engine to be *randomEngine")
 		}
+		if randomEng.timeLimit != 3*time.Second {
+			t.Errorf("timeLimit = %v, want 3s", randomEng.timeLimit)
+		}
+
+		// Clean up
+		engine.Close()
 	})
 
 	t.Run("InvalidTimeLimit", func(t *testing.T) {
 		engine, err := NewRandomEngine(WithTimeLimit(0))
 
-		// Should return validation error, not "not implemented"
+		// Should return validation error
 		if err == nil {
 			t.Error("NewRandomEngine(invalid time) error = nil, want validation error")
 		}
@@ -227,18 +239,17 @@ func TestNewRandomEngine(t *testing.T) {
 		// Random engine doesn't use search depth, but should accept it
 		engine, err := NewRandomEngine(WithSearchDepth(5))
 
-		// Should still return "not implemented"
-		if err == nil {
-			t.Error("NewRandomEngine(WithSearchDepth) error = nil, want 'not implemented' error")
+		// Should create engine successfully (search depth ignored)
+		if err != nil {
+			t.Errorf("NewRandomEngine(WithSearchDepth) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewRandomEngine(WithSearchDepth) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewRandomEngine(WithSearchDepth) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewRandomEngine(WithSearchDepth) engine = %v, want nil (placeholder)", engine)
-		}
+		// Clean up
+		engine.Close()
 	})
 
 	t.Run("MultipleOptions", func(t *testing.T) {
@@ -247,18 +258,17 @@ func TestNewRandomEngine(t *testing.T) {
 			WithOptions(map[string]any{"seed": 42}),
 		)
 
-		// Should still return "not implemented"
-		if err == nil {
-			t.Error("NewRandomEngine(multiple opts) error = nil, want 'not implemented' error")
+		// Should create engine successfully
+		if err != nil {
+			t.Errorf("NewRandomEngine(multiple opts) error = %v, want nil", err)
 		}
 
-		if !strings.Contains(err.Error(), "not implemented") {
-			t.Errorf("NewRandomEngine(multiple opts) error = %q, want error containing 'not implemented'", err.Error())
+		if engine == nil {
+			t.Fatal("NewRandomEngine(multiple opts) engine = nil, want non-nil engine")
 		}
 
-		if engine != nil {
-			t.Errorf("NewRandomEngine(multiple opts) engine = %v, want nil (placeholder)", engine)
-		}
+		// Clean up
+		engine.Close()
 	})
 }
 
