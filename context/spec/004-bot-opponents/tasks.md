@@ -206,30 +206,30 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 8: Add Piece-Square Tables and Mobility Evaluation
 **Goal:** Improve bot strength with positional evaluation (Medium/Hard bots).
 
-- [ ] Update `internal/bot/eval.go`:
-  - [ ] Define piece-square tables for each piece type:
-    - [ ] Pawn table (advancement bonus)
-    - [ ] Knight table (center control bonus)
-    - [ ] Bishop table (long diagonal bonus)
-    - [ ] Rook table (open file bonus)
-    - [ ] King table (safety in opening, activity in endgame)
-  - [ ] Implement `evaluatePiecePositions(board) float64`:
-    - [ ] Iterate all pieces
-    - [ ] Look up piece-square table bonus
-    - [ ] Sum positional bonuses
-  - [ ] Implement `evaluateMobility(board) float64`:
-    - [ ] Count legal moves for active player
-    - [ ] Return count as float
-  - [ ] Update `evaluate()` to use difficulty-based evaluation:
-    - [ ] Material (all difficulties)
-    - [ ] Piece-square tables (Medium+)
-    - [ ] Mobility (Medium+)
-- [ ] Update `internal/bot/eval_test.go`:
-  - [ ] Test piece-square tables give correct bonuses
-  - [ ] Test mobility evaluation counts moves correctly
-  - [ ] Test difficulty-based evaluation (Easy vs Medium vs Hard)
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Medium/Hard bots have positional awareness
+- [x] Update `internal/bot/eval.go`:
+  - [x] Define piece-square tables for each piece type:
+    - [x] Pawn table (advancement bonus)
+    - [x] Knight table (center control bonus)
+    - [x] Bishop table (long diagonal bonus)
+    - [x] Rook table (open file bonus)
+    - [x] King table (safety in opening, activity in endgame)
+  - [x] Implement `evaluatePiecePositions(board) float64`:
+    - [x] Iterate all pieces
+    - [x] Look up piece-square table bonus
+    - [x] Sum positional bonuses
+  - [x] Implement `evaluateMobility(board) float64`:
+    - [x] Count legal moves for active player
+    - [x] Return count as float
+  - [x] Update `evaluate()` to use difficulty-based evaluation:
+    - [x] Material (all difficulties)
+    - [x] Piece-square tables (Medium+)
+    - [x] Mobility (Medium+)
+- [x] Update `internal/bot/eval_test.go`:
+  - [x] Test piece-square tables give correct bonuses
+  - [x] Test mobility evaluation counts moves correctly
+  - [x] Test difficulty-based evaluation (Easy vs Medium vs Hard)
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Medium/Hard bots have positional awareness
 
 **Deliverable:** Bots understand piece positioning and mobility. Medium/Hard bots stronger.
 

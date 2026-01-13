@@ -347,21 +347,252 @@ func TestEvaluate_ComplexPositions(t *testing.T) {
 
 func TestEvaluate_DifficultyParameter(t *testing.T) {
 	// Test that evaluate() accepts all difficulty levels
-	// (Currently difficulty doesn't affect material evaluation,
-	// but this test ensures the function signature works correctly)
 	board := engine.NewBoard()
 
 	scoreEasy := evaluate(board, Easy)
 	scoreMedium := evaluate(board, Medium)
 	scoreHard := evaluate(board, Hard)
 
-	// For material-only evaluation, all difficulties should give same result
-	if scoreEasy != scoreMedium || scoreMedium != scoreHard {
-		t.Errorf("Material evaluation should be same for all difficulties: Easy=%v, Medium=%v, Hard=%v",
-			scoreEasy, scoreMedium, scoreHard)
+	// Easy should use only material evaluation
+	if math.Abs(scoreEasy) > 0.01 {
+		t.Errorf("Starting position Easy evaluation should be ~0, got %v", scoreEasy)
 	}
 
-	if math.Abs(scoreEasy) > 0.01 {
-		t.Errorf("Starting position should evaluate to ~0, got %v", scoreEasy)
+	// Medium and Hard use additional evaluation components
+	// They should be equal to each other (same components, different search depth in minimax)
+	if scoreMedium != scoreHard {
+		t.Errorf("Medium and Hard should evaluate the same: Medium=%v, Hard=%v",
+			scoreMedium, scoreHard)
+	}
+
+	// Starting position should still be close to 0 for all difficulties (symmetric position)
+	if math.Abs(scoreMedium) > 3.0 {
+		t.Errorf("Starting position Medium/Hard evaluation too far from 0: %v", scoreMedium)
+	}
+}
+
+func TestEvaluatePiecePositions(t *testing.T) {
+	// Test that piece-square tables give reasonable bonuses
+
+	// Test 1: Knight on e4 (central square) should score higher than knight on a1 (corner)
+	fenCentralKnight := "8/8/8/8/4N3/8/8/8 w - - 0 1"
+	boardCentral, err := engine.FromFEN(fenCentralKnight)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	fenCornerKnight := "N7/8/8/8/8/8/8/8 w - - 0 1"
+	boardCorner, err := engine.FromFEN(fenCornerKnight)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreCentral := evaluatePiecePositions(boardCentral)
+	scoreCorner := evaluatePiecePositions(boardCorner)
+
+	if scoreCentral <= scoreCorner {
+		t.Errorf("Central knight should score higher than corner knight: central=%v, corner=%v",
+			scoreCentral, scoreCorner)
+	}
+
+	// Test 2: Advanced pawn (rank 7) should score higher than starting pawn (rank 2)
+	fenAdvancedPawn := "8/4P3/8/8/8/8/8/8 w - - 0 1"
+	boardAdvanced, err := engine.FromFEN(fenAdvancedPawn)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	fenStartingPawn := "8/8/8/8/8/8/4P3/8 w - - 0 1"
+	boardStarting, err := engine.FromFEN(fenStartingPawn)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreAdvanced := evaluatePiecePositions(boardAdvanced)
+	scoreStarting := evaluatePiecePositions(boardStarting)
+
+	if scoreAdvanced <= scoreStarting {
+		t.Errorf("Advanced pawn (rank 7) should score higher than starting pawn (rank 2): advanced=%v, starting=%v",
+			scoreAdvanced, scoreStarting)
+	}
+
+	// Test 3: Symmetric position for Black
+	// Black knight on e5 (central) should have same magnitude as White knight on e4
+	fenWhiteKnight := "8/8/8/8/4N3/8/8/8 w - - 0 1"
+	boardWhite, err := engine.FromFEN(fenWhiteKnight)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	fenBlackKnight := "8/8/8/4n3/8/8/8/8 w - - 0 1"
+	boardBlack, err := engine.FromFEN(fenBlackKnight)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreWhiteKnight := evaluatePiecePositions(boardWhite)
+	scoreBlackKnight := evaluatePiecePositions(boardBlack)
+
+	// Scores should be opposite (White positive, Black negative)
+	if math.Abs(scoreWhiteKnight+scoreBlackKnight) > 0.01 {
+		t.Errorf("Symmetric knight positions should have opposite scores: white=%v, black=%v",
+			scoreWhiteKnight, scoreBlackKnight)
+	}
+}
+
+func TestEvaluateMobility(t *testing.T) {
+	// Test mobility scoring
+
+	// Test 1: Open position should have more mobility than cramped position
+	fenOpen := "8/8/8/8/8/8/8/R3K3 w - - 0 1" // Rook and King, rook has many moves
+	boardOpen, err := engine.FromFEN(fenOpen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	fenCramped := "8/8/8/8/8/8/PPP5/RK6 w - - 0 1" // Rook and King blocked by pawns
+	boardCramped, err := engine.FromFEN(fenCramped)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	mobilityOpen := evaluateMobility(boardOpen)
+	mobilityCramped := evaluateMobility(boardCramped)
+
+	if mobilityOpen <= mobilityCramped {
+		t.Errorf("Open position should have higher mobility: open=%v, cramped=%v",
+			mobilityOpen, mobilityCramped)
+	}
+
+	// Test 2: Mobility should be positive for White to move
+	if mobilityOpen <= 0 {
+		t.Errorf("White to move should have positive mobility, got %v", mobilityOpen)
+	}
+
+	// Test 3: Mobility should be negative for Black to move
+	fenBlackToMove := "8/8/8/8/8/8/8/r3k3 b - - 0 1"
+	boardBlackToMove, err := engine.FromFEN(fenBlackToMove)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	mobilityBlack := evaluateMobility(boardBlackToMove)
+	if mobilityBlack >= 0 {
+		t.Errorf("Black to move should have negative mobility (from White's perspective), got %v", mobilityBlack)
+	}
+
+	// Test 4: Starting position mobility check
+	board := engine.NewBoard()
+	mobilityStart := evaluateMobility(board)
+
+	// White has 20 legal moves in starting position
+	if mobilityStart != 20.0 {
+		t.Errorf("Starting position should have 20 legal moves for White, got %v", mobilityStart)
+	}
+}
+
+func TestEvaluate_DifficultyLevels(t *testing.T) {
+	// Verify Easy bot doesn't use piece-square tables or mobility
+	// Verify Medium bot uses piece-square tables and mobility
+
+	// Position with good piece placement (knight on e4, advanced pawn)
+	// Need to include kings for legal position
+	fen := "4k3/8/8/8/3NP3/8/8/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreEasy := evaluate(board, Easy)
+	scoreMedium := evaluate(board, Medium)
+	scoreHard := evaluate(board, Hard)
+
+	// Easy should only count material (N=3, P=1) = 4.0
+	expectedEasy := 4.0
+	if math.Abs(scoreEasy-expectedEasy) > 0.01 {
+		t.Errorf("Easy difficulty should only use material: got %v, want ~%v", scoreEasy, expectedEasy)
+	}
+
+	// Medium and Hard should give higher scores due to positional bonuses
+	// (knight on e4 gets +0.2, pawn on e4 gets +0.35, plus mobility bonus)
+	if scoreMedium <= scoreEasy {
+		t.Errorf("Medium should score higher than Easy due to positional bonuses: Medium=%v, Easy=%v",
+			scoreMedium, scoreEasy)
+	}
+
+	// Medium and Hard should be equal (both use same evaluation components)
+	if scoreMedium != scoreHard {
+		t.Errorf("Medium and Hard should evaluate the same: Medium=%v, Hard=%v",
+			scoreMedium, scoreHard)
+	}
+
+	// Test with starting position - should be close to balanced for all
+	boardStart := engine.NewBoard()
+	easyStart := evaluate(boardStart, Easy)
+	mediumStart := evaluate(boardStart, Medium)
+	hardStart := evaluate(boardStart, Hard)
+
+	if math.Abs(easyStart) > 0.01 {
+		t.Errorf("Easy: Starting position should be ~0, got %v", easyStart)
+	}
+
+	// Medium/Hard might not be exactly 0 due to mobility (White moves first)
+	if math.Abs(mediumStart) > 3.0 {
+		t.Errorf("Medium: Starting position should be close to 0, got %v", mediumStart)
+	}
+
+	if math.Abs(hardStart) > 3.0 {
+		t.Errorf("Hard: Starting position should be close to 0, got %v", hardStart)
+	}
+}
+
+func TestEvaluatePiecePositions_AllPieces(t *testing.T) {
+	// Test that all piece types get evaluated correctly
+
+	tests := []struct {
+		name     string
+		fen      string
+		minScore float64
+		maxScore float64
+	}{
+		{
+			name:     "WhitePawnRank7",
+			fen:      "8/4P3/8/8/8/8/8/8 w - - 0 1",
+			minScore: 0.6, // Should get a good bonus near promotion (rank 7)
+			maxScore: 0.8,
+		},
+		{
+			name:     "BlackPawnRank2",
+			fen:      "8/8/8/8/8/8/4p3/8 w - - 0 1",
+			minScore: -0.8, // Black pawn near promotion (negative, flipped to rank 7)
+			maxScore: -0.6,
+		},
+		{
+			name:     "WhiteRookRank7",
+			fen:      "8/4R3/8/8/8/8/8/8 w - - 0 1",
+			minScore: 0.2, // 7th rank bonus
+			maxScore: 0.3,
+		},
+		{
+			name:     "WhiteBishopCenter",
+			fen:      "8/8/8/3B4/8/8/8/8 w - - 0 1",
+			minScore: 0.05,
+			maxScore: 0.15,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			board, err := engine.FromFEN(tt.fen)
+			if err != nil {
+				t.Fatalf("Failed to parse FEN: %v", err)
+			}
+
+			score := evaluatePiecePositions(board)
+			if score < tt.minScore || score > tt.maxScore {
+				t.Errorf("%s: evaluatePiecePositions() = %v, want between %v and %v",
+					tt.name, score, tt.minScore, tt.maxScore)
+			}
+		})
 	}
 }
