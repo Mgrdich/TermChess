@@ -174,7 +174,8 @@ func (e *minimaxEngine) searchDepth(ctx context.Context, board *engine.Board, de
 		}
 
 		// Search with negamax (negate the score since we switched sides)
-		score := -e.alphaBeta(ctx, boardCopy, depth-1, -beta, -alpha)
+		// Pass ply=1 since we're one move from the root
+		score := -e.alphaBeta(ctx, boardCopy, depth-1, -beta, -alpha, 1)
 
 		// Update best move
 		if score > bestScore {
@@ -198,7 +199,8 @@ func (e *minimaxEngine) searchDepth(ctx context.Context, board *engine.Board, de
 
 // alphaBeta performs recursive negamax search with alpha-beta pruning.
 // Returns the score from the perspective of the side to move.
-func (e *minimaxEngine) alphaBeta(ctx context.Context, board *engine.Board, depth int, alpha, beta float64) float64 {
+// ply is the distance from the root (0 at root, increments with each recursive call).
+func (e *minimaxEngine) alphaBeta(ctx context.Context, board *engine.Board, depth int, alpha, beta float64, ply int) float64 {
 	// Check for timeout at the start of each node
 	select {
 	case <-ctx.Done():
@@ -213,6 +215,16 @@ func (e *minimaxEngine) alphaBeta(ctx context.Context, board *engine.Board, dept
 		// Evaluate from White's perspective, then adjust for current player
 		whiteScore := evaluate(board, e.difficulty)
 
+		// Adjust mate scores to prefer faster mates
+		// Mate in 1 ply scores higher than mate in 3 ply
+		if whiteScore >= 9999.0 {
+			// White wins - prefer faster mate
+			whiteScore = whiteScore - float64(ply)
+		} else if whiteScore <= -9999.0 {
+			// Black wins - prefer faster mate (more negative = worse for us)
+			whiteScore = whiteScore + float64(ply)
+		}
+
 		// Negamax: flip score if Black is to move
 		if board.ActiveColor == engine.Black {
 			return -whiteScore
@@ -226,6 +238,14 @@ func (e *minimaxEngine) alphaBeta(ctx context.Context, board *engine.Board, dept
 		// No legal moves means checkmate or stalemate
 		// evaluate() already handles this, so just evaluate
 		whiteScore := evaluate(board, e.difficulty)
+
+		// Adjust mate scores to prefer faster mates
+		if whiteScore >= 9999.0 {
+			whiteScore = whiteScore - float64(ply)
+		} else if whiteScore <= -9999.0 {
+			whiteScore = whiteScore + float64(ply)
+		}
+
 		if board.ActiveColor == engine.Black {
 			return -whiteScore
 		}
@@ -247,7 +267,7 @@ func (e *minimaxEngine) alphaBeta(ctx context.Context, board *engine.Board, dept
 		}
 
 		// Recursive search with negated alpha-beta bounds
-		score := -e.alphaBeta(ctx, boardCopy, depth-1, -beta, -alpha)
+		score := -e.alphaBeta(ctx, boardCopy, depth-1, -beta, -alpha, ply+1)
 
 		// Update max score
 		if score > maxScore {
