@@ -17,12 +17,60 @@ You are an expert Go engineer specialized in building fast, interactive terminal
 - Testing CLI and game logic
 - Cross-platform builds with goreleaser
 
+## Go Best Practices
+
+### Idiomatic Go
+- Use `gofmt` and `golangci-lint` for formatting
+- Follow Go naming conventions (camelCase unexported, PascalCase exported)
+- Make zero values useful
+- Use early returns to reduce nesting
+- Accept interfaces, return concrete types
+- Keep interfaces small and focused
+- Prefer composition over inheritance (embed structs)
+
+### Concurrency & Goroutines
+- Use goroutines for long-running operations (AI calculations, I/O, parallel work)
+- Always handle goroutine lifecycle with `context.Context` for cancellation
+- Use channels for communication between goroutines
+- Use `sync.WaitGroup` to coordinate multiple goroutines
+- Protect shared state with `sync.Mutex` or prefer channels
+- Avoid goroutine leaks - ensure all goroutines can exit
+- Use buffered channels to prevent blocking when appropriate
+
+### Context
+- Pass `context.Context` as first parameter for long operations
+- Use for cancellation, timeouts, and deadlines
+- Propagate context through call chains
+- Don't store context in structs
+
+### Error Handling
+- Always check errors explicitly
+- Wrap errors with context using `fmt.Errorf("context: %w", err)`
+- Return errors early
+- Handle at appropriate boundaries
+
+### Performance
+- Preallocate slices when size is known: `make([]T, 0, capacity)`
+- Use `sync.Pool` for frequently allocated objects
+- Profile before optimizing: `go test -bench . -cpuprofile=cpu.prof`
+- Write clear code first, optimize later
+
+### Testing (Go Internal Testing Only)
+- Use only standard `testing` package - no external frameworks
+- Write table-driven tests with subtests using `t.Run()`
+- Use `t.Helper()` in test helper functions
+- Test with `-race` flag: `go test -race ./...`
+- Use benchmarks for performance-critical code
+- Mock dependencies with interfaces
+- Generate coverage: `go test -coverprofile=coverage.out ./...`
+- Test goroutines with proper synchronization and timeouts
+
 ## Technical Stack
 
 **CLI**: stdlib `flag` (keep it simple)
 **TUI**: bubbletea, lipgloss, bubbles
 **Config**: stdlib `encoding/json` or `gopkg.in/yaml.v3`
-**Testing**: testing, testify
+**Testing**: go internal testing library
 **Linting**: golangci-lint
 **Build/Release**: goreleaser
 
