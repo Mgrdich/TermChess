@@ -21,18 +21,18 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 1: Create Bot Engine Interface & Package Structure
 **Goal:** Establish the bot package with core interfaces and types. No actual bot logic yet, just the contract.
 
-- [ ] Create `internal/bot/` package directory
-- [ ] Create `internal/bot/engine.go` with core interfaces:
-  - [ ] Define `Engine` interface (SelectMove, Name, Close)
-  - [ ] Define `Configurable` interface (Configure)
-  - [ ] Define `Stateful` interface (SetPositionHistory)
-  - [ ] Define `Inspectable` interface (Info)
-  - [ ] Define `Info` struct with metadata fields
-  - [ ] Define `EngineType` enum (TypeInternal, TypeUCI, TypeRL)
-  - [ ] Define `Difficulty` enum (Easy, Medium, Hard)
-- [ ] Create `internal/bot/engine_test.go` with interface contract tests
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Tests pass, package compiles
+- [x] Create `internal/bot/` package directory
+- [x] Create `internal/bot/engine.go` with core interfaces:
+  - [x] Define `Engine` interface (SelectMove, Name, Close)
+  - [x] Define `Configurable` interface (Configure)
+  - [x] Define `Stateful` interface (SetPositionHistory)
+  - [x] Define `Inspectable` interface (Info)
+  - [x] Define `Info` struct with metadata fields
+  - [x] Define `EngineType` enum (TypeInternal, TypeUCI, TypeRL)
+  - [x] Define `Difficulty` enum (Easy, Medium, Hard)
+- [x] Create `internal/bot/engine_test.go` with interface contract tests
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Tests pass, package compiles
 
 **Deliverable:** Bot package exists with clear interface contracts. Foundation ready for implementations.
 
