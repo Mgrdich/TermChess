@@ -341,28 +341,28 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 13: Create Tactical Puzzle Test Suite
 **Goal:** Validate bot quality with standard chess puzzles (mate-in-N, tactics).
 
-- [ ] Create `internal/bot/tactics_test.go`:
-  - [ ] Define test helper: `loadFEN(fenString) *engine.Board`
-  - [ ] Test mate-in-1 positions (5 examples):
-    - [ ] Back rank mate
-    - [ ] Queen + Rook mate
-    - [ ] Two rooks mate
-    - [ ] Bishop + Knight mate
-    - [ ] Smothered mate
-  - [ ] Test mate-in-2 positions (3 examples)
-  - [ ] Test tactical patterns:
-    - [ ] Fork detection
-    - [ ] Pin detection
-    - [ ] Skewer detection
-    - [ ] Discovered attack
-  - [ ] Test blunder avoidance:
-    - [ ] Don't hang queen
-    - [ ] Don't hang rook
-    - [ ] Don't allow back rank mate
-  - [ ] Run tests on Medium and Hard bots
-  - [ ] Allow Easy bot to fail these tests (by design)
-- [ ] Run tests: `go test ./internal/bot/ -v`
-- [ ] Verify: Medium/Hard bots find most tactics, Easy bot misses them
+- [x] Create `internal/bot/tactics_test.go`:
+  - [x] Define test helper: `loadFEN(fenString) *engine.Board`
+  - [x] Test mate-in-1 positions (5 examples):
+    - [x] Back rank mate
+    - [x] Queen + Rook mate
+    - [x] Two rooks mate
+    - [x] Bishop + Knight mate
+    - [x] Smothered mate
+  - [x] Test mate-in-2 positions (3 examples)
+  - [x] Test tactical patterns:
+    - [x] Fork detection
+    - [x] Pin detection
+    - [x] Skewer detection
+    - [x] Discovered attack
+  - [x] Test blunder avoidance:
+    - [x] Don't hang queen
+    - [x] Don't hang rook
+    - [x] Don't allow back rank mate
+  - [x] Run tests on Medium and Hard bots
+  - [x] Allow Easy bot to fail these tests (by design)
+- [x] Run tests: `go test ./internal/bot/ -v`
+- [x] Verify: Medium/Hard bots find most tactics, Easy bot misses them
 
 **Deliverable:** Comprehensive tactical test suite. Validates bot playing strength.
 
