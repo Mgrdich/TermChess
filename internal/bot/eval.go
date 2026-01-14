@@ -154,8 +154,10 @@ func evaluate(board *engine.Board, difficulty Difficulty) float64 {
 		score += evaluateMobility(board) * 0.1 // Weight mobility at 10%
 	}
 
-	// Future tasks will add:
 	// 5. King safety (Hard only)
+	if difficulty >= Hard {
+		score += evaluateKingSafety(board)
+	}
 
 	return score
 }
@@ -252,4 +254,170 @@ func evaluateMobility(board *engine.Board) float64 {
 		return -mobilityScore
 	}
 	return mobilityScore
+}
+
+// evaluateKingSafety calculates king safety scores for both kings.
+// Returns score from White's perspective (positive = White's king is safer).
+func evaluateKingSafety(board *engine.Board) float64 {
+	score := 0.0
+
+	// Evaluate White king safety
+	whiteKingSq := findKing(board, engine.White)
+	if whiteKingSq != -1 {
+		whiteKingSafety := evaluateKingSafetyForColor(board, whiteKingSq, engine.White)
+		score += whiteKingSafety
+	}
+
+	// Evaluate Black king safety
+	blackKingSq := findKing(board, engine.Black)
+	if blackKingSq != -1 {
+		blackKingSafety := evaluateKingSafetyForColor(board, blackKingSq, engine.Black)
+		score -= blackKingSafety // Subtract because negative is bad for White
+	}
+
+	return score
+}
+
+// findKing finds and returns the square index of the king for the given color.
+// Returns -1 if the king is not found (should never happen in a legal position).
+func findKing(board *engine.Board, color engine.Color) int {
+	for sq := 0; sq < 64; sq++ {
+		piece := board.PieceAt(engine.Square(sq))
+		if piece.Type() == engine.King && piece.Color() == color {
+			return sq
+		}
+	}
+	return -1
+}
+
+// evaluateKingSafetyForColor evaluates king safety for a specific color.
+// Returns a negative penalty (lower = worse safety).
+func evaluateKingSafetyForColor(board *engine.Board, kingSq int, color engine.Color) float64 {
+	penalty := 0.0
+
+	// 1. Check pawn shield completeness
+	penalty += evaluatePawnShield(board, kingSq, color)
+
+	// 2. Check for open files near king
+	penalty += evaluateOpenFilesNearKing(board, kingSq, color)
+
+	// 3. Count enemy attackers in king zone
+	penalty += evaluateAttackersInKingZone(board, kingSq, color)
+
+	// Return negative penalty (lower score = worse king safety)
+	return -penalty
+}
+
+// evaluatePawnShield checks if the king has a protective pawn shield.
+// Returns a penalty for missing pawns in the shield.
+func evaluatePawnShield(board *engine.Board, kingSq int, color engine.Color) float64 {
+	kingFile := kingSq % 8
+	kingRank := kingSq / 8
+
+	penalty := 0.0
+	pawnCount := 0
+
+	// Check 3 files: king's file, and files ±1
+	for fileOffset := -1; fileOffset <= 1; fileOffset++ {
+		file := kingFile + fileOffset
+		if file < 0 || file >= 8 {
+			continue
+		}
+
+		// Check one rank ahead of king
+		var targetRank int
+		if color == engine.White {
+			targetRank = kingRank + 1
+		} else {
+			targetRank = kingRank - 1
+		}
+
+		if targetRank >= 0 && targetRank < 8 {
+			sq := targetRank*8 + file
+			piece := board.PieceAt(engine.Square(sq))
+			if piece.Type() == engine.Pawn && piece.Color() == color {
+				pawnCount++
+			}
+		}
+	}
+
+	// Penalty for missing pawns in shield
+	// Ideal: 3 pawns in front, acceptable: 2 pawns
+	missingPawns := 3 - pawnCount
+	penalty = float64(missingPawns) * 0.3 // 0.3 penalty per missing pawn
+
+	return penalty
+}
+
+// evaluateOpenFilesNearKing checks for open files near the king.
+// Open files (no pawns) allow enemy rooks/queens to attack.
+// Returns a penalty for each open file near the king.
+func evaluateOpenFilesNearKing(board *engine.Board, kingSq int, color engine.Color) float64 {
+	kingFile := kingSq % 8
+	penalty := 0.0
+
+	// Check files around king (king's file ± 1)
+	for fileOffset := -1; fileOffset <= 1; fileOffset++ {
+		file := kingFile + fileOffset
+		if file < 0 || file >= 8 {
+			continue
+		}
+
+		// Check if this file has any pawns
+		hasPawn := false
+		for rank := 0; rank < 8; rank++ {
+			sq := rank*8 + file
+			piece := board.PieceAt(engine.Square(sq))
+			if piece.Type() == engine.Pawn {
+				hasPawn = true
+				break
+			}
+		}
+
+		// If no pawns on this file, it's open → penalty
+		if !hasPawn {
+			penalty += 0.25 // 0.25 penalty per open file near king
+		}
+	}
+
+	return penalty
+}
+
+// evaluateAttackersInKingZone counts enemy pieces attacking the king zone.
+// King zone is a 3x3 area around the king.
+// Returns a penalty based on the number of attacked squares.
+func evaluateAttackersInKingZone(board *engine.Board, kingSq int, color engine.Color) float64 {
+	kingFile := kingSq % 8
+	kingRank := kingSq / 8
+
+	opponentColor := engine.Black
+	if color == engine.Black {
+		opponentColor = engine.White
+	}
+
+	attackerCount := 0
+
+	// Check 3x3 area around king
+	for rankOffset := -1; rankOffset <= 1; rankOffset++ {
+		for fileOffset := -1; fileOffset <= 1; fileOffset++ {
+			targetRank := kingRank + rankOffset
+			targetFile := kingFile + fileOffset
+
+			if targetRank < 0 || targetRank >= 8 || targetFile < 0 || targetFile >= 8 {
+				continue
+			}
+
+			targetSq := engine.Square(targetRank*8 + targetFile)
+
+			// Check if this square is attacked by opponent
+			if board.IsSquareAttacked(targetSq, opponentColor) {
+				attackerCount++
+			}
+		}
+	}
+
+	// Penalty based on number of attacked squares in king zone
+	penalty := float64(attackerCount) * 0.1 // 0.1 penalty per attacked square
+
+	return penalty
 }

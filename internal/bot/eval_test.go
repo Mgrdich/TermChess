@@ -596,3 +596,296 @@ func TestEvaluatePiecePositions_AllPieces(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluateKingSafety(t *testing.T) {
+	// Test king safety evaluation
+
+	// Test 1: King with complete pawn shield should be safer
+	fenGoodShield := "4k3/ppp5/8/8/8/8/PPP5/4K3 w - - 0 1"
+	boardGood, err := engine.FromFEN(fenGoodShield)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	fenNoShield := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	boardBad, err := engine.FromFEN(fenNoShield)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	safetyGood := evaluateKingSafety(boardGood)
+	safetyBad := evaluateKingSafety(boardBad)
+
+	// King with pawn shield should have better (less negative) score
+	if safetyGood < safetyBad {
+		t.Errorf("King with pawn shield should be safer: good=%v, bad=%v",
+			safetyGood, safetyBad)
+	}
+}
+
+func TestFindKing(t *testing.T) {
+	// Test finding kings on the board
+
+	// Test 1: Standard position with both kings
+	board := engine.NewBoard()
+
+	whiteKingSq := findKing(board, engine.White)
+	if whiteKingSq != 4 { // e1 = 4
+		t.Errorf("White king should be at square 4 (e1), got %v", whiteKingSq)
+	}
+
+	blackKingSq := findKing(board, engine.Black)
+	if blackKingSq != 60 { // e8 = 60
+		t.Errorf("Black king should be at square 60 (e8), got %v", blackKingSq)
+	}
+
+	// Test 2: Custom position
+	fen := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	board2, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq2 := findKing(board2, engine.White)
+	if whiteKingSq2 != 4 { // e1 = 4
+		t.Errorf("White king should be at square 4 (e1), got %v", whiteKingSq2)
+	}
+
+	blackKingSq2 := findKing(board2, engine.Black)
+	if blackKingSq2 != 60 { // e8 = 60
+		t.Errorf("Black king should be at square 60 (e8), got %v", blackKingSq2)
+	}
+}
+
+func TestEvaluatePawnShield(t *testing.T) {
+	// Test pawn shield detection specifically
+
+	// Test 1: Complete pawn shield (3 pawns)
+	fenComplete := "8/8/8/8/8/8/PPP5/1K6 w - - 0 1"
+	boardComplete, err := engine.FromFEN(fenComplete)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq := findKing(boardComplete, engine.White)
+	penaltyComplete := evaluatePawnShield(boardComplete, whiteKingSq, engine.White)
+
+	// Should have 0 penalty (all 3 pawns present)
+	if math.Abs(penaltyComplete) > 0.01 {
+		t.Errorf("Complete pawn shield should have no penalty, got %v", penaltyComplete)
+	}
+
+	// Test 2: Partial pawn shield (1 pawn)
+	fenPartial := "8/8/8/8/8/8/P7/1K6 w - - 0 1"
+	boardPartial, err := engine.FromFEN(fenPartial)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq2 := findKing(boardPartial, engine.White)
+	penaltyPartial := evaluatePawnShield(boardPartial, whiteKingSq2, engine.White)
+
+	// Should have penalty for 2 missing pawns
+	expectedPenalty := 2.0 * 0.3 // 2 missing pawns * 0.3
+	if math.Abs(penaltyPartial-expectedPenalty) > 0.01 {
+		t.Errorf("Partial pawn shield should have penalty %v, got %v", expectedPenalty, penaltyPartial)
+	}
+
+	// Test 3: No pawn shield
+	fenNone := "8/8/8/8/8/8/8/1K6 w - - 0 1"
+	boardNone, err := engine.FromFEN(fenNone)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq3 := findKing(boardNone, engine.White)
+	penaltyNone := evaluatePawnShield(boardNone, whiteKingSq3, engine.White)
+
+	// Should have penalty for 3 missing pawns
+	expectedPenaltyNone := 3.0 * 0.3 // 3 missing pawns * 0.3
+	if math.Abs(penaltyNone-expectedPenaltyNone) > 0.01 {
+		t.Errorf("No pawn shield should have penalty %v, got %v", expectedPenaltyNone, penaltyNone)
+	}
+}
+
+func TestEvaluateOpenFilesNearKing(t *testing.T) {
+	// Test open file penalty
+
+	// Test 1: No open files (all files have pawns)
+	fenClosed := "8/8/8/8/8/ppp5/PPP5/1K1k4 w - - 0 1"
+	boardClosed, err := engine.FromFEN(fenClosed)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq := findKing(boardClosed, engine.White)
+	penaltyClosed := evaluateOpenFilesNearKing(boardClosed, whiteKingSq, engine.White)
+
+	// Should have 0 penalty (no open files)
+	if math.Abs(penaltyClosed) > 0.01 {
+		t.Errorf("Closed files should have no penalty, got %v", penaltyClosed)
+	}
+
+	// Test 2: One open file near king
+	fenOneOpen := "8/8/8/8/8/8/PP6/1K6 w - - 0 1"
+	boardOneOpen, err := engine.FromFEN(fenOneOpen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq2 := findKing(boardOneOpen, engine.White)
+	penaltyOneOpen := evaluateOpenFilesNearKing(boardOneOpen, whiteKingSq2, engine.White)
+
+	// Should have penalty for 1 open file (c-file is open)
+	expectedPenalty := 0.25
+	if math.Abs(penaltyOneOpen-expectedPenalty) > 0.01 {
+		t.Errorf("One open file should have penalty %v, got %v", expectedPenalty, penaltyOneOpen)
+	}
+
+	// Test 3: All files open near king
+	fenAllOpen := "8/8/8/8/8/8/8/1K6 w - - 0 1"
+	boardAllOpen, err := engine.FromFEN(fenAllOpen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq3 := findKing(boardAllOpen, engine.White)
+	penaltyAllOpen := evaluateOpenFilesNearKing(boardAllOpen, whiteKingSq3, engine.White)
+
+	// Should have penalty for 3 open files (a, b, c files all open)
+	expectedPenaltyAll := 3.0 * 0.25
+	if math.Abs(penaltyAllOpen-expectedPenaltyAll) > 0.01 {
+		t.Errorf("All open files should have penalty %v, got %v", expectedPenaltyAll, penaltyAllOpen)
+	}
+}
+
+func TestEvaluateAttackersInKingZone(t *testing.T) {
+	// Test attacker detection in king zone
+
+	// Test 1: No attackers in king zone
+	fenSafe := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	boardSafe, err := engine.FromFEN(fenSafe)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq := findKing(boardSafe, engine.White)
+	penaltySafe := evaluateAttackersInKingZone(boardSafe, whiteKingSq, engine.White)
+
+	// Should have 0 penalty (no attackers)
+	if math.Abs(penaltySafe) > 0.01 {
+		t.Errorf("No attackers should have no penalty, got %v", penaltySafe)
+	}
+
+	// Test 2: Enemy queen near king (attacking multiple squares)
+	fenDanger := "4k3/8/8/8/8/8/8/q3K3 w - - 0 1"
+	boardDanger, err := engine.FromFEN(fenDanger)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	whiteKingSq2 := findKing(boardDanger, engine.White)
+	penaltyDanger := evaluateAttackersInKingZone(boardDanger, whiteKingSq2, engine.White)
+
+	// Should have penalty (queen attacks multiple squares around king)
+	if penaltyDanger <= 0 {
+		t.Errorf("Enemy queen should create penalty, got %v", penaltyDanger)
+	}
+
+	// Test 3: Enemy rook on open file near king
+	fenRook := "4k3/8/8/8/8/8/8/R3K3 w - - 0 1"
+	boardRook, err := engine.FromFEN(fenRook)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	blackKingSq := findKing(boardRook, engine.Black)
+	penaltyRook := evaluateAttackersInKingZone(boardRook, blackKingSq, engine.Black)
+
+	// Black king should be safe (White rook far away on rank 1)
+	// No white pieces attacking squares around black king on e8
+	if penaltyRook != 0 {
+		t.Errorf("Black king should be safe from white rook, got penalty %v", penaltyRook)
+	}
+}
+
+func TestEvaluate_KingSafetyOnlyHard(t *testing.T) {
+	// Verify king safety only affects Hard difficulty
+	// Medium and Hard should differ when king safety matters
+
+	// Position where White king is exposed but Black king has pawn shield
+	// Black king on e7, pawns on rank 6 (d6, e6, f6) provide shield
+	// White king on e1, no pawns on rank 2
+	fenAsymmetric := "8/4k3/3ppp2/8/8/8/8/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fenAsymmetric)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// First, verify that evaluateKingSafety returns non-zero for this position
+	kingSafetyScore := evaluateKingSafety(board)
+	if math.Abs(kingSafetyScore) < 0.01 {
+		t.Errorf("evaluateKingSafety should return non-zero for asymmetric position, got %v", kingSafetyScore)
+	}
+
+	scoreMedium := evaluate(board, Medium)
+	scoreHard := evaluate(board, Hard)
+
+	// Hard should penalize White's exposed king (making score more negative)
+	// Since Black has a pawn shield but White doesn't
+	if scoreHard >= scoreMedium {
+		t.Errorf("Hard bot should penalize exposed White king: Hard=%v, Medium=%v, kingSafety=%v",
+			scoreHard, scoreMedium, kingSafetyScore)
+	}
+
+	// Test with a position where both kings have good pawn shields
+	fenBothSafe := "4k3/ppp5/8/8/8/8/PPP5/4K3 w - - 0 1"
+	boardBothSafe, err := engine.FromFEN(fenBothSafe)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreMediumBothSafe := evaluate(boardBothSafe, Medium)
+	scoreHardBothSafe := evaluate(boardBothSafe, Hard)
+
+	// When both kings are equally safe, the difference should be smaller
+	diffAsymmetric := math.Abs(scoreHard - scoreMedium)
+	diffBothSafe := math.Abs(scoreHardBothSafe - scoreMediumBothSafe)
+
+	if diffBothSafe >= diffAsymmetric {
+		t.Errorf("Asymmetric king safety should create larger diff than symmetric: asymmetric=%v, bothSafe=%v",
+			diffAsymmetric, diffBothSafe)
+	}
+}
+
+func TestEvaluateKingSafety_Symmetry(t *testing.T) {
+	// Test that king safety evaluation is symmetric for both colors
+
+	// Position with both kings having no pawn shield
+	fenNoShield := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	boardNoShield, err := engine.FromFEN(fenNoShield)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	safetyNoShield := evaluateKingSafety(boardNoShield)
+
+	// Both kings should have same penalty, so net should be ~0
+	if math.Abs(safetyNoShield) > 0.1 {
+		t.Errorf("Symmetric position should have ~0 king safety score, got %v", safetyNoShield)
+	}
+
+	// Position with both kings having good pawn shields
+	fenGoodShields := "4k3/ppp5/8/8/8/8/PPP5/4K3 w - - 0 1"
+	boardGoodShields, err := engine.FromFEN(fenGoodShields)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	safetyGoodShields := evaluateKingSafety(boardGoodShields)
+
+	// Both kings should have similar safety, so net should be ~0
+	if math.Abs(safetyGoodShields) > 0.1 {
+		t.Errorf("Symmetric position with shields should have ~0 king safety score, got %v", safetyGoodShields)
+	}
+}

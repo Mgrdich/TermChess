@@ -238,21 +238,21 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 9: Add King Safety Evaluation (Hard Bot Only)
 **Goal:** Make Hard bot understand king safety and play more strategically.
 
-- [ ] Update `internal/bot/eval.go`:
-  - [ ] Implement `evaluateKingSafety(board) float64`:
-    - [ ] Identify king positions for both colors
-    - [ ] Check pawn shield completeness (pawns in front of king)
-    - [ ] Penalty for open files near king
-    - [ ] Penalty for enemy pieces attacking king zone
-    - [ ] Return safety score
-  - [ ] Update `evaluate()` to include king safety for Hard difficulty
-- [ ] Update `internal/bot/eval_test.go`:
-  - [ ] Test pawn shield detection
-  - [ ] Test open file penalty
-  - [ ] Test attacker detection in king zone
-  - [ ] Test king safety only affects Hard bot evaluation
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Hard bot considers king safety in evaluation
+- [x] Update `internal/bot/eval.go`:
+  - [x] Implement `evaluateKingSafety(board) float64`:
+    - [x] Identify king positions for both colors
+    - [x] Check pawn shield completeness (pawns in front of king)
+    - [x] Penalty for open files near king
+    - [x] Penalty for enemy pieces attacking king zone
+    - [x] Return safety score
+  - [x] Update `evaluate()` to include king safety for Hard difficulty
+- [x] Update `internal/bot/eval_test.go`:
+  - [x] Test pawn shield detection
+  - [x] Test open file penalty
+  - [x] Test attacker detection in king zone
+  - [x] Test king safety only affects Hard bot evaluation
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Hard bot considers king safety in evaluation
 
 **Deliverable:** Hard bot has strategic depth. Understands king safety.
 
