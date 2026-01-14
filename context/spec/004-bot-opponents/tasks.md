@@ -371,21 +371,21 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 14: Add Bot vs Bot Automated Testing
 **Goal:** Validate difficulty progression. Medium beats Easy, Hard beats Medium.
 
-- [ ] Create `internal/bot/difficulty_test.go`:
-  - [ ] Implement helper: `runBotGame(white, black Engine) GameResult`
-    - [ ] Create starting position
-    - [ ] Alternate moves between white and black
-    - [ ] Detect game over
-    - [ ] Return winner
-  - [ ] Test: Medium vs Easy (run 10 games)
-    - [ ] Assert Medium wins at least 7 games
-  - [ ] Test: Hard vs Medium (run 10 games)
-    - [ ] Assert Hard wins at least 6 games
-  - [ ] Test: Easy vs Easy (run 5 games)
-    - [ ] Assert games complete without crashes
-- [ ] Run tests: `go test ./internal/bot/ -v -timeout 5m`
-- [ ] If tests fail, tune evaluation weights or search depths
-- [ ] Verify: Difficulty progression is correct
+- [x] Create `internal/bot/difficulty_test.go`:
+  - [x] Implement helper: `runBotGame(white, black Engine) GameResult`
+    - [x] Create starting position
+    - [x] Alternate moves between white and black
+    - [x] Detect game over
+    - [x] Return winner
+  - [x] Test: Medium vs Easy (run 10 games)
+    - [x] Assert Medium wins at least 7 games
+  - [x] Test: Hard vs Medium (run 10 games)
+    - [x] Assert Hard wins at least 6 games
+  - [x] Test: Easy vs Easy (run 5 games)
+    - [x] Assert games complete without crashes
+- [x] Run tests: `go test ./internal/bot/ -v -timeout 5m`
+- [x] If tests fail, tune evaluation weights or search depths
+- [x] Verify: Difficulty progression is correct
 
 **Deliverable:** Automated validation of bot strength. Difficulty levels properly calibrated.
 
