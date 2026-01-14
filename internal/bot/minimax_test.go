@@ -9,6 +9,11 @@ import (
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
+// Helper functions for creating pointers to primitive types (for MinimaxConfig)
+func intPtr(v int) *int                         { return &v }
+func durationPtr(v time.Duration) *time.Duration { return &v }
+func float64Ptr(v float64) *float64             { return &v }
+
 func TestMinimaxEngine_Name(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -634,8 +639,8 @@ func TestMinimaxEngine_Configure_SearchDepth(t *testing.T) {
 	}
 
 	// Valid depth
-	err = configurable.Configure(map[string]any{
-		"search_depth": 8,
+	err = configurable.Configure(MinimaxConfig{
+		SearchDepth: intPtr(8),
 	})
 	if err != nil {
 		t.Errorf("Configure should accept valid depth: %v", err)
@@ -648,16 +653,16 @@ func TestMinimaxEngine_Configure_SearchDepth(t *testing.T) {
 	}
 
 	// Invalid depth (too low)
-	err = configurable.Configure(map[string]any{
-		"search_depth": 0,
+	err = configurable.Configure(MinimaxConfig{
+		SearchDepth: intPtr(0),
 	})
 	if err == nil {
 		t.Error("Configure should reject depth < 1")
 	}
 
 	// Invalid depth (too high)
-	err = configurable.Configure(map[string]any{
-		"search_depth": 21,
+	err = configurable.Configure(MinimaxConfig{
+		SearchDepth: intPtr(21),
 	})
 	if err == nil {
 		t.Error("Configure should reject depth > 20")
@@ -677,8 +682,8 @@ func TestMinimaxEngine_Configure_TimeLimit(t *testing.T) {
 	}
 
 	// Valid time limit
-	err = configurable.Configure(map[string]any{
-		"time_limit": 5 * time.Second,
+	err = configurable.Configure(MinimaxConfig{
+		TimeLimit: durationPtr(5 * time.Second),
 	})
 	if err != nil {
 		t.Errorf("Configure should accept valid time limit: %v", err)
@@ -691,16 +696,16 @@ func TestMinimaxEngine_Configure_TimeLimit(t *testing.T) {
 	}
 
 	// Invalid time limit (negative)
-	err = configurable.Configure(map[string]any{
-		"time_limit": -1 * time.Second,
+	err = configurable.Configure(MinimaxConfig{
+		TimeLimit: durationPtr(-1 * time.Second),
 	})
 	if err == nil {
 		t.Error("Configure should reject negative time limit")
 	}
 
 	// Invalid time limit (zero)
-	err = configurable.Configure(map[string]any{
-		"time_limit": 0 * time.Second,
+	err = configurable.Configure(MinimaxConfig{
+		TimeLimit: durationPtr(0 * time.Second),
 	})
 	if err == nil {
 		t.Error("Configure should reject zero time limit")
@@ -719,11 +724,11 @@ func TestMinimaxEngine_Configure_EvalWeights(t *testing.T) {
 		t.Fatal("engine should implement Configurable")
 	}
 
-	err = configurable.Configure(map[string]any{
-		"eval_weight_material":     1.5,
-		"eval_weight_piece_square": 0.2,
-		"eval_weight_mobility":     0.15,
-		"eval_weight_king_safety":  0.3,
+	err = configurable.Configure(MinimaxConfig{
+		MaterialWeight:    float64Ptr(1.5),
+		PieceSquareWeight: float64Ptr(0.2),
+		MobilityWeight:    float64Ptr(0.15),
+		KingSafetyWeight:  float64Ptr(0.3),
 	})
 
 	if err != nil {
@@ -758,13 +763,12 @@ func TestMinimaxEngine_Configure_InvalidOption(t *testing.T) {
 		t.Fatal("engine should implement Configurable")
 	}
 
-	err = configurable.Configure(map[string]any{
-		"invalid_option": 123,
-		"search_depth":   5, // valid option
+	err = configurable.Configure(MinimaxConfig{
+		SearchDepth: intPtr(5), // valid option
 	})
 
 	if err != nil {
-		t.Errorf("Configure should ignore invalid options: %v", err)
+		t.Errorf("Configure should succeed with valid options: %v", err)
 	}
 
 	// Verify valid option was applied
@@ -786,11 +790,11 @@ func TestMinimaxEngine_Configure_MultipleOptions(t *testing.T) {
 		t.Fatal("engine should implement Configurable")
 	}
 
-	err = configurable.Configure(map[string]any{
-		"search_depth":             10,
-		"time_limit":               3 * time.Second,
-		"eval_weight_material":     1.2,
-		"eval_weight_piece_square": 0.25,
+	err = configurable.Configure(MinimaxConfig{
+		SearchDepth:       intPtr(10),
+		TimeLimit:         durationPtr(3 * time.Second),
+		MaterialWeight:    float64Ptr(1.2),
+		PieceSquareWeight: float64Ptr(0.25),
 	})
 
 	if err != nil {
@@ -813,8 +817,8 @@ func TestMinimaxEngine_Configure_MultipleOptions(t *testing.T) {
 	}
 }
 
-func TestMinimaxEngine_Configure_InvalidType(t *testing.T) {
-	// Test that wrong types are ignored (not an error)
+func TestMinimaxEngine_Configure_EmptyConfig(t *testing.T) {
+	// Test that empty config is valid (no-op)
 	eng, err := NewMinimaxEngine(Medium)
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
@@ -825,13 +829,11 @@ func TestMinimaxEngine_Configure_InvalidType(t *testing.T) {
 		t.Fatal("engine should implement Configurable")
 	}
 
-	// Try to pass wrong type for search_depth (string instead of int)
-	err = configurable.Configure(map[string]any{
-		"search_depth": "invalid",
-	})
+	// Pass empty config (no options set)
+	err = configurable.Configure(MinimaxConfig{})
 
 	if err != nil {
-		t.Errorf("Configure should ignore wrong type (type assertion fails): %v", err)
+		t.Errorf("Configure should accept empty config: %v", err)
 	}
 
 	// Original depth should be unchanged

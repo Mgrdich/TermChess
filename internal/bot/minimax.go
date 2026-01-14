@@ -69,43 +69,35 @@ func (e *minimaxEngine) Close() error {
 }
 
 // Configure allows runtime tuning of engine parameters.
-func (e *minimaxEngine) Configure(options map[string]any) error {
-	// Parse and validate each option
-
-	// 1. Search depth (1-20)
-	if depth, ok := options["search_depth"].(int); ok {
-		if depth < 1 || depth > 20 {
-			return fmt.Errorf("search depth must be 1-20, got %d", depth)
+func (e *minimaxEngine) Configure(config MinimaxConfig) error {
+	// Validate and apply search depth
+	if config.SearchDepth != nil {
+		if *config.SearchDepth < 1 || *config.SearchDepth > 20 {
+			return fmt.Errorf("search depth must be 1-20, got %d", *config.SearchDepth)
 		}
-		e.maxDepth = depth
+		e.maxDepth = *config.SearchDepth
 	}
 
-	// 2. Time limit (must be positive)
-	if timeLimit, ok := options["time_limit"].(time.Duration); ok {
-		if timeLimit <= 0 {
-			return fmt.Errorf("time limit must be positive, got %v", timeLimit)
+	// Validate and apply time limit
+	if config.TimeLimit != nil {
+		if *config.TimeLimit <= 0 {
+			return fmt.Errorf("time limit must be positive, got %v", *config.TimeLimit)
 		}
-		e.timeLimit = timeLimit
+		e.timeLimit = *config.TimeLimit
 	}
 
-	// 3. Evaluation weight: material
-	if material, ok := options["eval_weight_material"].(float64); ok {
-		e.evalWeights.material = material
+	// Apply evaluation weights (no validation needed)
+	if config.MaterialWeight != nil {
+		e.evalWeights.material = *config.MaterialWeight
 	}
-
-	// 4. Evaluation weight: piece-square tables
-	if pieceSquare, ok := options["eval_weight_piece_square"].(float64); ok {
-		e.evalWeights.pieceSquare = pieceSquare
+	if config.PieceSquareWeight != nil {
+		e.evalWeights.pieceSquare = *config.PieceSquareWeight
 	}
-
-	// 5. Evaluation weight: mobility
-	if mobility, ok := options["eval_weight_mobility"].(float64); ok {
-		e.evalWeights.mobility = mobility
+	if config.MobilityWeight != nil {
+		e.evalWeights.mobility = *config.MobilityWeight
 	}
-
-	// 6. Evaluation weight: king safety
-	if kingSafety, ok := options["eval_weight_king_safety"].(float64); ok {
-		e.evalWeights.kingSafety = kingSafety
+	if config.KingSafetyWeight != nil {
+		e.evalWeights.kingSafety = *config.KingSafetyWeight
 	}
 
 	return nil

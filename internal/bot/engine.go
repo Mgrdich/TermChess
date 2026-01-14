@@ -3,6 +3,7 @@ package bot
 
 import (
 	"context"
+	"time"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
@@ -23,12 +24,23 @@ type Engine interface {
 	Close() error
 }
 
+// MinimaxConfig holds configuration options for minimax engines.
+// All fields are optional (use pointers to indicate "not set").
+type MinimaxConfig struct {
+	SearchDepth       *int           // Search depth (1-20)
+	TimeLimit         *time.Duration // Time limit per move (must be positive)
+	MaterialWeight    *float64       // Weight for material evaluation
+	PieceSquareWeight *float64       // Weight for piece-square table evaluation
+	MobilityWeight    *float64       // Weight for mobility evaluation
+	KingSafetyWeight  *float64       // Weight for king safety evaluation
+}
+
 // Configurable engines can accept configuration before or during use.
 // Internal bots implement this for difficulty tuning.
 // UCI engines implement this for engine options (Threads, Hash, etc.).
 type Configurable interface {
 	Engine
-	Configure(options map[string]any) error
+	Configure(config MinimaxConfig) error
 }
 
 // Stateful engines benefit from knowing position history.

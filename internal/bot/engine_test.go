@@ -35,12 +35,12 @@ func (m *mockEngine) Close() error {
 type mockConfigurableEngine struct {
 	mockEngine
 	configured bool
-	options    map[string]any
+	config     MinimaxConfig
 }
 
-func (m *mockConfigurableEngine) Configure(options map[string]any) error {
+func (m *mockConfigurableEngine) Configure(config MinimaxConfig) error {
 	m.configured = true
-	m.options = options
+	m.config = config
 	return nil
 }
 
@@ -113,8 +113,8 @@ func TestOptionalInterfaces(t *testing.T) {
 		}
 
 		// Test Configure method
-		options := map[string]any{"depth": 5, "threads": 2}
-		if err := configurable.Configure(options); err != nil {
+		config := MinimaxConfig{SearchDepth: intPtr(5)}
+		if err := configurable.Configure(config); err != nil {
 			t.Errorf("Configure() error = %v, want nil", err)
 		}
 
@@ -123,8 +123,8 @@ func TestOptionalInterfaces(t *testing.T) {
 		if !mockCfg.configured {
 			t.Error("Configure() did not set configured flag")
 		}
-		if mockCfg.options["depth"] != 5 {
-			t.Errorf("Configure() depth = %v, want 5", mockCfg.options["depth"])
+		if mockCfg.config.SearchDepth == nil || *mockCfg.config.SearchDepth != 5 {
+			t.Errorf("Configure() SearchDepth = %v, want 5", mockCfg.config.SearchDepth)
 		}
 	})
 

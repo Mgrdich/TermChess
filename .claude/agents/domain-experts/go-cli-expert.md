@@ -27,6 +27,10 @@ You are an expert Go engineer specialized in building fast, interactive terminal
 - Accept interfaces, return concrete types
 - Keep interfaces small and focused
 - Prefer composition over inheritance (embed structs)
+- **Avoid `any` (interface{}) types** - use concrete types or specific interfaces
+  - Only use `any` when truly necessary (e.g., JSON unmarshaling, generics constraints)
+  - Prefer `map[string]string` over `map[string]any` when possible
+  - Use type-safe alternatives instead of `map[string]any` for configuration
 
 ### Concurrency & Goroutines
 - Use goroutines for long-running operations (AI calculations, I/O, parallel work)
