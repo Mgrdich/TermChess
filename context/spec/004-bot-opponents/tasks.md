@@ -432,29 +432,29 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 17: Manual QA - Play Full Games at Each Difficulty
 **Goal:** End-to-end validation. Play actual games and verify quality.
 
-- [ ] Play 3 full games vs Easy bot:
-  - [ ] Verify beatable by novice-level play
-  - [ ] Verify thinking messages display
-  - [ ] Verify no crashes or freezes
-  - [ ] Verify game ends correctly (checkmate/stalemate)
-- [ ] Play 3 full games vs Medium bot:
-  - [ ] Verify provides reasonable challenge
-  - [ ] Verify finds basic tactics (forks, pins)
-  - [ ] Verify thinking messages display
-  - [ ] Verify no crashes or freezes
-- [ ] Play 3 full games vs Hard bot:
-  - [ ] Verify challenging for experienced players
-  - [ ] Verify finds complex tactics
-  - [ ] Verify strategic depth (king safety, positioning)
-  - [ ] Verify no crashes or freezes
-- [ ] Test edge cases:
-  - [ ] Resign during bot game
-  - [ ] Offer draw (bot accepts/declines correctly)
-  - [ ] Rematch after game ends
-  - [ ] Play as White and Black
-  - [ ] Random color selection
-- [ ] Document any bugs found
-- [ ] Verify: All difficulty levels work correctly, good UX
+- [x] Play 3 full games vs Easy bot:
+  - [x] Verify beatable by novice-level play
+  - [x] Verify thinking messages display
+  - [x] Verify no crashes or freezes
+  - [x] Verify game ends correctly (checkmate/stalemate)
+- [x] Play 3 full games vs Medium bot:
+  - [x] Verify provides reasonable challenge
+  - [x] Verify finds basic tactics (forks, pins)
+  - [x] Verify thinking messages display
+  - [x] Verify no crashes or freezes
+- [x] Play 3 full games vs Hard bot:
+  - [x] Verify challenging for experienced players
+  - [x] Verify finds complex tactics
+  - [x] Verify strategic depth (king safety, positioning)
+  - [x] Verify no crashes or freezes
+- [x] Test edge cases:
+  - [x] Resign during bot game
+  - [x] Offer draw (bot accepts/declines correctly)
+  - [x] Rematch after game ends
+  - [x] Play as White and Black
+  - [x] Random color selection
+- [x] Document any bugs found
+- [x] Verify: All difficulty levels work correctly, good UX
 
 **Deliverable:** Feature fully tested manually. Ready for release.
 
