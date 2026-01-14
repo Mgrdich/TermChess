@@ -322,15 +322,15 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 12: Handle Bot Plays White (Bot Moves First)
 **Goal:** Support user playing Black. Bot makes opening move immediately after setup.
 
-- [ ] Update `internal/ui/menu.go` (or wherever game setup happens):
-  - [ ] After color selection and board setup
-  - [ ] Check if bot game AND bot plays White
-  - [ ] If so, immediately call `makeBotMove()` before returning to game loop
-- [ ] Test manually:
-  - [ ] Start game vs Easy bot, select Black
-  - [ ] Start game vs Medium bot, select Black
-  - [ ] Start game vs Hard bot, select Black
-- [ ] Verify: Bot makes opening move immediately, user can respond
+- [x] Update `internal/ui/menu.go` (or wherever game setup happens):
+  - [x] After color selection and board setup
+  - [x] Check if bot game AND bot plays White
+  - [x] If so, immediately call `makeBotMove()` before returning to game loop
+- [x] Test manually:
+  - [x] Start game vs Easy bot, select Black
+  - [x] Start game vs Medium bot, select Black
+  - [x] Start game vs Hard bot, select Black
+- [x] Verify: Bot makes opening move immediately, user can respond
 
 **Deliverable:** User can play as Black. Bot makes first move correctly.
 

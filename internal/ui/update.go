@@ -77,6 +77,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleGameTypeSelectKeys(msg)
 	case ScreenBotSelect:
 		return m.handleBotSelectKeys(msg)
+	case ScreenColorSelect:
+		return m.handleColorSelectKeys(msg)
 	case ScreenFENInput:
 		return m.handleFENInputKeys(msg)
 	case ScreenGamePlay:
@@ -1005,18 +1007,59 @@ func (m Model) handleBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleBotDifficultySelection executes the action for the currently selected bot difficulty.
-// Sets the bot difficulty and starts a new game.
-func (m Model) handleBotDifficultySelection() (tea.Model, tea.Cmd) {
+// handleColorSelectKeys handles keyboard input for the color selection screen.
+// Supports arrow keys and vi-style navigation (j/k), Enter to select,
+// ESC to return to bot difficulty selection, and wraps around at top and bottom of the menu.
+func (m Model) handleColorSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Clear any previous error or status messages when user takes action
+	m.errorMsg = ""
+	m.statusMsg = ""
+
+	switch msg.String() {
+	case "up", "k":
+		// Move selection up
+		if m.menuSelection > 0 {
+			m.menuSelection--
+		} else {
+			// Wrap to bottom of menu
+			m.menuSelection = len(m.menuOptions) - 1
+		}
+
+	case "down", "j":
+		// Move selection down
+		if m.menuSelection < len(m.menuOptions)-1 {
+			m.menuSelection++
+		} else {
+			// Wrap to top of menu
+			m.menuSelection = 0
+		}
+
+	case "enter":
+		return m.handleColorSelection()
+
+	case "esc":
+		// Return to bot difficulty selection
+		m.screen = ScreenBotSelect
+		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		m.menuSelection = 0
+		m.errorMsg = ""
+		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleColorSelection executes the action for the currently selected color.
+// Sets the user's color and starts a new game.
+// If user plays Black, triggers bot's opening move.
+func (m Model) handleColorSelection() (tea.Model, tea.Cmd) {
 	selected := m.menuOptions[m.menuSelection]
 
 	switch selected {
-	case "Easy":
-		m.botDifficulty = BotEasy
-	case "Medium":
-		m.botDifficulty = BotMedium
-	case "Hard":
-		m.botDifficulty = BotHard
+	case "Play as White":
+		m.userColor = engine.White
+	case "Play as Black":
+		m.userColor = engine.Black
 	}
 
 	// Create a new board with the standard starting position
@@ -1035,6 +1078,35 @@ func (m Model) handleBotDifficultySelection() (tea.Model, tea.Cmd) {
 	m.drawOfferedByWhite = false
 	m.drawOfferedByBlack = false
 	m.drawByAgreement = false
+
+	// If user plays Black, bot should make the opening move
+	if m.userColor == engine.Black {
+		return m.makeBotMove()
+	}
+
+	return m, nil
+}
+
+// handleBotDifficultySelection executes the action for the currently selected bot difficulty.
+// Sets the bot difficulty and transitions to color selection.
+func (m Model) handleBotDifficultySelection() (tea.Model, tea.Cmd) {
+	selected := m.menuOptions[m.menuSelection]
+
+	switch selected {
+	case "Easy":
+		m.botDifficulty = BotEasy
+	case "Medium":
+		m.botDifficulty = BotMedium
+	case "Hard":
+		m.botDifficulty = BotHard
+	}
+
+	// Transition to color selection screen
+	m.screen = ScreenColorSelect
+	m.menuOptions = []string{"Play as White", "Play as Black"}
+	m.menuSelection = 0
+	m.statusMsg = ""
+	m.errorMsg = ""
 
 	return m, nil
 }
