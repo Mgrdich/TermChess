@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -67,6 +68,49 @@ func (e *minimaxEngine) Close() error {
 	return nil
 }
 
+// Configure allows runtime tuning of engine parameters.
+func (e *minimaxEngine) Configure(options map[string]any) error {
+	// Parse and validate each option
+
+	// 1. Search depth (1-20)
+	if depth, ok := options["search_depth"].(int); ok {
+		if depth < 1 || depth > 20 {
+			return fmt.Errorf("search depth must be 1-20, got %d", depth)
+		}
+		e.maxDepth = depth
+	}
+
+	// 2. Time limit (must be positive)
+	if timeLimit, ok := options["time_limit"].(time.Duration); ok {
+		if timeLimit <= 0 {
+			return fmt.Errorf("time limit must be positive, got %v", timeLimit)
+		}
+		e.timeLimit = timeLimit
+	}
+
+	// 3. Evaluation weight: material
+	if material, ok := options["eval_weight_material"].(float64); ok {
+		e.evalWeights.material = material
+	}
+
+	// 4. Evaluation weight: piece-square tables
+	if pieceSquare, ok := options["eval_weight_piece_square"].(float64); ok {
+		e.evalWeights.pieceSquare = pieceSquare
+	}
+
+	// 5. Evaluation weight: mobility
+	if mobility, ok := options["eval_weight_mobility"].(float64); ok {
+		e.evalWeights.mobility = mobility
+	}
+
+	// 6. Evaluation weight: king safety
+	if kingSafety, ok := options["eval_weight_king_safety"].(float64); ok {
+		e.evalWeights.kingSafety = kingSafety
+	}
+
+	return nil
+}
+
 // Info returns metadata about this engine.
 func (e *minimaxEngine) Info() Info {
 	return Info{
@@ -76,10 +120,13 @@ func (e *minimaxEngine) Info() Info {
 		Type:       TypeInternal,
 		Difficulty: e.difficulty,
 		Features: map[string]bool{
-			"minimax":             true,
 			"alpha_beta":          true,
-			"move_ordering":       true,
 			"iterative_deepening": true,
+			"move_ordering":       true,
+			"configurable":        true,
+			"piece_square_tables": e.difficulty >= Medium,
+			"mobility":            e.difficulty >= Medium,
+			"king_safety":         e.difficulty >= Hard,
 		},
 	}
 }

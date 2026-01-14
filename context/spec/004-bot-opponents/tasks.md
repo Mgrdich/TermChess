@@ -261,23 +261,23 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 10: Implement Configure() for Runtime Tuning
 **Goal:** Allow runtime configuration of minimax parameters (depth, timeouts, eval weights).
 
-- [ ] Update `internal/bot/minimax.go`:
-  - [ ] Implement `Configure(options map[string]any) error`:
-    - [ ] Parse "search_depth" option (validate 1-20)
-    - [ ] Parse "time_limit" option (validate positive duration)
-    - [ ] Parse eval weight options (material, pieceSquare, mobility, kingSafety)
-    - [ ] Update engine fields
-    - [ ] Return error for invalid options
-  - [ ] Implement `Info()` method:
-    - [ ] Return metadata (name, author, version, type, difficulty, features)
-- [ ] Update `internal/bot/minimax_test.go`:
-  - [ ] Test Configure() updates search depth
-  - [ ] Test Configure() updates time limit
-  - [ ] Test Configure() updates eval weights
-  - [ ] Test Configure() validates input
-  - [ ] Test Info() returns correct metadata
-- [ ] Run tests: `go test ./internal/bot/`
-- [ ] Verify: Minimax engine can be configured at runtime
+- [x] Update `internal/bot/minimax.go`:
+  - [x] Implement `Configure(options map[string]any) error`:
+    - [x] Parse "search_depth" option (validate 1-20)
+    - [x] Parse "time_limit" option (validate positive duration)
+    - [x] Parse eval weight options (material, pieceSquare, mobility, kingSafety)
+    - [x] Update engine fields
+    - [x] Return error for invalid options
+  - [x] Implement `Info()` method:
+    - [x] Return metadata (name, author, version, type, difficulty, features)
+- [x] Update `internal/bot/minimax_test.go`:
+  - [x] Test Configure() updates search depth
+  - [x] Test Configure() updates time limit
+  - [x] Test Configure() updates eval weights
+  - [x] Test Configure() validates input
+  - [x] Test Info() returns correct metadata
+- [x] Run tests: `go test ./internal/bot/`
+- [x] Verify: Minimax engine can be configured at runtime
 
 **Deliverable:** Configurable minimax engine. Can tune parameters for testing/debugging.
 

@@ -64,34 +64,72 @@ func TestMinimaxEngine_Close(t *testing.T) {
 }
 
 func TestMinimaxEngine_Info(t *testing.T) {
-	eng, err := NewMinimaxEngine(Medium)
+	// Test Info() returns correct metadata
+
+	// Medium bot
+	engMedium, err := NewMinimaxEngine(Medium)
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
 
-	inspectable, ok := eng.(Inspectable)
+	inspectable, ok := engMedium.(Inspectable)
 	if !ok {
 		t.Fatal("engine should implement Inspectable")
 	}
 
-	info := inspectable.Info()
-	if info.Name != "Medium Bot" {
-		t.Errorf("Info.Name = %q, want 'Medium Bot'", info.Name)
+	infoMedium := inspectable.Info()
+	if infoMedium.Name != "Medium Bot" {
+		t.Errorf("Medium bot name should be 'Medium Bot', got '%s'", infoMedium.Name)
 	}
-	if info.Author != "TermChess" {
-		t.Errorf("Info.Author = %q, want 'TermChess'", info.Author)
+	if infoMedium.Author != "TermChess" {
+		t.Errorf("Author should be 'TermChess', got '%s'", infoMedium.Author)
 	}
-	if info.Type != TypeInternal {
-		t.Errorf("Info.Type = %v, want TypeInternal", info.Type)
+	if infoMedium.Version != "1.0" {
+		t.Errorf("Version should be '1.0', got '%s'", infoMedium.Version)
 	}
-	if info.Difficulty != Medium {
-		t.Errorf("Info.Difficulty = %v, want Medium", info.Difficulty)
+	if infoMedium.Type != TypeInternal {
+		t.Errorf("Type should be TypeInternal, got %v", infoMedium.Type)
 	}
-	if !info.Features["minimax"] {
-		t.Error("Info.Features['minimax'] should be true")
+	if infoMedium.Difficulty != Medium {
+		t.Errorf("Difficulty should be Medium, got %v", infoMedium.Difficulty)
 	}
-	if !info.Features["alpha_beta"] {
-		t.Error("Info.Features['alpha_beta'] should be true")
+
+	// Check features
+	if !infoMedium.Features["alpha_beta"] {
+		t.Error("Medium bot should have alpha_beta feature")
+	}
+	if !infoMedium.Features["iterative_deepening"] {
+		t.Error("Medium bot should have iterative_deepening feature")
+	}
+	if !infoMedium.Features["configurable"] {
+		t.Error("Medium bot should have configurable feature")
+	}
+	if !infoMedium.Features["piece_square_tables"] {
+		t.Error("Medium bot should have piece_square_tables feature")
+	}
+	if !infoMedium.Features["mobility"] {
+		t.Error("Medium bot should have mobility feature")
+	}
+	if infoMedium.Features["king_safety"] {
+		t.Error("Medium bot should NOT have king_safety feature")
+	}
+
+	// Hard bot
+	engHard, err := NewMinimaxEngine(Hard)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+
+	infoHard := engHard.(Inspectable).Info()
+
+	if infoHard.Name != "Hard Bot" {
+		t.Errorf("Hard bot name should be 'Hard Bot', got '%s'", infoHard.Name)
+	}
+	if infoHard.Difficulty != Hard {
+		t.Errorf("Difficulty should be Hard, got %v", infoHard.Difficulty)
+	}
+	if !infoHard.Features["king_safety"] {
+		t.Error("Hard bot should have king_safety feature")
 	}
 }
 
@@ -580,6 +618,226 @@ func TestMinimaxEngine_ReturnsLastCompletedDepth(t *testing.T) {
 	legalMoves := board.LegalMoves()
 	if !containsMove(legalMoves, move) {
 		t.Errorf("SelectMove() returned illegal move %v", move)
+	}
+}
+
+func TestMinimaxEngine_Configure_SearchDepth(t *testing.T) {
+	// Test updating search depth
+	eng, err := NewMinimaxEngine(Medium)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+
+	configurable, ok := eng.(Configurable)
+	if !ok {
+		t.Fatal("engine should implement Configurable")
+	}
+
+	// Valid depth
+	err = configurable.Configure(map[string]any{
+		"search_depth": 8,
+	})
+	if err != nil {
+		t.Errorf("Configure should accept valid depth: %v", err)
+	}
+
+	// Verify depth was updated
+	me := eng.(*minimaxEngine)
+	if me.maxDepth != 8 {
+		t.Errorf("search depth should be 8, got %d", me.maxDepth)
+	}
+
+	// Invalid depth (too low)
+	err = configurable.Configure(map[string]any{
+		"search_depth": 0,
+	})
+	if err == nil {
+		t.Error("Configure should reject depth < 1")
+	}
+
+	// Invalid depth (too high)
+	err = configurable.Configure(map[string]any{
+		"search_depth": 21,
+	})
+	if err == nil {
+		t.Error("Configure should reject depth > 20")
+	}
+}
+
+func TestMinimaxEngine_Configure_TimeLimit(t *testing.T) {
+	// Test updating time limit
+	eng, err := NewMinimaxEngine(Medium)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+
+	configurable, ok := eng.(Configurable)
+	if !ok {
+		t.Fatal("engine should implement Configurable")
+	}
+
+	// Valid time limit
+	err = configurable.Configure(map[string]any{
+		"time_limit": 5 * time.Second,
+	})
+	if err != nil {
+		t.Errorf("Configure should accept valid time limit: %v", err)
+	}
+
+	// Verify time limit was updated
+	me := eng.(*minimaxEngine)
+	if me.timeLimit != 5*time.Second {
+		t.Errorf("time limit should be 5s, got %v", me.timeLimit)
+	}
+
+	// Invalid time limit (negative)
+	err = configurable.Configure(map[string]any{
+		"time_limit": -1 * time.Second,
+	})
+	if err == nil {
+		t.Error("Configure should reject negative time limit")
+	}
+
+	// Invalid time limit (zero)
+	err = configurable.Configure(map[string]any{
+		"time_limit": 0 * time.Second,
+	})
+	if err == nil {
+		t.Error("Configure should reject zero time limit")
+	}
+}
+
+func TestMinimaxEngine_Configure_EvalWeights(t *testing.T) {
+	// Test updating evaluation weights
+	eng, err := NewMinimaxEngine(Hard)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+
+	configurable, ok := eng.(Configurable)
+	if !ok {
+		t.Fatal("engine should implement Configurable")
+	}
+
+	err = configurable.Configure(map[string]any{
+		"eval_weight_material":     1.5,
+		"eval_weight_piece_square": 0.2,
+		"eval_weight_mobility":     0.15,
+		"eval_weight_king_safety":  0.3,
+	})
+
+	if err != nil {
+		t.Errorf("Configure should accept valid eval weights: %v", err)
+	}
+
+	// Verify weights were updated
+	me := eng.(*minimaxEngine)
+	if me.evalWeights.material != 1.5 {
+		t.Errorf("material weight should be 1.5, got %f", me.evalWeights.material)
+	}
+	if me.evalWeights.pieceSquare != 0.2 {
+		t.Errorf("piece square weight should be 0.2, got %f", me.evalWeights.pieceSquare)
+	}
+	if me.evalWeights.mobility != 0.15 {
+		t.Errorf("mobility weight should be 0.15, got %f", me.evalWeights.mobility)
+	}
+	if me.evalWeights.kingSafety != 0.3 {
+		t.Errorf("king safety weight should be 0.3, got %f", me.evalWeights.kingSafety)
+	}
+}
+
+func TestMinimaxEngine_Configure_InvalidOption(t *testing.T) {
+	// Test that invalid option keys are ignored (not an error)
+	eng, err := NewMinimaxEngine(Medium)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+
+	configurable, ok := eng.(Configurable)
+	if !ok {
+		t.Fatal("engine should implement Configurable")
+	}
+
+	err = configurable.Configure(map[string]any{
+		"invalid_option": 123,
+		"search_depth":   5, // valid option
+	})
+
+	if err != nil {
+		t.Errorf("Configure should ignore invalid options: %v", err)
+	}
+
+	// Verify valid option was applied
+	me := eng.(*minimaxEngine)
+	if me.maxDepth != 5 {
+		t.Errorf("search depth should be 5, got %d", me.maxDepth)
+	}
+}
+
+func TestMinimaxEngine_Configure_MultipleOptions(t *testing.T) {
+	// Test configuring multiple options at once
+	eng, err := NewMinimaxEngine(Medium)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+
+	configurable, ok := eng.(Configurable)
+	if !ok {
+		t.Fatal("engine should implement Configurable")
+	}
+
+	err = configurable.Configure(map[string]any{
+		"search_depth":             10,
+		"time_limit":               3 * time.Second,
+		"eval_weight_material":     1.2,
+		"eval_weight_piece_square": 0.25,
+	})
+
+	if err != nil {
+		t.Errorf("Configure should accept multiple valid options: %v", err)
+	}
+
+	// Verify all options were applied
+	me := eng.(*minimaxEngine)
+	if me.maxDepth != 10 {
+		t.Errorf("search depth should be 10, got %d", me.maxDepth)
+	}
+	if me.timeLimit != 3*time.Second {
+		t.Errorf("time limit should be 3s, got %v", me.timeLimit)
+	}
+	if me.evalWeights.material != 1.2 {
+		t.Errorf("material weight should be 1.2, got %f", me.evalWeights.material)
+	}
+	if me.evalWeights.pieceSquare != 0.25 {
+		t.Errorf("piece square weight should be 0.25, got %f", me.evalWeights.pieceSquare)
+	}
+}
+
+func TestMinimaxEngine_Configure_InvalidType(t *testing.T) {
+	// Test that wrong types are ignored (not an error)
+	eng, err := NewMinimaxEngine(Medium)
+	if err != nil {
+		t.Fatalf("NewMinimaxEngine() error = %v", err)
+	}
+
+	configurable, ok := eng.(Configurable)
+	if !ok {
+		t.Fatal("engine should implement Configurable")
+	}
+
+	// Try to pass wrong type for search_depth (string instead of int)
+	err = configurable.Configure(map[string]any{
+		"search_depth": "invalid",
+	})
+
+	if err != nil {
+		t.Errorf("Configure should ignore wrong type (type assertion fails): %v", err)
+	}
+
+	// Original depth should be unchanged
+	me := eng.(*minimaxEngine)
+	if me.maxDepth != 4 { // Medium default
+		t.Errorf("search depth should remain at default 4, got %d", me.maxDepth)
 	}
 }
 
