@@ -394,20 +394,20 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 15: Add Performance Benchmarks and Time Limit Tests
 **Goal:** Ensure bots meet time constraints (Easy: 2s, Medium: 4s, Hard: 8s).
 
-- [ ] Create `internal/bot/performance_test.go`:
-  - [ ] Benchmark: `BenchmarkEasyBot` (depth 0, random)
-  - [ ] Benchmark: `BenchmarkMediumBot_Depth4` (minimax depth 4)
-  - [ ] Benchmark: `BenchmarkHardBot_Depth6` (minimax depth 6)
-  - [ ] Benchmark: `BenchmarkEvaluate` (evaluation function speed)
-- [ ] Add time limit tests:
-  - [ ] Test Easy bot completes within 2 seconds
-  - [ ] Test Medium bot completes within 4 seconds
-  - [ ] Test Hard bot completes within 8 seconds
-  - [ ] Use complex middlegame positions
-- [ ] Run benchmarks: `go test -bench=. ./internal/bot/`
-- [ ] Run time tests: `go test ./internal/bot/ -v -run TimeLimit`
-- [ ] If tests fail, adjust maxDepth or optimize move ordering
-- [ ] Verify: All bots meet time constraints
+- [x] Create `internal/bot/performance_test.go`:
+  - [x] Benchmark: `BenchmarkEasyBot` (depth 0, random)
+  - [x] Benchmark: `BenchmarkMediumBot_Depth4` (minimax depth 4)
+  - [x] Benchmark: `BenchmarkHardBot_Depth6` (minimax depth 6)
+  - [x] Benchmark: `BenchmarkEvaluate` (evaluation function speed)
+- [x] Add time limit tests:
+  - [x] Test Easy bot completes within 2 seconds
+  - [x] Test Medium bot completes within 4 seconds
+  - [x] Test Hard bot completes within 8 seconds
+  - [x] Use complex middlegame positions
+- [x] Run benchmarks: `go test -bench=. ./internal/bot/`
+- [x] Run time tests: `go test ./internal/bot/ -v -run TimeLimit`
+- [x] If tests fail, adjust maxDepth or optimize move ordering
+- [x] Verify: All bots meet time constraints
 
 **Deliverable:** Performance validated. Bots are fast enough for good UX.
 
