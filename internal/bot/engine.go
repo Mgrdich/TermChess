@@ -41,12 +41,12 @@ type Stateful interface {
 
 // Info provides metadata about the engine.
 type Info struct {
-	Name       string            // Human-readable name
-	Author     string            // Engine author
-	Version    string            // Engine version
-	Type       EngineType        // Internal, UCI, or RL
-	Difficulty Difficulty        // Easy, Medium, Hard (for internal bots)
-	Features   map[string]bool   // Supported features
+	Name       string          // Human-readable name
+	Author     string          // Engine author
+	Version    string          // Engine version
+	Type       EngineType      // Internal, UCI, or RL
+	Difficulty Difficulty      // Easy, Medium, Hard (for internal bots)
+	Features   map[string]bool // Supported features
 }
 
 // Inspectable engines can report metadata.

@@ -59,11 +59,11 @@ func TestEvaluate_StartPosition(t *testing.T) {
 
 func TestEvaluate_MaterialAdvantage(t *testing.T) {
 	tests := []struct {
-		name     string
-		fen      string
-		wantMin  float64
-		wantMax  float64
-		desc     string
+		name    string
+		fen     string
+		wantMin float64
+		wantMax float64
+		desc    string
 	}{
 		{
 			name:    "WhiteExtraQueen",
