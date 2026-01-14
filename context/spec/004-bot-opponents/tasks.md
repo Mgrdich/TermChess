@@ -416,14 +416,16 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 16: Add Artificial Delay for Easy Bot (UX Polish)
 **Goal:** Make Easy bot feel more natural (not instant). Add 1-2 second delay.
 
-- [ ] Update `internal/bot/random.go`:
-  - [ ] In `SelectMove()`, after selecting move:
-    - [ ] Generate random delay between 1-2 seconds
-    - [ ] Sleep for that duration (respect context timeout)
-- [ ] Test manually: Play vs Easy bot
-- [ ] Verify: Easy bot pauses briefly before moving (feels more natural)
+- [x] Update `internal/bot/random.go`:
+  - [x] In `SelectMove()`, after selecting move:
+    - [x] Generate random delay between 1-2 seconds
+    - [x] Sleep for that duration (respect context timeout)
+- [x] Test manually: Play vs Easy bot
+- [x] Verify: Easy bot pauses briefly before moving (feels more natural)
 
 **Deliverable:** Easy bot has realistic timing. Better UX.
+
+**Note:** Implemented in UI layer (`internal/ui/update.go`) instead of bot engine for better separation of concerns. Applies to all bot difficulties (Easy: 1-2s, Medium: 1-2s, Hard: 1s+). See commit 2e5b2ee.
 
 ---
 
