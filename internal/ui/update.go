@@ -3,7 +3,9 @@ package ui
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/Mgrdich/TermChess/internal/bot"
 	"github.com/Mgrdich/TermChess/internal/config"
@@ -1141,12 +1143,52 @@ func (m Model) makeBotMove() (Model, tea.Cmd) {
 
 	// Execute bot move asynchronously
 	return m, func() tea.Msg {
+		// Track start time for minimum delay enforcement
+		startTime := time.Now()
+
+		// Determine minimum delay based on difficulty
+		minDelay := getMinimumBotDelay(m.botDifficulty)
+
 		ctx := context.Background()
 		move, err := botEngine.SelectMove(ctx, m.board)
 		if err != nil {
 			return BotMoveErrorMsg{err: err}
 		}
+
+		// Enforce minimum delay for natural feel
+		elapsed := time.Since(startTime)
+		if elapsed < minDelay {
+			time.Sleep(minDelay - elapsed)
+		}
+
 		return BotMoveMsg{move: move}
+	}
+}
+
+// getMinimumBotDelay returns the minimum delay for bot moves based on difficulty.
+// This ensures bot moves feel natural and not instantaneous, especially for Easy difficulty.
+// The delay is randomized within a range to add variety and feel more human-like.
+func getMinimumBotDelay(difficulty BotDifficulty) time.Duration {
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	switch difficulty {
+	case BotEasy:
+		// Easy: 1-2 seconds (random for variety)
+		// Random engine returns instantly, so this is critical
+		minSeconds := 1.0 + rng.Float64() // 1.0 to 2.0 seconds
+		return time.Duration(minSeconds * float64(time.Second))
+	case BotMedium:
+		// Medium: 1-2 seconds minimum
+		// Minimax usually takes 2-4 seconds naturally, so this is a safety net
+		minSeconds := 1.0 + rng.Float64() // 1.0 to 2.0 seconds
+		return time.Duration(minSeconds * float64(time.Second))
+	case BotHard:
+		// Hard: 1 second minimum
+		// Minimax usually takes 4-8 seconds naturally, so delay rarely needed
+		return 1 * time.Second
+	default:
+		// Fallback to 1 second
+		return 1 * time.Second
 	}
 }
 

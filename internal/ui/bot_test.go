@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
@@ -510,4 +511,106 @@ func TestBotEngineCleanup(t *testing.T) {
 
 	// Bot engine should be cleaned up (we can't check if Close was called,
 	// but we can verify the function doesn't panic)
+}
+
+// TestBotMoveDelay tests that bot moves enforce a minimum delay
+func TestBotMoveDelay(t *testing.T) {
+	tests := []struct {
+		name       string
+		difficulty BotDifficulty
+		minDelay   time.Duration
+		maxDelay   time.Duration
+	}{
+		{"Easy bot has 1-2s delay", BotEasy, 1 * time.Second, 2 * time.Second},
+		{"Medium bot has 1-2s delay", BotMedium, 1 * time.Second, 2 * time.Second},
+		{"Hard bot has 1s+ delay", BotHard, 1 * time.Second, 10 * time.Second}, // Hard can take longer naturally
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			m.screen = ScreenGamePlay
+			m.gameType = GameTypePvBot
+			m.botDifficulty = tt.difficulty
+			m.board = engine.NewBoard()
+			m.moveHistory = []engine.Move{}
+
+			// Player makes a move (e2e4)
+			move, _ := engine.ParseMove("e2e4")
+			err := m.board.MakeMove(move)
+			if err != nil {
+				t.Fatalf("Failed to make player move: %v", err)
+			}
+			m.moveHistory = append(m.moveHistory, move)
+
+			// Bot should respond
+			m, cmd := m.makeBotMove()
+
+			if cmd == nil {
+				t.Fatal("Expected bot move command")
+			}
+
+			// Measure time for bot move
+			start := time.Now()
+			msg := cmd()
+			elapsed := time.Since(start)
+
+			// Verify it's a successful move
+			botMoveMsg, ok := msg.(BotMoveMsg)
+			if !ok {
+				t.Fatalf("Expected BotMoveMsg, got: %T", msg)
+			}
+
+			// Verify minimum delay was enforced
+			if elapsed < tt.minDelay {
+				t.Errorf("Expected delay >= %v, got %v", tt.minDelay, elapsed)
+			}
+
+			// Verify it's not excessively long (sanity check)
+			if elapsed > tt.maxDelay {
+				t.Errorf("Expected delay <= %v, got %v (might indicate timeout issue)", tt.maxDelay, elapsed)
+			}
+
+			// Verify move is valid
+			if botMoveMsg.move == (engine.Move{}) {
+				t.Error("Bot returned empty move")
+			}
+
+			// Clean up
+			if m.botEngine != nil {
+				_ = m.botEngine.Close()
+			}
+		})
+	}
+}
+
+// TestGetMinimumBotDelay tests the delay calculation function
+func TestGetMinimumBotDelay(t *testing.T) {
+	tests := []struct {
+		name       string
+		difficulty BotDifficulty
+		minBound   time.Duration
+		maxBound   time.Duration
+	}{
+		{"Easy: 1-2 seconds", BotEasy, 1 * time.Second, 2 * time.Second},
+		{"Medium: 1-2 seconds", BotMedium, 1 * time.Second, 2 * time.Second},
+		{"Hard: 1 second", BotHard, 1 * time.Second, 1 * time.Second},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test multiple times to verify randomization (for Easy/Medium)
+			for i := 0; i < 10; i++ {
+				delay := getMinimumBotDelay(tt.difficulty)
+
+				if delay < tt.minBound {
+					t.Errorf("Delay %v is less than minimum %v", delay, tt.minBound)
+				}
+
+				if delay > tt.maxBound {
+					t.Errorf("Delay %v is greater than maximum %v", delay, tt.maxBound)
+				}
+			}
+		})
+	}
 }
