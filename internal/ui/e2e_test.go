@@ -808,8 +808,8 @@ func TestErrorMessageClearing(t *testing.T) {
 	}
 }
 
-// TestGameTypeSelection_BotNotImplemented tests that bot selection shows coming soon message
-func TestGameTypeSelection_BotNotImplemented(t *testing.T) {
+// TestGameTypeSelection_BotTransitionsToBotSelect tests that bot selection transitions to bot difficulty screen
+func TestGameTypeSelection_BotTransitionsToBotSelect(t *testing.T) {
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenGameTypeSelect
 	m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Back"}
@@ -818,14 +818,25 @@ func TestGameTypeSelection_BotNotImplemented(t *testing.T) {
 	result, _ := m.handleGameTypeSelection()
 	m = result.(Model)
 
-	// Should show "coming soon" message
-	if !strings.Contains(strings.ToLower(m.statusMsg), "coming soon") {
-		t.Errorf("Expected 'coming soon' message for bot play, got: %s", m.statusMsg)
+	// Should transition to ScreenBotSelect
+	if m.screen != ScreenBotSelect {
+		t.Errorf("Expected screen to be ScreenBotSelect, got: %v", m.screen)
 	}
 
-	// Should set game type to PvBot even though not implemented
+	// Should set game type to PvBot
 	if m.gameType != GameTypePvBot {
 		t.Errorf("Expected gameType to be set to PvBot, got: %v", m.gameType)
+	}
+
+	// Should have difficulty options
+	expectedOptions := []string{"Easy", "Medium", "Hard"}
+	if len(m.menuOptions) != len(expectedOptions) {
+		t.Errorf("Expected %d menu options, got %d", len(expectedOptions), len(m.menuOptions))
+	}
+	for i, opt := range expectedOptions {
+		if i < len(m.menuOptions) && m.menuOptions[i] != opt {
+			t.Errorf("Expected option %d to be %s, got %s", i, opt, m.menuOptions[i])
+		}
 	}
 }
 

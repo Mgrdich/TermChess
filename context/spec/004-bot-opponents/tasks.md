@@ -288,32 +288,32 @@ This task list breaks down the Bot Opponents feature into small, incremental ver
 #### Task 11: Add Bot Move Execution to UI Game Loop
 **Goal:** Integrate bot engines with Bubbletea UI. First end-to-end bot game!
 
-- [ ] Create `internal/ui/messages.go`:
-  - [ ] Define `thinkingMessages` array with 12 chess-themed messages
-  - [ ] Implement `getRandomThinkingMessage() string` function
-- [ ] Update `internal/ui/model.go`:
-  - [ ] Add `botEngine bot.Engine` field to Model struct
-- [ ] Update `internal/ui/update.go`:
-  - [ ] Define message types:
-    - [ ] `BotMoveMsg` struct with move field
-    - [ ] `BotMoveErrorMsg` struct with error field
-  - [ ] Create `makeBotMove() (Model, tea.Cmd)` method:
-    - [ ] Set thinking message
-    - [ ] Create bot engine based on difficulty (Easy/Medium/Hard)
-    - [ ] Store engine in model.botEngine
-    - [ ] Return async command that calls engine.SelectMove()
-    - [ ] Return BotMoveMsg or BotMoveErrorMsg
-  - [ ] Update `Update()` function to handle messages:
-    - [ ] Handle `BotMoveMsg`: apply move, clear status, check game over
-    - [ ] Handle `BotMoveErrorMsg`: display error message
-  - [ ] Update `handleMoveInput()`:
-    - [ ] After successful user move, check if bot game
-    - [ ] If bot game and not game over, call `makeBotMove()`
-- [ ] Add cleanup logic:
-  - [ ] In quit handler: call `model.botEngine.Close()` if not nil
-  - [ ] On game over: call `model.botEngine.Close()` if not nil
-- [ ] Test manually: Start game vs Easy bot, make moves
-- [ ] Verify: Bot responds with moves, UI doesn't freeze, game completes
+- [x] Create `internal/ui/messages.go`:
+  - [x] Define `thinkingMessages` array with 12 chess-themed messages
+  - [x] Implement `getRandomThinkingMessage() string` function
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `botEngine bot.Engine` field to Model struct
+- [x] Update `internal/ui/update.go`:
+  - [x] Define message types:
+    - [x] `BotMoveMsg` struct with move field
+    - [x] `BotMoveErrorMsg` struct with error field
+  - [x] Create `makeBotMove() (Model, tea.Cmd)` method:
+    - [x] Set thinking message
+    - [x] Create bot engine based on difficulty (Easy/Medium/Hard)
+    - [x] Store engine in model.botEngine
+    - [x] Return async command that calls engine.SelectMove()
+    - [x] Return BotMoveMsg or BotMoveErrorMsg
+  - [x] Update `Update()` function to handle messages:
+    - [x] Handle `BotMoveMsg`: apply move, clear status, check game over
+    - [x] Handle `BotMoveErrorMsg`: display error message
+  - [x] Update `handleMoveInput()`:
+    - [x] After successful user move, check if bot game
+    - [x] If bot game and not game over, call `makeBotMove()`
+- [x] Add cleanup logic:
+  - [x] In quit handler: call `model.botEngine.Close()` if not nil
+  - [x] On game over: call `model.botEngine.Close()` if not nil
+- [x] Test manually: Start game vs Easy bot, make moves
+- [x] Verify: Bot responds with moves, UI doesn't freeze, game completes
 
 **Deliverable:** Bots fully integrated with UI. Can play complete games vs Easy/Medium/Hard bots.
 

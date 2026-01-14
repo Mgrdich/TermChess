@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/Mgrdich/TermChess/internal/bot"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -102,6 +103,8 @@ type Model struct {
 	gameType GameType
 	// botDifficulty stores the selected bot difficulty (for future use)
 	botDifficulty BotDifficulty
+	// botEngine holds the chess bot engine instance for PvBot games
+	botEngine bot.Engine
 	// resignedBy indicates which player resigned (White, Black, or -1 for no resignation)
 	resignedBy int8
 	// drawOfferedBy indicates which color offered a draw (-1 if none)

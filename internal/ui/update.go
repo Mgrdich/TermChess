@@ -1,14 +1,26 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/Mgrdich/TermChess/internal/bot"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/Mgrdich/TermChess/internal/util"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+// BotMoveMsg is sent when the bot has selected a move.
+type BotMoveMsg struct {
+	move engine.Move
+}
+
+// BotMoveErrorMsg is sent when the bot encounters an error during move selection.
+type BotMoveErrorMsg struct {
+	err error
+}
 
 // Init initializes the model. Called once at program start.
 // Returns nil as no initial commands are needed for the basic menu interface.
@@ -24,6 +36,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyPress(msg)
+	case BotMoveMsg:
+		return m.handleBotMove(msg)
+	case BotMoveErrorMsg:
+		return m.handleBotMoveError(msg)
 	}
 
 	return m, nil
@@ -36,10 +52,18 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Handle global quit keys (work from any screen except GamePlay where 'q' shows save prompt)
 	switch msg.String() {
 	case "ctrl+c":
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+		}
 		return m, tea.Quit
 	case "q":
 		// Only quit directly if not in GamePlay screen
 		if m.screen != ScreenGamePlay {
+			// Clean up bot engine if it exists
+			if m.botEngine != nil {
+				_ = m.botEngine.Close()
+			}
 			return m, tea.Quit
 		}
 		// Otherwise, let the GamePlay handler deal with it
@@ -51,6 +75,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleMainMenuKeys(msg)
 	case ScreenGameTypeSelect:
 		return m.handleGameTypeSelectKeys(msg)
+	case ScreenBotSelect:
+		return m.handleBotSelectKeys(msg)
 	case ScreenFENInput:
 		return m.handleFENInputKeys(msg)
 	case ScreenGamePlay:
@@ -243,9 +269,12 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 	case "Player vs Bot":
 		// Set game type to PvBot
 		m.gameType = GameTypePvBot
-		// Show coming soon message and keep user on game type select screen
-		// They can press ESC or navigate to return to main menu
-		m.statusMsg = "Coming soon - Bot play not yet implemented. Press ESC to return to menu."
+		// Transition to bot difficulty selection screen
+		m.screen = ScreenBotSelect
+		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		m.menuSelection = 0
+		m.statusMsg = ""
+		m.errorMsg = ""
 	}
 
 	return m, nil
@@ -308,6 +337,11 @@ func (m Model) handleGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "n", "N":
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
+		}
 		// Start a new game - go through game type selection
 		m.board = nil
 		m.moveHistory = []engine.Move{}
@@ -325,6 +359,11 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.drawByAgreement = false
 
 	case "m", "M", "esc":
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
+		}
 		// Return to main menu
 		m.screen = ScreenMainMenu
 		m.board = nil
@@ -337,6 +376,10 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.menuSelection = 0
 
 	case "q", "Q":
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+		}
 		// Quit the application
 		return m, tea.Quit
 	}
@@ -450,6 +493,11 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
 			return m, nil
 		}
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
+		}
 		// Save completed successfully, execute the action (exit or menu)
 		if m.savePromptAction == "exit" {
 			return m, tea.Quit
@@ -465,6 +513,11 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.menuSelection = 0
 
 	case "n", "N":
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
+		}
 		// Direct "No" - don't save, just execute the action
 		if m.savePromptAction == "exit" {
 			return m, tea.Quit
@@ -488,6 +541,11 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
 				return m, nil
 			}
+		}
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
 		}
 		// User selected "No" or save completed successfully
 		// Execute the action (exit or menu)
@@ -795,6 +853,17 @@ func (m Model) handleMoveInput() (tea.Model, tea.Cmd) {
 		m.screen = ScreenGameOver
 		// Delete the save game file since the game is over
 		_ = config.DeleteSaveGame()
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
+		}
+		return m, nil
+	}
+
+	// If this is a bot game and game is not over, trigger bot move
+	if m.gameType == GameTypePvBot {
+		return m.makeBotMove()
 	}
 
 	return m, nil
@@ -891,5 +960,163 @@ func (m Model) handleDrawPromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.drawOfferedBy = -1
 	}
 
+	return m, nil
+}
+
+// handleBotSelectKeys handles keyboard input for the bot difficulty selection screen.
+// Supports arrow keys and vi-style navigation (j/k), Enter to select,
+// ESC to return to game type selection, and wraps around at top and bottom of the menu.
+func (m Model) handleBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Clear any previous error or status messages when user takes action
+	m.errorMsg = ""
+	m.statusMsg = ""
+
+	switch msg.String() {
+	case "up", "k":
+		// Move selection up
+		if m.menuSelection > 0 {
+			m.menuSelection--
+		} else {
+			// Wrap to bottom of menu
+			m.menuSelection = len(m.menuOptions) - 1
+		}
+
+	case "down", "j":
+		// Move selection down
+		if m.menuSelection < len(m.menuOptions)-1 {
+			m.menuSelection++
+		} else {
+			// Wrap to top of menu
+			m.menuSelection = 0
+		}
+
+	case "enter":
+		return m.handleBotDifficultySelection()
+
+	case "esc":
+		// Return to game type selection
+		m.screen = ScreenGameTypeSelect
+		m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
+		m.menuSelection = 0
+		m.errorMsg = ""
+		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBotDifficultySelection executes the action for the currently selected bot difficulty.
+// Sets the bot difficulty and starts a new game.
+func (m Model) handleBotDifficultySelection() (tea.Model, tea.Cmd) {
+	selected := m.menuOptions[m.menuSelection]
+
+	switch selected {
+	case "Easy":
+		m.botDifficulty = BotEasy
+	case "Medium":
+		m.botDifficulty = BotMedium
+	case "Hard":
+		m.botDifficulty = BotHard
+	}
+
+	// Create a new board with the standard starting position
+	m.board = engine.NewBoard()
+	// Switch to the GamePlay screen
+	m.screen = ScreenGamePlay
+	// Clear any previous status messages
+	m.statusMsg = ""
+	m.errorMsg = ""
+	// Clear any previous input
+	m.input = ""
+	// Reset resignation tracking
+	m.resignedBy = -1
+	// Reset draw offer state
+	m.drawOfferedBy = -1
+	m.drawOfferedByWhite = false
+	m.drawOfferedByBlack = false
+	m.drawByAgreement = false
+
+	return m, nil
+}
+
+// makeBotMove initiates a bot move calculation asynchronously.
+// It displays a thinking message, creates the appropriate bot engine based on difficulty,
+// and returns a command that will execute the move selection in a goroutine.
+func (m Model) makeBotMove() (Model, tea.Cmd) {
+	// Display thinking message
+	m.statusMsg = getRandomThinkingMessage()
+
+	// Create bot engine based on difficulty
+	var botEngine bot.Engine
+	var err error
+	switch m.botDifficulty {
+	case BotEasy:
+		botEngine, err = bot.NewRandomEngine()
+	case BotMedium:
+		botEngine, err = bot.NewMinimaxEngine(bot.Medium)
+	case BotHard:
+		botEngine, err = bot.NewMinimaxEngine(bot.Hard)
+	}
+
+	if err != nil {
+		return m, func() tea.Msg {
+			return BotMoveErrorMsg{err: err}
+		}
+	}
+
+	// Store engine for cleanup
+	m.botEngine = botEngine
+
+	// Execute bot move asynchronously
+	return m, func() tea.Msg {
+		ctx := context.Background()
+		move, err := botEngine.SelectMove(ctx, m.board)
+		if err != nil {
+			return BotMoveErrorMsg{err: err}
+		}
+		return BotMoveMsg{move: move}
+	}
+}
+
+// handleBotMove processes a successful bot move.
+// It applies the move to the board, clears the status message, adds the move to history,
+// and checks if the game is over.
+func (m Model) handleBotMove(msg BotMoveMsg) (tea.Model, tea.Cmd) {
+	// Try to make the move on the board
+	err := m.board.MakeMove(msg.move)
+	if err != nil {
+		// Invalid move from bot - show error
+		m.errorMsg = fmt.Sprintf("Bot generated invalid move: %v", err)
+		m.statusMsg = ""
+		return m, nil
+	}
+
+	// Move was successful - clear status message
+	m.statusMsg = ""
+	m.errorMsg = ""
+
+	// Add move to history
+	m.moveHistory = append(m.moveHistory, msg.move)
+
+	// Check if the game is over after this move
+	if m.board.IsGameOver() {
+		m.screen = ScreenGameOver
+		// Delete the save game file since the game is over
+		_ = config.DeleteSaveGame()
+		// Clean up bot engine
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
+		}
+	}
+
+	return m, nil
+}
+
+// handleBotMoveError processes a bot move error.
+// It displays the error message to the user and clears the thinking status.
+func (m Model) handleBotMoveError(msg BotMoveErrorMsg) (tea.Model, tea.Cmd) {
+	m.errorMsg = fmt.Sprintf("Bot error: %v", msg.err)
+	m.statusMsg = ""
 	return m, nil
 }
