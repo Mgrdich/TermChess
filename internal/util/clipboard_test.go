@@ -1,6 +1,7 @@
 package util
 
 import (
+	"os"
 	"testing"
 )
 
@@ -8,6 +9,10 @@ import (
 // Note: This test may fail in headless/CI environments without display server access.
 // The test verifies that the function can be called without panicking.
 func TestCopyToClipboard(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		t.Skip("Skipping clipboard tests in CI environment")
+	}
+
 	tests := []struct {
 		name string
 		text string
