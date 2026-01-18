@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/Mgrdich/TermChess/internal/bot"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -17,6 +18,8 @@ const (
 	ScreenGameTypeSelect
 	// ScreenBotSelect allows the user to choose bot difficulty
 	ScreenBotSelect
+	// ScreenColorSelect allows the user to choose their color in bot games
+	ScreenColorSelect
 	// ScreenFENInput allows the user to load a game from FEN notation
 	ScreenFENInput
 	// ScreenGamePlay is the main game screen where chess is played
@@ -102,6 +105,10 @@ type Model struct {
 	gameType GameType
 	// botDifficulty stores the selected bot difficulty (for future use)
 	botDifficulty BotDifficulty
+	// botEngine holds the chess bot engine instance for PvBot games
+	botEngine bot.Engine
+	// userColor stores the color the user is playing (White or Black) in bot games
+	userColor engine.Color
 	// resignedBy indicates which player resigned (White, Black, or -1 for no resignation)
 	resignedBy int8
 	// drawOfferedBy indicates which color offered a draw (-1 if none)

@@ -70,7 +70,9 @@ func (m Model) View() string {
 	case ScreenGameTypeSelect:
 		return m.renderGameTypeSelect()
 	case ScreenBotSelect:
-		return "Bot Selection - Coming Soon"
+		return m.renderBotSelect()
+	case ScreenColorSelect:
+		return m.renderColorSelect()
 	case ScreenFENInput:
 		return m.renderFENInput()
 	case ScreenGamePlay:
@@ -224,6 +226,125 @@ func (m Model) renderGameTypeSelect() string {
 	return b.String()
 }
 
+// renderBotSelect renders the BotSelect screen with title, bot difficulty options,
+// cursor indicator, help text, and any error or status messages.
+func (m Model) renderBotSelect() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Bot Difficulty:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Render menu options with cursor indicator for selected item
+	for i, option := range m.menuOptions {
+		cursor := "  " // Two spaces for non-selected items
+		optionText := option
+
+		if i == m.menuSelection {
+			// Highlight the selected item
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(option)
+		} else {
+			// Regular menu item styling
+			optionText = menuItemStyle.Render(option)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Render help text
+	helpText := renderHelpText("ESC: back to game type | arrows/jk: navigate | enter: select", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// renderColorSelect renders the ColorSelect screen with title, color options,
+// cursor indicator, help text, and any error or status messages.
+func (m Model) renderColorSelect() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Your Color:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Render menu options with cursor indicator for selected item
+	for i, option := range m.menuOptions {
+		cursor := "  " // Two spaces for non-selected items
+		optionText := option
+
+		if i == m.menuSelection {
+			// Highlight the selected item
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(option)
+		} else {
+			// Regular menu item styling
+			optionText = menuItemStyle.Render(option)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Render help text
+	helpText := renderHelpText("ESC: back to difficulty | arrows/jk: navigate | enter: select", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
 
 // renderGamePlay renders the GamePlay screen showing the chess board.
 // Displays the title, board, turn indicator, input prompt, help text, and messages.
