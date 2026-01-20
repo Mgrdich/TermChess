@@ -36,10 +36,10 @@ _The highest priority features that form the core foundation of the product._
 
 _Once the foundational features are complete, we will move on to these high-value additions._
 
-- [ ] **Bot Opponents**
-  - [ ] **Easy Bot:** Create a basic AI opponent that makes legal moves with minimal strategy (random or simple heuristics).
-  - [ ] **Medium Bot:** Develop a moderately challenging AI using minimax or similar algorithms with position evaluation.
-  - [ ] **Hard Bot:** Build a stronger AI with deeper search and improved evaluation for experienced players.
+- [x] **Bot Opponents**
+  - [x] **Easy Bot:** Create a basic AI opponent that makes legal moves with minimal strategy (random or simple heuristics).
+  - [x] **Medium Bot:** Develop a moderately challenging AI using minimax or similar algorithms with position evaluation.
+  - [x] **Hard Bot:** Build a stronger AI with deeper search and improved evaluation for experienced players.
 
 ---
 
