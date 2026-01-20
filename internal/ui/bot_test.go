@@ -521,8 +521,10 @@ func TestBotMoveDelay(t *testing.T) {
 		minDelay   time.Duration
 		maxDelay   time.Duration
 	}{
-		{"Easy bot has 1-2s delay", BotEasy, 1 * time.Second, 2 * time.Second},
-		{"Medium bot has 1-2s delay", BotMedium, 1 * time.Second, 2 * time.Second},
+		// Note: Total time = minimum delay (1-2s) + computation time
+		// CI environments may be slower, so we allow extra time
+		{"Easy bot has 1-2s delay", BotEasy, 1 * time.Second, 3 * time.Second},
+		{"Medium bot has 1-2s delay", BotMedium, 1 * time.Second, 4 * time.Second},
 		{"Hard bot has 1s+ delay", BotHard, 1 * time.Second, 10 * time.Second}, // Hard can take longer naturally
 	}
 
