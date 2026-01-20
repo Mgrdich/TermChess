@@ -19,7 +19,7 @@ A terminal-based chess application written in Go. Play chess against friends loc
 - **Standard Chess Rules** — Castling, en passant, pawn promotion, checkmate/stalemate detection
 - **Draw System** — Draw offers, resignation, automatic draw detection
 - **Move History** — Optional move list display in SAN format
-- **Bot Opponents** — Coming soon (easy, medium, hard difficulty levels)
+- **Bot Opponents** — AI players with easy, medium, and hard difficulty levels
 
 ## Installation
 
@@ -47,7 +47,7 @@ make run
 
 The application features a full interactive menu system:
 - **Main Menu** — New game, load game from FEN, resume saved game, settings, exit
-- **Game Types** — Player vs Player (local)
+- **Game Types** — Player vs Player (local), Bot Opponents (easy/medium/hard)
 - **Gameplay** — Enter moves using SAN notation (e4, Nf3, Bxc5, O-O, etc.)
 - **Commands** — Type `resign`, `offerdraw`, `showfen`, or `menu` during gameplay
 - **Navigation** — Use arrow keys or j/k, press ESC to go back, Ctrl+C to exit
@@ -164,9 +164,9 @@ termchess/
 - [x] Settings and configuration management
 - [x] Move history display
 - [x] Draw offers and resignation
+- [x] Bot opponents (easy/medium/hard)
 
 ### In Progress / Planned 🚧
-- [ ] Bot opponents (easy/medium/hard)
 - [ ] RL-trained agent
 - [ ] Opening book integration
 - [ ] PGN import/export

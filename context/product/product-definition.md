@@ -1,8 +1,8 @@
 # Product Definition: TermChess
 
-- **Version:** 1.2
+- **Version:** 1.3
 - **Status:** In Development
-- **Last Updated:** 2026-01-13
+- **Last Updated:** 2026-01-20
 
 ---
 
@@ -39,15 +39,15 @@ To create a terminal-based chess application that serves as both a learning proj
 
 ### 1.4. Success Metrics
 
-#### Current Metrics (Phase 1)
+#### Current Metrics (Phase 1 & 2)
 - Users can complete a full PvP game without issues
 - Clean, intuitive CLI experience with no confusion about commands or move input
 - FEN string import/export works reliably for game state persistence
 - All chess rules (castling, en passant, promotion, check/checkmate/stalemate) work correctly
 - Configuration and game saves persist reliably across sessions
-
-#### Future Metrics (Phase 2+)
 - Bot difficulty levels provide meaningful skill progression from beginner to advanced
+
+#### Future Metrics (Phase 3+)
 - Bot vs bot mode provides entertainment and testing value
 - Users can navigate and play entirely with mouse or keyboard
 - Visual themes receive positive feedback for aesthetics and readability
@@ -62,16 +62,16 @@ To create a terminal-based chess application that serves as both a learning proj
 
 ### 2.1. Core Features
 
-#### Completed (Phase 1)
+#### Completed (Phase 1 & 2)
 - **Chess Engine Foundation** — Complete chess rules implementation including move validation, castling, en passant, pawn promotion, check, checkmate, and stalemate detection
 - **Local Player vs Player (PvP)** — Two humans play chess on the same machine, taking turns
 - **Board Display** — ASCII/Unicode chess board rendering in the terminal
 - **Move Input** — Standard algebraic notation for entering moves (e.g., `e4`, `Nf3`, `O-O`)
 - **FEN Support** — Save/load games using FEN strings; start from any valid position
 - **Configuration & Persistence** — User preferences and game saves stored on disk
-
-#### Planned (Phase 2+)
 - **Bot Opponents** (Phase 2) — Multiple difficulty levels (easy, medium, hard) for solo play
+
+#### Planned (Phase 3+)
 - **Bot vs Bot Mode** (Phase 3) — Watch bots play against each other with speed control and statistics
 - **Mouse Interaction** (Phase 4) — Click-to-select pieces and click-to-move for intuitive gameplay
 - **UI/UX Enhancements** (Phase 4) — Beautiful themes, smooth animations, enhanced typography, visual feedback, and accessibility features
@@ -81,11 +81,11 @@ To create a terminal-based chess application that serves as both a learning proj
 
 ### 2.2. User Journey
 
-#### Current Experience (Phase 1)
-A user launches TermChess from their terminal and is greeted with a main menu. They can start a new Player vs Player game, load a saved game from a FEN string, or begin from a custom position. The board renders clearly in ASCII/Unicode showing the starting position with piece symbols and coordinates. The user enters moves using standard algebraic notation (e.g., `e4`, `Nf3`, `O-O`). The game validates each move and provides feedback for illegal moves. The game continues until checkmate, stalemate, or draw. At any point, the user can export the current position as a FEN string to save their progress.
+#### Current Experience (Phase 1 & 2)
+A user launches TermChess from their terminal and is greeted with a main menu. They can start a new Player vs Player game, play against bot opponents (easy, medium, or hard), load a saved game from a FEN string, or begin from a custom position. The board renders clearly in ASCII/Unicode showing the starting position with piece symbols and coordinates. The user enters moves using standard algebraic notation (e.g., `e4`, `Nf3`, `O-O`). The game validates each move and provides feedback for illegal moves. When playing against bots, the AI opponent thinks for a few seconds and displays humorous chess-themed messages during calculation. The game continues until checkmate, stalemate, or draw. At any point, the user can export the current position as a FEN string to save their progress.
 
-#### Future Experience (Phase 2+)
-In future versions, users will be able to play against bot opponents of varying difficulties, watch bot vs bot games, interact with the board using mouse clicks, and enjoy beautiful themes with smooth animations and enhanced visual feedback.
+#### Future Experience (Phase 3+)
+In future versions, users will be able to watch bot vs bot games, interact with the board using mouse clicks, and enjoy beautiful themes with smooth animations and enhanced visual feedback.
 
 ---
 
@@ -93,7 +93,7 @@ In future versions, users will be able to play against bot opponents of varying 
 
 ### 3.1. What's In-Scope for this Version
 
-#### Completed (Phase 1)
+#### Completed (Phase 1 & 2)
 - CLI-based terminal interface
 - Local PvP mode (two players, same machine)
 - Standard chess rules: castling, en passant, pawn promotion, checkmate/stalemate detection
@@ -102,9 +102,9 @@ In future versions, users will be able to play against bot opponents of varying 
 - FEN string support for saving/loading game states
 - Starting games from arbitrary FEN positions
 - User configuration and game persistence
+- Multiple bot difficulty levels (easy, medium, hard)
 
 #### In Progress / Planned
-- **Phase 2:** Multiple bot difficulty levels (easy, medium, hard)
 - **Phase 3:** Bot vs bot gameplay with speed control and statistics
 - **Phase 4:** Mouse interaction, beautiful themes, animations, visual feedback, enhanced typography, and accessibility features
 - **Phase 5:** CLI distribution via curl install script
