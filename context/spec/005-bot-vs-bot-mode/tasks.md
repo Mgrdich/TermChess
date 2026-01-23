@@ -88,27 +88,27 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 4: Create SessionManager for Multi-Game Orchestration
 **Goal:** SessionManager creates and manages N parallel game sessions.
 
-- [ ] Create `internal/bvb/manager.go`:
-  - [ ] Define `SessionManager` struct (sessions, state, speed, difficulties, names)
-  - [ ] Implement `NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, gameCount) *SessionManager`
-  - [ ] Implement `Start()` - creates engine instances and launches all sessions as goroutines
-  - [ ] Implement `Pause()` - pauses all sessions
-  - [ ] Implement `Resume()` - resumes all sessions
-  - [ ] Implement `SetSpeed(speed)` - updates speed for all sessions
-  - [ ] Implement `Abort()` - stops all sessions, cleans up
-  - [ ] Implement `Sessions() []*GameSession` - returns sessions slice
-  - [ ] Implement `AllFinished() bool`
-  - [ ] Implement `State() SessionState`
-- [ ] Create `internal/bvb/manager_test.go`:
-  - [ ] Test creating manager with N games
-  - [ ] Test Start() launches all sessions
-  - [ ] Test all sessions complete (Easy vs Easy, 3 games)
-  - [ ] Test Pause/Resume affects all sessions
-  - [ ] Test SetSpeed propagates to all sessions
-  - [ ] Test Abort stops all sessions and cleans up (no goroutine leaks)
-  - [ ] Test AllFinished() returns true only when all done
-- [ ] Run tests: `go test ./internal/bvb/`
-- [ ] Verify: Manager orchestrates parallel games correctly
+- [x] Create `internal/bvb/manager.go`:
+  - [x] Define `SessionManager` struct (sessions, state, speed, difficulties, names)
+  - [x] Implement `NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, gameCount) *SessionManager`
+  - [x] Implement `Start()` - creates engine instances and launches all sessions as goroutines
+  - [x] Implement `Pause()` - pauses all sessions
+  - [x] Implement `Resume()` - resumes all sessions
+  - [x] Implement `SetSpeed(speed)` - updates speed for all sessions
+  - [x] Implement `Abort()` - stops all sessions, cleans up
+  - [x] Implement `Sessions() []*GameSession` - returns sessions slice
+  - [x] Implement `AllFinished() bool`
+  - [x] Implement `State() SessionState`
+- [x] Create `internal/bvb/manager_test.go`:
+  - [x] Test creating manager with N games
+  - [x] Test Start() launches all sessions
+  - [x] Test all sessions complete (Easy vs Easy, 3 games)
+  - [x] Test Pause/Resume affects all sessions
+  - [x] Test SetSpeed propagates to all sessions
+  - [x] Test Abort stops all sessions and cleans up (no goroutine leaks)
+  - [x] Test AllFinished() returns true only when all done
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Manager orchestrates parallel games correctly
 
 **Deliverable:** Multi-game parallel execution working. Core BvB logic complete.
 
