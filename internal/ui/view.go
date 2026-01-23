@@ -1014,6 +1014,172 @@ func (m Model) renderBvBGameMode() string {
 	return b.String()
 }
 
+// renderBvBGridView renders multiple games in a grid layout.
+func (m Model) renderBvBGridView() string {
+	var b strings.Builder
+
+	title := titleStyle.Render("TermChess - Bot vs Bot")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	sessions := m.bvbManager.Sessions()
+	if len(sessions) == 0 {
+		b.WriteString("No games available.\n")
+		return b.String()
+	}
+
+	// Calculate pagination
+	boardsPerPage := m.bvbGridRows * m.bvbGridCols
+	totalPages := (len(sessions) + boardsPerPage - 1) / boardsPerPage
+	pageIdx := m.bvbPageIndex
+	if pageIdx >= totalPages {
+		pageIdx = totalPages - 1
+	}
+	startIdx := pageIdx * boardsPerPage
+	endIdx := startIdx + boardsPerPage
+	if endIdx > len(sessions) {
+		endIdx = len(sessions)
+	}
+
+	// Show matchup and progress info
+	infoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#50FA7B")).
+		Padding(0, 2)
+
+	finished := 0
+	for _, s := range sessions {
+		if s.IsFinished() {
+			finished++
+		}
+	}
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black) | Games: %d/%d completed",
+		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff),
+		finished, len(sessions))
+	b.WriteString(infoStyle.Render(matchup))
+	b.WriteString("\n\n")
+
+	// Render the grid
+	pageSessions := sessions[startIdx:endIdx]
+	gridStr := m.renderBoardGrid(pageSessions, m.bvbGridCols)
+	b.WriteString(gridStr)
+	b.WriteString("\n")
+
+	// Page indicator
+	if totalPages > 1 {
+		pageInfo := fmt.Sprintf("Page %d/%d", pageIdx+1, totalPages)
+		pageStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4")).
+			Bold(true).
+			Padding(0, 2)
+		b.WriteString(pageStyle.Render(pageInfo))
+		b.WriteString("\n")
+	}
+
+	// Speed/pause status
+	speedNames := map[bvb.PlaybackSpeed]string{
+		bvb.SpeedInstant: "Instant",
+		bvb.SpeedFast:    "Fast",
+		bvb.SpeedNormal:  "Normal",
+		bvb.SpeedSlow:    "Slow",
+	}
+	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
+	if m.bvbPaused {
+		controlStatus += " | PAUSED"
+	}
+	controlStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFDF5")).
+		Padding(0, 2)
+	b.WriteString(controlStyle.Render(controlStatus))
+	b.WriteString("\n")
+
+	// Help text
+	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: pages | Tab: single view | ESC: abort", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	return b.String()
+}
+
+// renderBoardGrid renders a slice of sessions as a grid with the given number of columns.
+func (m Model) renderBoardGrid(sessions []*bvb.GameSession, cols int) string {
+	if len(sessions) == 0 {
+		return ""
+	}
+
+	// Render each session as a compact board cell
+	cells := make([]string, len(sessions))
+	for i, session := range sessions {
+		cells[i] = m.renderCompactBoardCell(session)
+	}
+
+	// Arrange cells into rows
+	var rows []string
+	for i := 0; i < len(cells); i += cols {
+		end := i + cols
+		if end > len(cells) {
+			end = len(cells)
+		}
+		rowCells := cells[i:end]
+		row := lipgloss.JoinHorizontal(lipgloss.Top, rowCells...)
+		rows = append(rows, row)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, rows...)
+}
+
+// renderCompactBoardCell renders a single game session as a compact board cell for the grid.
+// Shows: game number, compact board, move count, and status.
+func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
+	var b strings.Builder
+
+	board := session.CurrentBoard()
+	gameNum := session.GameNumber()
+	moveCount := len(session.CurrentMoveHistory())
+	isFinished := session.IsFinished()
+
+	// Game header
+	headerText := fmt.Sprintf("Game %d", gameNum)
+	b.WriteString(headerText)
+	b.WriteString("\n")
+
+	// Render compact board (no coords, no color)
+	compactConfig := Config{
+		UseUnicode: m.config.UseUnicode,
+		ShowCoords: false,
+		UseColors:  false,
+	}
+	renderer := NewBoardRenderer(compactConfig)
+	boardStr := renderer.Render(board)
+	b.WriteString(boardStr)
+	b.WriteString("\n")
+
+	// Status line
+	if isFinished {
+		result := session.Result()
+		if result != nil {
+			statusText := fmt.Sprintf("Moves: %d | %s", moveCount, result.Winner)
+			b.WriteString(statusText)
+		}
+	} else {
+		b.WriteString(fmt.Sprintf("Moves: %d", moveCount))
+	}
+	b.WriteString("\n")
+
+	// Style the cell with border and padding
+	cellStyle := lipgloss.NewStyle().
+		Padding(0, 1).
+		Margin(0, 1)
+
+	if isFinished {
+		// Dimmed style for finished games
+		cellStyle = cellStyle.Foreground(lipgloss.Color("#626262"))
+	}
+
+	return cellStyle.Render(b.String())
+}
+
 // renderBvBGridConfig renders the Bot vs Bot grid configuration screen.
 func (m Model) renderBvBGridConfig() string {
 	var b strings.Builder
@@ -1102,8 +1268,7 @@ func (m Model) renderBvBGamePlay() string {
 	if m.bvbViewMode == BvBSingleView {
 		return m.renderBvBSingleView()
 	}
-	// Grid view will be implemented in Task 10; fall back to single view for now
-	return m.renderBvBSingleView()
+	return m.renderBvBGridView()
 }
 
 // renderBvBSingleView renders a single game with full detail.

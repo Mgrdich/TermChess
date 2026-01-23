@@ -250,23 +250,23 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 10: Implement Grid View for Multi-Game Display
 **Goal:** User can watch multiple games simultaneously in a grid layout.
 
-- [ ] Update `internal/ui/bvb_view.go`:
-  - [ ] Implement `renderBvBGrid()` function:
-    - [ ] Render compact boards using lipgloss JoinHorizontal/JoinVertical
-    - [ ] Each board shows: position, game number, move count, status
-    - [ ] Completed games visually distinguished (dimmed or different border)
-  - [ ] Implement compact board renderer (smaller than full-size)
-  - [ ] Calculate grid layout based on bvbGridRows/bvbGridCols
-- [ ] Update `internal/ui/bvb_view.go`:
-  - [ ] Route to grid view or single view based on bvbViewMode
-  - [ ] In grid view, show page indicator if games > grid slots
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] Add Tab key: toggle between GridView and SingleView
-  - [ ] In grid view: ←/→ navigate pages
-  - [ ] In single view: ←/→ navigate between games
-- [ ] Test: Start 4 games with 2x2 grid, see all 4 boards
-- [ ] Test: Start 8 games with 2x2 grid, see pages
-- [ ] Verify: Grid renders correctly, page navigation works
+- [x] Update `internal/ui/view.go`:
+  - [x] Implement `renderBvBGridView()` function:
+    - [x] Render compact boards using lipgloss JoinHorizontal/JoinVertical
+    - [x] Each board shows: position, game number, move count, status
+    - [x] Completed games visually distinguished (dimmed style)
+  - [x] Implement `renderCompactBoardCell()` compact board renderer
+  - [x] Calculate grid layout based on bvbGridRows/bvbGridCols
+- [x] Update `internal/ui/view.go`:
+  - [x] Route to grid view or single view based on bvbViewMode
+  - [x] In grid view, show page indicator if games > grid slots
+- [x] Update `internal/ui/update.go`:
+  - [x] Tab key: toggle between GridView and SingleView
+  - [x] In grid view: ←/→ navigate pages (no wrap)
+  - [x] In single view: ←/→ navigate between games (with wrap)
+- [x] Test: Grid view renders with multiple games
+- [x] Test: Page navigation in grid view
+- [x] Verify: Grid renders correctly, page navigation works, page indicator shows/hides
 
 **Deliverable:** Multi-game grid display working. Full viewing experience.
 

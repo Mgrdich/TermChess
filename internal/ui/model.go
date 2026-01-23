@@ -162,6 +162,8 @@ type Model struct {
 	bvbViewMode BvBViewMode
 	// bvbPaused tracks whether games are paused
 	bvbPaused bool
+	// bvbPageIndex tracks the current page in grid view
+	bvbPageIndex int
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.

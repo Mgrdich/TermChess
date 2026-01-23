@@ -1468,24 +1468,41 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "left", "h":
-		// Previous game in single view
-		if m.bvbViewMode == BvBSingleView && m.bvbManager != nil {
-			sessions := m.bvbManager.Sessions()
-			if m.bvbSelectedGame > 0 {
-				m.bvbSelectedGame--
+		if m.bvbManager != nil {
+			if m.bvbViewMode == BvBSingleView {
+				// Previous game in single view
+				sessions := m.bvbManager.Sessions()
+				if m.bvbSelectedGame > 0 {
+					m.bvbSelectedGame--
+				} else {
+					m.bvbSelectedGame = len(sessions) - 1
+				}
 			} else {
-				m.bvbSelectedGame = len(sessions) - 1
+				// Previous page in grid view
+				if m.bvbPageIndex > 0 {
+					m.bvbPageIndex--
+				}
 			}
 		}
 
 	case "right", "l":
-		// Next game in single view
-		if m.bvbViewMode == BvBSingleView && m.bvbManager != nil {
-			sessions := m.bvbManager.Sessions()
-			if m.bvbSelectedGame < len(sessions)-1 {
-				m.bvbSelectedGame++
+		if m.bvbManager != nil {
+			if m.bvbViewMode == BvBSingleView {
+				// Next game in single view
+				sessions := m.bvbManager.Sessions()
+				if m.bvbSelectedGame < len(sessions)-1 {
+					m.bvbSelectedGame++
+				} else {
+					m.bvbSelectedGame = 0
+				}
 			} else {
-				m.bvbSelectedGame = 0
+				// Next page in grid view
+				sessions := m.bvbManager.Sessions()
+				boardsPerPage := m.bvbGridRows * m.bvbGridCols
+				totalPages := (len(sessions) + boardsPerPage - 1) / boardsPerPage
+				if m.bvbPageIndex < totalPages-1 {
+					m.bvbPageIndex++
+				}
 			}
 		}
 	}

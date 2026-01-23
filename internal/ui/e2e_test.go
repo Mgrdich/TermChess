@@ -1776,6 +1776,245 @@ func TestBvBGamePlay_RenderSingleView(t *testing.T) {
 	}
 }
 
+// TestBvBGamePlay_RenderGridView tests that the grid view renders correctly with multiple games.
+func TestBvBGamePlay_RenderGridView(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotMedium
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Switch to grid view
+	m.bvbViewMode = BvBGridView
+
+	view := m.renderBvBGamePlay()
+
+	if !strings.Contains(view, "Bot vs Bot") {
+		t.Error("Expected title to contain 'Bot vs Bot'")
+	}
+	if !strings.Contains(view, "Easy Bot (White) vs Medium Bot (Black)") {
+		t.Error("Expected matchup info in grid view")
+	}
+	if !strings.Contains(view, "Game 1") {
+		t.Error("Expected Game 1 cell in grid view")
+	}
+	if !strings.Contains(view, "Speed: Normal") {
+		t.Error("Expected speed indicator in grid view")
+	}
+	if !strings.Contains(view, "pages") {
+		t.Error("Expected help text to mention pages navigation")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_GridPageNavigation tests page navigation in grid view.
+func TestBvBGamePlay_GridPageNavigation(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0 // 1x1 grid
+	m.bvbGameCount = 3  // 3 games with 1x1 grid = 3 pages
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Switch to grid view
+	m.bvbViewMode = BvBGridView
+
+	// Should start at page 0
+	if m.bvbPageIndex != 0 {
+		t.Errorf("Expected initial page index 0, got %d", m.bvbPageIndex)
+	}
+
+	rightMsg := tea.KeyMsg{Type: tea.KeyRight}
+	leftMsg := tea.KeyMsg{Type: tea.KeyLeft}
+
+	// Navigate right to page 1
+	result, _ = m.handleBvBGamePlayKeys(rightMsg)
+	m = result.(Model)
+	if m.bvbPageIndex != 1 {
+		t.Errorf("Expected page index 1 after right, got %d", m.bvbPageIndex)
+	}
+
+	// Navigate right to page 2
+	result, _ = m.handleBvBGamePlayKeys(rightMsg)
+	m = result.(Model)
+	if m.bvbPageIndex != 2 {
+		t.Errorf("Expected page index 2 after second right, got %d", m.bvbPageIndex)
+	}
+
+	// Navigate right again - should not go past last page
+	result, _ = m.handleBvBGamePlayKeys(rightMsg)
+	m = result.(Model)
+	if m.bvbPageIndex != 2 {
+		t.Errorf("Expected page index to stay at 2 (no wrap), got %d", m.bvbPageIndex)
+	}
+
+	// Navigate left back to page 1
+	result, _ = m.handleBvBGamePlayKeys(leftMsg)
+	m = result.(Model)
+	if m.bvbPageIndex != 1 {
+		t.Errorf("Expected page index 1 after left, got %d", m.bvbPageIndex)
+	}
+
+	// Navigate left to page 0
+	result, _ = m.handleBvBGamePlayKeys(leftMsg)
+	m = result.(Model)
+	if m.bvbPageIndex != 0 {
+		t.Errorf("Expected page index 0 after second left, got %d", m.bvbPageIndex)
+	}
+
+	// Navigate left again - should not go below 0
+	result, _ = m.handleBvBGamePlayKeys(leftMsg)
+	m = result.(Model)
+	if m.bvbPageIndex != 0 {
+		t.Errorf("Expected page index to stay at 0 (no wrap), got %d", m.bvbPageIndex)
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_GridViewPageIndicator tests that page indicator shows for multi-page grids.
+func TestBvBGamePlay_GridViewPageIndicator(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0 // 1x1 grid
+	m.bvbGameCount = 2  // 2 pages
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewMode = BvBGridView
+
+	view := m.renderBvBGamePlay()
+	if !strings.Contains(view, "Page 1/2") {
+		t.Error("Expected page indicator 'Page 1/2' for multi-page grid")
+	}
+
+	// Navigate to page 2
+	m.bvbPageIndex = 1
+	view = m.renderBvBGamePlay()
+	if !strings.Contains(view, "Page 2/2") {
+		t.Error("Expected page indicator 'Page 2/2' after navigation")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_GridViewNoPageIndicatorSinglePage tests no page indicator for single-page grids.
+func TestBvBGamePlay_GridViewNoPageIndicatorSinglePage(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2 grid
+	m.bvbGameCount = 4  // Exactly fits in one page
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewMode = BvBGridView
+
+	view := m.renderBvBGamePlay()
+	if strings.Contains(view, "Page ") {
+		t.Error("Expected no page indicator when all games fit on one page")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_ViewTogglePreservesNavigation tests that view toggle doesn't reset navigation state.
+func TestBvBGamePlay_ViewTogglePreservesNavigation(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0 // 1x1
+	m.bvbGameCount = 3
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Start in single view, navigate to game 2
+	m.bvbViewMode = BvBSingleView
+	m.bvbSelectedGame = 2
+
+	tabMsg := tea.KeyMsg{Type: tea.KeyTab}
+
+	// Toggle to grid view
+	result, _ = m.handleBvBGamePlayKeys(tabMsg)
+	m = result.(Model)
+	if m.bvbViewMode != BvBGridView {
+		t.Error("Expected grid view after tab")
+	}
+
+	// Selected game should be preserved
+	if m.bvbSelectedGame != 2 {
+		t.Errorf("Expected selectedGame to be preserved as 2, got %d", m.bvbSelectedGame)
+	}
+
+	// Toggle back to single view
+	result, _ = m.handleBvBGamePlayKeys(tabMsg)
+	m = result.(Model)
+	if m.bvbViewMode != BvBSingleView {
+		t.Error("Expected single view after second tab")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_GridViewPausedIndicator tests the paused indicator in grid view.
+func TestBvBGamePlay_GridViewPausedIndicator(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewMode = BvBGridView
+	m.bvbPaused = true
+
+	view := m.renderBvBGamePlay()
+	if !strings.Contains(view, "PAUSED") {
+		t.Error("Expected PAUSED indicator in grid view when paused")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
 // TestParsePositiveInt tests the parsePositiveInt helper.
 func TestParsePositiveInt(t *testing.T) {
 	tests := []struct {
