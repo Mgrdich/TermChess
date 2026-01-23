@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -1092,20 +1093,41 @@ func (m Model) renderBvBGridConfig() string {
 }
 
 // renderBvBGamePlay renders the Bot vs Bot gameplay screen.
-// Shows the current state of the running games.
+// Shows the current state of the running games in single-board or grid view.
 func (m Model) renderBvBGamePlay() string {
+	if m.bvbManager == nil {
+		return "No session running.\n"
+	}
+
+	if m.bvbViewMode == BvBSingleView {
+		return m.renderBvBSingleView()
+	}
+	// Grid view will be implemented in Task 10; fall back to single view for now
+	return m.renderBvBSingleView()
+}
+
+// renderBvBSingleView renders a single game with full detail.
+func (m Model) renderBvBSingleView() string {
 	var b strings.Builder
 
 	title := titleStyle.Render("TermChess - Bot vs Bot")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
-	if m.bvbManager == nil {
-		b.WriteString("No session running.\n")
+	sessions := m.bvbManager.Sessions()
+	if len(sessions) == 0 {
+		b.WriteString("No games available.\n")
 		return b.String()
 	}
 
-	// Show basic status
+	// Clamp selected game index
+	selectedIdx := m.bvbSelectedGame
+	if selectedIdx >= len(sessions) {
+		selectedIdx = len(sessions) - 1
+	}
+	session := sessions[selectedIdx]
+
+	// Show game info header
 	infoStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#50FA7B")).
 		Padding(0, 2)
@@ -1113,22 +1135,87 @@ func (m Model) renderBvBGamePlay() string {
 	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
 		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
 	b.WriteString(infoStyle.Render(matchup))
-	b.WriteString("\n\n")
+	b.WriteString("\n")
 
-	sessions := m.bvbManager.Sessions()
+	// Game number and progress
 	finished := 0
 	for _, s := range sessions {
 		if s.IsFinished() {
 			finished++
 		}
 	}
+	gameInfo := fmt.Sprintf("Game %d of %d | Completed: %d/%d",
+		selectedIdx+1, len(sessions), finished, len(sessions))
+	b.WriteString(infoStyle.Render(gameInfo))
+	b.WriteString("\n\n")
 
-	statusText := fmt.Sprintf("Games: %d/%d completed | Grid: %dx%d",
-		finished, len(sessions), m.bvbGridRows, m.bvbGridCols)
-	b.WriteString(infoStyle.Render(statusText))
+	// Render the chess board
+	board := session.CurrentBoard()
+	renderer := NewBoardRenderer(m.config)
+	boardStr := renderer.Render(board)
+	b.WriteString(boardStr)
+	b.WriteString("\n\n")
+
+	// Move count and status
+	moves := session.CurrentMoveHistory()
+	moveCount := len(moves)
+
+	statusLine := fmt.Sprintf("Moves: %d", moveCount)
+	if session.IsFinished() {
+		result := session.Result()
+		if result != nil {
+			statusLine += fmt.Sprintf(" | Result: %s (%s)", result.Winner, result.EndReason)
+		}
+	} else {
+		if board.ActiveColor == 0 {
+			statusLine += " | White to move"
+		} else {
+			statusLine += " | Black to move"
+		}
+	}
+
+	statusLineStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7D56F4")).
+		Bold(true)
+	b.WriteString(statusLineStyle.Render(statusLine))
 	b.WriteString("\n")
 
-	helpText := renderHelpText("ESC: abort and return to menu", m.config)
+	// Show pause/speed status
+	speedNames := map[bvb.PlaybackSpeed]string{
+		bvb.SpeedInstant: "Instant",
+		bvb.SpeedFast:    "Fast",
+		bvb.SpeedNormal:  "Normal",
+		bvb.SpeedSlow:    "Slow",
+	}
+	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
+	if m.bvbPaused {
+		controlStatus += " | PAUSED"
+	}
+	controlStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFFDF5")).
+		Padding(0, 2)
+	b.WriteString(controlStyle.Render(controlStatus))
+	b.WriteString("\n")
+
+	// Move history (if enabled and there are moves)
+	if m.config.ShowMoveHistory && moveCount > 0 {
+		b.WriteString("\n")
+		historyHeader := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FAFAFA")).
+			Render("Move History:")
+		b.WriteString(historyHeader)
+		b.WriteString("\n")
+
+		historyText := FormatMoveHistory(moves)
+		historyStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4"))
+		b.WriteString(historyStyle.Render(historyText))
+		b.WriteString("\n")
+	}
+
+	// Help text
+	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: games | Tab: view | ESC: abort", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)

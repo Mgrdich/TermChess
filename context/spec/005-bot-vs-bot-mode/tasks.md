@@ -221,28 +221,27 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 9: Implement Single-Board BvB View (1x1 Grid)
 **Goal:** User can watch a single bot vs bot game with move history and status.
 
-- [ ] Update `internal/ui/model.go`:
-  - [ ] Add `ScreenBvBGamePlay` screen state
-  - [ ] Add fields: bvbManager, bvbSpeed, bvbViewMode, bvbSelectedGame
-  - [ ] Add `BvBViewMode` type (GridView, SingleView)
-- [ ] Create `internal/ui/bvb_view.go`:
-  - [ ] Implement `renderBvBGamePlay()` function
-  - [ ] For single-board view: render full board, move history, bot names, move count, status
-  - [ ] Show "Bot thinking..." or game result as status
-  - [ ] Show help text with controls
-- [ ] Update `internal/ui/update.go`:
-  - [ ] Add `BvBTickMsg` message type
-  - [ ] Implement `bvbTickCmd()` function (schedule ticks based on speed)
-  - [ ] Handle BvBTickMsg: check AllFinished → go to stats; otherwise re-render
-  - [ ] Start ticking when entering ScreenBvBGamePlay
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] Implement `handleBvBGamePlayKeys()`:
-    - [ ] Space: pause/resume
-    - [ ] 1-4: change speed
-    - [ ] f: export FEN
-    - [ ] ESC: abort and return to menu
-- [ ] Test: Start single Easy vs Easy game, watch it play out
-- [ ] Verify: Board updates, moves display, game reaches completion
+- [x] Update `internal/ui/model.go`:
+  - [x] Add fields: bvbSpeed, bvbSelectedGame, bvbViewMode, bvbPaused
+  - [x] Add `BvBViewMode` type (BvBGridView, BvBSingleView)
+- [x] Update `internal/ui/view.go`:
+  - [x] Implement `renderBvBGamePlay()` with view mode routing
+  - [x] Implement `renderBvBSingleView()`: full board, move history, bot names, move count, status, speed indicator
+  - [x] Show game result when finished, active color when running
+  - [x] Show help text with controls
+- [x] Update `internal/ui/update.go`:
+  - [x] Add `BvBTickMsg` message type
+  - [x] Implement `bvbTickCmd()` function (schedule ticks based on speed)
+  - [x] Handle BvBTickMsg: check AllFinished → stop ticking; otherwise re-render
+  - [x] Start ticking when entering ScreenBvBGamePlay (from startBvBSession)
+  - [x] Implement full `handleBvBGamePlayKeys()`:
+    - [x] Space: pause/resume
+    - [x] 1-4: change speed (Instant/Fast/Normal/Slow)
+    - [x] Tab: toggle grid/single view
+    - [x] Left/Right (h/l): navigate between games in single view
+    - [x] ESC: abort and return to menu
+- [x] Test: Speed change, pause/resume, game navigation, view toggle, tick scheduling, render
+- [x] Verify: Board updates, moves display, controls work
 
 **Deliverable:** First playable BvB experience. Single game watchable end-to-end.
 

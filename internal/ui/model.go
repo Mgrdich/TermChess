@@ -154,7 +154,25 @@ type Model struct {
 	bvbInputtingGrid bool
 	// bvbManager holds the session manager for the current BvB session
 	bvbManager *bvb.SessionManager
+	// bvbSpeed stores the current playback speed
+	bvbSpeed bvb.PlaybackSpeed
+	// bvbSelectedGame tracks which game is focused in single view (0-indexed)
+	bvbSelectedGame int
+	// bvbViewMode tracks whether we're in grid or single-board view
+	bvbViewMode BvBViewMode
+	// bvbPaused tracks whether games are paused
+	bvbPaused bool
 }
+
+// BvBViewMode represents the display mode for BvB gameplay.
+type BvBViewMode int
+
+const (
+	// BvBGridView shows multiple boards in a grid
+	BvBGridView BvBViewMode = iota
+	// BvBSingleView shows a single board with full details
+	BvBSingleView
+)
 
 // NewModel creates and initializes a new Model with the provided configuration.
 // The model always starts at the main menu screen.

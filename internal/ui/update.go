@@ -15,6 +15,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// BvBTickMsg triggers a UI re-render for Bot vs Bot gameplay.
+type BvBTickMsg struct{}
+
 // BotMoveMsg is sent when the bot has selected a move.
 type BotMoveMsg struct {
 	move engine.Move
@@ -39,6 +42,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyPress(msg)
+	case BvBTickMsg:
+		return m.handleBvBTick()
 	case BotMoveMsg:
 		return m.handleBotMove(msg)
 	case BotMoveErrorMsg:
@@ -1380,10 +1385,14 @@ func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
 	manager.Start()
 
 	m.bvbManager = manager
+	m.bvbSpeed = bvb.SpeedNormal
+	m.bvbSelectedGame = 0
+	m.bvbViewMode = BvBSingleView
+	m.bvbPaused = false
 	m.screen = ScreenBvBGamePlay
 	m.statusMsg = ""
 	m.errorMsg = ""
-	return m, nil
+	return m, bvbTickCmd(m.bvbSpeed)
 }
 
 // uiBotDiffToBvB maps the UI BotDifficulty to the bot package Difficulty.
@@ -1401,7 +1410,7 @@ func uiBotDiffToBvB(d BotDifficulty) bot.Difficulty {
 }
 
 // handleBvBGamePlayKeys handles keyboard input during BvB game viewing.
-// For now, only ESC to abort and return to menu is supported.
+// Supports pause/resume, speed changes, view toggle, game navigation, and abort.
 func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
@@ -1415,9 +1424,101 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.menuSelection = 0
 		m.statusMsg = ""
 		m.errorMsg = ""
+		return m, nil
+
+	case " ":
+		// Toggle pause/resume
+		if m.bvbManager != nil {
+			if m.bvbPaused {
+				m.bvbManager.Resume()
+				m.bvbPaused = false
+			} else {
+				m.bvbManager.Pause()
+				m.bvbPaused = true
+			}
+		}
+
+	case "1":
+		m.bvbSpeed = bvb.SpeedInstant
+		if m.bvbManager != nil {
+			m.bvbManager.SetSpeed(m.bvbSpeed)
+		}
+	case "2":
+		m.bvbSpeed = bvb.SpeedFast
+		if m.bvbManager != nil {
+			m.bvbManager.SetSpeed(m.bvbSpeed)
+		}
+	case "3":
+		m.bvbSpeed = bvb.SpeedNormal
+		if m.bvbManager != nil {
+			m.bvbManager.SetSpeed(m.bvbSpeed)
+		}
+	case "4":
+		m.bvbSpeed = bvb.SpeedSlow
+		if m.bvbManager != nil {
+			m.bvbManager.SetSpeed(m.bvbSpeed)
+		}
+
+	case "tab":
+		// Toggle view mode
+		if m.bvbViewMode == BvBGridView {
+			m.bvbViewMode = BvBSingleView
+		} else {
+			m.bvbViewMode = BvBGridView
+		}
+
+	case "left", "h":
+		// Previous game in single view
+		if m.bvbViewMode == BvBSingleView && m.bvbManager != nil {
+			sessions := m.bvbManager.Sessions()
+			if m.bvbSelectedGame > 0 {
+				m.bvbSelectedGame--
+			} else {
+				m.bvbSelectedGame = len(sessions) - 1
+			}
+		}
+
+	case "right", "l":
+		// Next game in single view
+		if m.bvbViewMode == BvBSingleView && m.bvbManager != nil {
+			sessions := m.bvbManager.Sessions()
+			if m.bvbSelectedGame < len(sessions)-1 {
+				m.bvbSelectedGame++
+			} else {
+				m.bvbSelectedGame = 0
+			}
+		}
 	}
 
 	return m, nil
+}
+
+// bvbTickCmd returns a command that sends a BvBTickMsg after a delay based on speed.
+func bvbTickCmd(speed bvb.PlaybackSpeed) tea.Cmd {
+	delay := speed.Duration()
+	if delay == 0 {
+		// For instant speed, use a short tick interval for rendering
+		delay = 100 * time.Millisecond
+	}
+	return tea.Tick(delay, func(time.Time) tea.Msg {
+		return BvBTickMsg{}
+	})
+}
+
+// handleBvBTick handles tick messages for BvB gameplay updates.
+func (m Model) handleBvBTick() (tea.Model, tea.Cmd) {
+	if m.screen != ScreenBvBGamePlay || m.bvbManager == nil {
+		return m, nil
+	}
+
+	if m.bvbManager.AllFinished() {
+		// All games done - transition to stats (Task 12)
+		// For now, just stop ticking
+		return m, nil
+	}
+
+	// Schedule next tick
+	return m, bvbTickCmd(m.bvbSpeed)
 }
 
 // handleColorSelectKeys handles keyboard input for the color selection screen.

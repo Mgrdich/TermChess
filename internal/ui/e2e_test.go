@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
@@ -1548,6 +1549,230 @@ func TestBvBGamePlay_EscAbortsSession(t *testing.T) {
 	}
 	if m.bvbManager != nil {
 		t.Error("Expected bvbManager to be nil after abort")
+	}
+}
+
+// TestBvBGamePlay_SpeedChange tests speed change keys.
+func TestBvBGamePlay_SpeedChange(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Speed should default to Normal
+	if m.bvbSpeed != bvb.SpeedNormal {
+		t.Errorf("Expected default speed Normal, got %v", m.bvbSpeed)
+	}
+
+	// Change to Fast (key "2")
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	if m.bvbSpeed != bvb.SpeedFast {
+		t.Errorf("Expected speed Fast after pressing '2', got %v", m.bvbSpeed)
+	}
+
+	// Change to Instant (key "1")
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	if m.bvbSpeed != bvb.SpeedInstant {
+		t.Errorf("Expected speed Instant after pressing '1', got %v", m.bvbSpeed)
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_PauseResume tests pause/resume toggle.
+func TestBvBGamePlay_PauseResume(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	if m.bvbPaused {
+		t.Error("Should not be paused initially")
+	}
+
+	// Press space to pause
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	if !m.bvbPaused {
+		t.Error("Should be paused after space")
+	}
+
+	// Press space again to resume
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	if m.bvbPaused {
+		t.Error("Should be resumed after second space")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_GameNavigation tests left/right game navigation.
+func TestBvBGamePlay_GameNavigation(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 3
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	if m.bvbSelectedGame != 0 {
+		t.Errorf("Expected selectedGame=0, got %d", m.bvbSelectedGame)
+	}
+
+	// Press right to go to game 1
+	msg := tea.KeyMsg{Type: tea.KeyRight}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+	if m.bvbSelectedGame != 1 {
+		t.Errorf("Expected selectedGame=1, got %d", m.bvbSelectedGame)
+	}
+
+	// Press right again to game 2
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+	if m.bvbSelectedGame != 2 {
+		t.Errorf("Expected selectedGame=2, got %d", m.bvbSelectedGame)
+	}
+
+	// Wrap around
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+	if m.bvbSelectedGame != 0 {
+		t.Errorf("Expected wrap to 0, got %d", m.bvbSelectedGame)
+	}
+
+	// Press left wraps to last
+	msg = tea.KeyMsg{Type: tea.KeyLeft}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+	if m.bvbSelectedGame != 2 {
+		t.Errorf("Expected wrap to 2, got %d", m.bvbSelectedGame)
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_ViewToggle tests Tab toggles between grid and single view.
+func TestBvBGamePlay_ViewToggle(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGamePlay
+	m.bvbViewMode = BvBSingleView
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'\t'}}
+	// Note: tab is actually "tab" string
+	msg2 := tea.KeyMsg{Type: tea.KeyTab}
+	result, _ := m.handleBvBGamePlayKeys(msg2)
+	m = result.(Model)
+
+	if m.bvbViewMode != BvBGridView {
+		t.Errorf("Expected BvBGridView after Tab, got %v", m.bvbViewMode)
+	}
+
+	result, _ = m.handleBvBGamePlayKeys(msg2)
+	m = result.(Model)
+
+	if m.bvbViewMode != BvBSingleView {
+		t.Errorf("Expected BvBSingleView after second Tab, got %v", m.bvbViewMode)
+	}
+	_ = msg
+}
+
+// TestBvBGamePlay_TickSchedulesNext tests that tick handler schedules next tick.
+func TestBvBGamePlay_TickSchedulesNext(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Handle tick - should schedule another tick since game is running
+	result, cmd := m.handleBvBTick()
+	m = result.(Model)
+
+	if cmd == nil {
+		// Game might have finished instantly; check if manager shows finished
+		if m.bvbManager != nil && !m.bvbManager.AllFinished() {
+			t.Error("Expected tick to schedule next tick command while game running")
+		}
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_RenderSingleView tests that the single view renders correctly.
+func TestBvBGamePlay_RenderSingleView(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotHard
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	view := m.renderBvBGamePlay()
+
+	if !strings.Contains(view, "Bot vs Bot") {
+		t.Error("Expected title to contain 'Bot vs Bot'")
+	}
+	if !strings.Contains(view, "Easy Bot (White) vs Hard Bot (Black)") {
+		t.Error("Expected matchup info in view")
+	}
+	if !strings.Contains(view, "Game 1 of 1") {
+		t.Error("Expected game number info")
+	}
+	if !strings.Contains(view, "Speed: Normal") {
+		t.Error("Expected speed indicator")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
 	}
 }
 
