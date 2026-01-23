@@ -1505,7 +1505,12 @@ func (m Model) renderBvBSingleView() string {
 	}
 
 	// Help text
-	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: games | Tab: view | f: FEN | ESC: abort", m.config)
+	helpStr := "Space: pause/resume | 1-4: speed | "
+	if m.bvbGameCount > 1 {
+		helpStr += "←/→: games | "
+	}
+	helpStr += "Tab: view | f: FEN | ESC: abort"
+	helpText := renderHelpText(helpStr, m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
