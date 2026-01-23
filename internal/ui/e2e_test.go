@@ -872,3 +872,202 @@ func TestMoveHistoryPersistence(t *testing.T) {
 		t.Error("Move history should contain numbered moves")
 	}
 }
+
+// TestGameTypeSelection_BvBTransitionsToBvBBotSelect tests that "Bot vs Bot" transitions to BvB bot selection screen.
+func TestGameTypeSelection_BvBTransitionsToBvBBotSelect(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenGameTypeSelect
+	m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+	m.menuSelection = 2 // Select "Bot vs Bot"
+
+	result, _ := m.handleGameTypeSelection()
+	m = result.(Model)
+
+	if m.screen != ScreenBvBBotSelect {
+		t.Errorf("Expected screen to be ScreenBvBBotSelect, got: %v", m.screen)
+	}
+	if m.gameType != GameTypeBvB {
+		t.Errorf("Expected gameType to be GameTypeBvB, got: %v", m.gameType)
+	}
+	if !m.bvbSelectingWhite {
+		t.Error("Expected bvbSelectingWhite to be true for initial selection")
+	}
+	expectedOptions := []string{"Easy", "Medium", "Hard"}
+	if len(m.menuOptions) != len(expectedOptions) {
+		t.Fatalf("Expected %d menu options, got %d", len(expectedOptions), len(m.menuOptions))
+	}
+	for i, opt := range expectedOptions {
+		if m.menuOptions[i] != opt {
+			t.Errorf("Expected option %d to be %s, got %s", i, opt, m.menuOptions[i])
+		}
+	}
+}
+
+// TestBvBBotSelect_WhiteThenBlack tests the two-step bot selection flow.
+func TestBvBBotSelect_WhiteThenBlack(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBBotSelect
+	m.gameType = GameTypeBvB
+	m.bvbSelectingWhite = true
+	m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	m.menuSelection = 2 // Select "Hard" for White
+
+	// Select White difficulty
+	result, _ := m.handleBvBBotDifficultySelection()
+	m = result.(Model)
+
+	if m.bvbSelectingWhite {
+		t.Error("Expected bvbSelectingWhite to be false after White selection")
+	}
+	if m.bvbWhiteDiff != BotHard {
+		t.Errorf("Expected bvbWhiteDiff to be BotHard, got: %v", m.bvbWhiteDiff)
+	}
+	if m.screen != ScreenBvBBotSelect {
+		t.Errorf("Expected to stay on ScreenBvBBotSelect for Black selection, got: %v", m.screen)
+	}
+
+	// Select Black difficulty
+	m.menuSelection = 0 // Select "Easy" for Black
+	result, _ = m.handleBvBBotDifficultySelection()
+	m = result.(Model)
+
+	if m.bvbBlackDiff != BotEasy {
+		t.Errorf("Expected bvbBlackDiff to be BotEasy, got: %v", m.bvbBlackDiff)
+	}
+}
+
+// TestBvBBotSelect_EscFromWhiteGoesBackToGameType tests ESC during White selection.
+func TestBvBBotSelect_EscFromWhiteGoesBackToGameType(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBBotSelect
+	m.gameType = GameTypeBvB
+	m.bvbSelectingWhite = true
+	m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	m.menuSelection = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBBotSelectKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenGameTypeSelect {
+		t.Errorf("Expected screen to be ScreenGameTypeSelect, got: %v", m.screen)
+	}
+}
+
+// TestBvBBotSelect_EscFromBlackGoesBackToWhite tests ESC during Black selection.
+func TestBvBBotSelect_EscFromBlackGoesBackToWhite(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBBotSelect
+	m.gameType = GameTypeBvB
+	m.bvbSelectingWhite = false
+	m.bvbWhiteDiff = BotMedium
+	m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	m.menuSelection = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBBotSelectKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenBvBBotSelect {
+		t.Errorf("Expected to stay on ScreenBvBBotSelect, got: %v", m.screen)
+	}
+	if !m.bvbSelectingWhite {
+		t.Error("Expected bvbSelectingWhite to be true after ESC from Black selection")
+	}
+}
+
+// TestBvBBotSelect_Navigation tests arrow key navigation.
+func TestBvBBotSelect_Navigation(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBBotSelect
+	m.gameType = GameTypeBvB
+	m.bvbSelectingWhite = true
+	m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	m.menuSelection = 0
+
+	// Move down
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	result, _ := m.handleBvBBotSelectKeys(msg)
+	m = result.(Model)
+	if m.menuSelection != 1 {
+		t.Errorf("Expected menuSelection to be 1 after down, got: %d", m.menuSelection)
+	}
+
+	// Move down again
+	result, _ = m.handleBvBBotSelectKeys(msg)
+	m = result.(Model)
+	if m.menuSelection != 2 {
+		t.Errorf("Expected menuSelection to be 2 after second down, got: %d", m.menuSelection)
+	}
+
+	// Wrap around
+	result, _ = m.handleBvBBotSelectKeys(msg)
+	m = result.(Model)
+	if m.menuSelection != 0 {
+		t.Errorf("Expected menuSelection to wrap to 0, got: %d", m.menuSelection)
+	}
+
+	// Move up wraps to bottom
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	result, _ = m.handleBvBBotSelectKeys(msg)
+	m = result.(Model)
+	if m.menuSelection != 2 {
+		t.Errorf("Expected menuSelection to wrap to 2, got: %d", m.menuSelection)
+	}
+}
+
+// TestRenderBvBBotSelect_WhiteSelection tests rendering during White bot selection.
+func TestRenderBvBBotSelect_WhiteSelection(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBBotSelect
+	m.bvbSelectingWhite = true
+	m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	m.menuSelection = 0
+
+	view := m.renderBvBBotSelect()
+
+	if !strings.Contains(view, "Select White Bot Difficulty:") {
+		t.Error("Expected view to contain 'Select White Bot Difficulty:'")
+	}
+	if !strings.Contains(view, "Easy") {
+		t.Error("Expected view to contain 'Easy'")
+	}
+}
+
+// TestRenderBvBBotSelect_BlackSelection tests rendering during Black bot selection.
+func TestRenderBvBBotSelect_BlackSelection(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBBotSelect
+	m.bvbSelectingWhite = false
+	m.bvbWhiteDiff = BotHard
+	m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	m.menuSelection = 0
+
+	view := m.renderBvBBotSelect()
+
+	if !strings.Contains(view, "Select Black Bot Difficulty:") {
+		t.Error("Expected view to contain 'Select Black Bot Difficulty:'")
+	}
+	if !strings.Contains(view, "White: Hard Bot") {
+		t.Error("Expected view to show previously selected White difficulty")
+	}
+}
+
+// TestBotDifficultyName tests the botDifficultyName helper.
+func TestBotDifficultyName(t *testing.T) {
+	tests := []struct {
+		diff BotDifficulty
+		want string
+	}{
+		{BotEasy, "Easy"},
+		{BotMedium, "Medium"},
+		{BotHard, "Hard"},
+		{BotDifficulty(99), "Unknown"},
+	}
+	for _, tt := range tests {
+		got := botDifficultyName(tt.diff)
+		if got != tt.want {
+			t.Errorf("botDifficultyName(%d) = %q, want %q", tt.diff, got, tt.want)
+		}
+	}
+}

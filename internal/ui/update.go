@@ -95,6 +95,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleResumePromptKeys(msg)
 	case ScreenDrawPrompt:
 		return m.handleDrawPromptKeys(msg)
+	case ScreenBvBBotSelect:
+		return m.handleBvBBotSelectKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -171,7 +173,7 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		// Transition to game type selection screen
 		m.screen = ScreenGameTypeSelect
 		// Set up menu options for game type selection
-		m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
+		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
 		m.menuSelection = 0
 		// Clear any previous status messages
 		m.statusMsg = ""
@@ -279,6 +281,17 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 		m.menuSelection = 0
 		m.statusMsg = ""
 		m.errorMsg = ""
+
+	case "Bot vs Bot":
+		// Set game type to BvB
+		m.gameType = GameTypeBvB
+		// Start with selecting White bot difficulty
+		m.bvbSelectingWhite = true
+		m.screen = ScreenBvBBotSelect
+		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		m.menuSelection = 0
+		m.statusMsg = ""
+		m.errorMsg = ""
 	}
 
 	return m, nil
@@ -354,7 +367,7 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.errorMsg = ""
 		m.statusMsg = ""
 		// Set up menu options for game type selection
-		m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
+		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
 		m.menuSelection = 0
 		// Reset draw offer state
 		m.drawOfferedBy = -1
@@ -1000,10 +1013,94 @@ func (m Model) handleBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		// Return to game type selection
 		m.screen = ScreenGameTypeSelect
-		m.menuOptions = []string{"Player vs Player", "Player vs Bot"}
+		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBBotSelectKeys handles keyboard input for the BvB bot difficulty selection screen.
+// This screen is used twice: first to select White's bot difficulty, then Black's.
+// Supports arrow keys and vi-style navigation (j/k), Enter to select,
+// ESC to go back, and wraps around at top and bottom of the menu.
+func (m Model) handleBvBBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Clear any previous error or status messages when user takes action
+	m.errorMsg = ""
+	m.statusMsg = ""
+
+	switch msg.String() {
+	case "up", "k":
+		if m.menuSelection > 0 {
+			m.menuSelection--
+		} else {
+			m.menuSelection = len(m.menuOptions) - 1
+		}
+
+	case "down", "j":
+		if m.menuSelection < len(m.menuOptions)-1 {
+			m.menuSelection++
+		} else {
+			m.menuSelection = 0
+		}
+
+	case "enter":
+		return m.handleBvBBotDifficultySelection()
+
+	case "esc":
+		if m.bvbSelectingWhite {
+			// Go back to game type selection
+			m.screen = ScreenGameTypeSelect
+			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+			m.menuSelection = 0
+			m.errorMsg = ""
+			m.statusMsg = ""
+		} else {
+			// Go back to selecting White bot
+			m.bvbSelectingWhite = true
+			m.menuSelection = 0
+			m.errorMsg = ""
+			m.statusMsg = ""
+		}
+	}
+
+	return m, nil
+}
+
+// handleBvBBotDifficultySelection executes the action for the currently selected BvB bot difficulty.
+// If selecting White, stores the difficulty and moves to Black selection.
+// If selecting Black, stores the difficulty and transitions to game mode selection.
+func (m Model) handleBvBBotDifficultySelection() (tea.Model, tea.Cmd) {
+	selected := m.menuOptions[m.menuSelection]
+
+	var diff BotDifficulty
+	switch selected {
+	case "Easy":
+		diff = BotEasy
+	case "Medium":
+		diff = BotMedium
+	case "Hard":
+		diff = BotHard
+	}
+
+	if m.bvbSelectingWhite {
+		// Store White difficulty and move to Black selection
+		m.bvbWhiteDiff = diff
+		m.bvbSelectingWhite = false
+		m.menuSelection = 0
+		m.statusMsg = ""
+		m.errorMsg = ""
+	} else {
+		// Store Black difficulty and transition to game mode selection (Task 7)
+		m.bvbBlackDiff = diff
+		// For now, return to main menu until game mode screen is implemented
+		m.screen = ScreenMainMenu
+		m.menuOptions = buildMainMenuOptions()
+		m.menuSelection = 0
+		m.statusMsg = ""
+		m.errorMsg = ""
 	}
 
 	return m, nil

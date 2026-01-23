@@ -87,6 +87,8 @@ func (m Model) View() string {
 		return m.renderResumePrompt()
 	case ScreenDrawPrompt:
 		return m.renderDrawPrompt()
+	case ScreenBvBBotSelect:
+		return m.renderBvBBotSelect()
 	default:
 		return "Unknown screen"
 	}
@@ -838,6 +840,94 @@ func (m Model) renderDrawPrompt() string {
 	}
 
 	return b.String()
+}
+
+// renderBvBBotSelect renders the Bot vs Bot bot selection screen.
+// This screen is shown twice: once for White bot difficulty, once for Black.
+func (m Model) renderBvBBotSelect() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header based on which bot we're selecting
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+
+	headerText := "Select White Bot Difficulty:"
+	if !m.bvbSelectingWhite {
+		headerText = "Select Black Bot Difficulty:"
+	}
+	header := headerStyle.Render(headerText)
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Render menu options with cursor indicator for selected item
+	for i, option := range m.menuOptions {
+		cursor := "  "
+		optionText := option
+
+		if i == m.menuSelection {
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(option)
+		} else {
+			optionText = menuItemStyle.Render(option)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+	}
+
+	// Show the already-selected White difficulty when selecting Black
+	if !m.bvbSelectingWhite {
+		b.WriteString("\n")
+		infoStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#50FA7B")).
+			Padding(0, 2)
+		diffName := botDifficultyName(m.bvbWhiteDiff)
+		b.WriteString(infoStyle.Render(fmt.Sprintf("White: %s Bot", diffName)))
+		b.WriteString("\n")
+	}
+
+	// Render help text
+	helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// botDifficultyName returns the display name for a bot difficulty.
+func botDifficultyName(d BotDifficulty) string {
+	switch d {
+	case BotEasy:
+		return "Easy"
+	case BotMedium:
+		return "Medium"
+	case BotHard:
+		return "Hard"
+	default:
+		return "Unknown"
+	}
 }
 
 // formatMoveHistory formats the move history for display with a header.

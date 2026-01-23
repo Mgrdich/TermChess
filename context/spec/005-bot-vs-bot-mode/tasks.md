@@ -140,22 +140,22 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 6: Add "Bot vs Bot" Menu Option and BvB Bot Selection Screen
 **Goal:** User can select "Bot vs Bot" from game type menu and choose bot difficulties.
 
-- [ ] Update `internal/ui/model.go`:
-  - [ ] Add `GameTypeBvB` to GameType enum
-  - [ ] Add `ScreenBvBBotSelect` screen state
-  - [ ] Add BvB-related fields to Model (bvbWhiteDiff, bvbBlackDiff, bvbSelectingColor)
-- [ ] Update `internal/ui/update.go`:
-  - [ ] Add "Bot vs Bot" option to GameTypeSelect screen handler
-  - [ ] Handle transition: GameTypeSelect → ScreenBvBBotSelect
-- [ ] Create `internal/ui/bvb_screens.go`:
-  - [ ] Implement `handleBvBBotSelectKeys()`: navigate difficulties, select White then Black bot
-  - [ ] ESC returns to GameTypeSelect
-  - [ ] Enter on second selection advances to next screen
-- [ ] Update `internal/ui/view.go`:
-  - [ ] Add rendering for ScreenBvBBotSelect (show difficulty options, indicate White/Black selection)
-  - [ ] Add help text for BvB bot select screen
-- [ ] Test: Navigate to Bot vs Bot, select difficulties, ESC goes back
-- [ ] Verify: Menu flow works, selections stored in model
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `GameTypeBvB` to GameType enum
+  - [x] Add `ScreenBvBBotSelect` screen state
+  - [x] Add BvB-related fields to Model (bvbWhiteDiff, bvbBlackDiff, bvbSelectingWhite)
+- [x] Update `internal/ui/update.go`:
+  - [x] Add "Bot vs Bot" option to GameTypeSelect screen handler
+  - [x] Handle transition: GameTypeSelect → ScreenBvBBotSelect
+  - [x] Implement `handleBvBBotSelectKeys()`: navigate difficulties, select White then Black bot
+  - [x] ESC returns to GameTypeSelect (from White) or back to White selection (from Black)
+  - [x] Enter on second selection advances to next screen
+- [x] Update `internal/ui/view.go`:
+  - [x] Add rendering for ScreenBvBBotSelect (show difficulty options, indicate White/Black selection)
+  - [x] Show previously selected White difficulty when selecting Black
+  - [x] Add help text for BvB bot select screen
+- [x] Test: Navigate to Bot vs Bot, select difficulties, ESC goes back
+- [x] Verify: Menu flow works, selections stored in model
 
 **Deliverable:** User can navigate to BvB mode and select bot difficulties.
 

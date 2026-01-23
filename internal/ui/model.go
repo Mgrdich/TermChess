@@ -34,6 +34,8 @@ const (
 	ScreenResumePrompt
 	// ScreenDrawPrompt is displayed when one player offers a draw
 	ScreenDrawPrompt
+	// ScreenBvBBotSelect allows the user to choose bot difficulties for Bot vs Bot mode
+	ScreenBvBBotSelect
 )
 
 // GameType represents the type of chess game being played.
@@ -44,6 +46,8 @@ const (
 	GameTypePvP GameType = iota
 	// GameTypePvBot is a player vs bot game (for future bot support)
 	GameTypePvBot
+	// GameTypeBvB is a bot vs bot game
+	GameTypeBvB
 )
 
 // BotDifficulty represents the difficulty level of the chess bot.
@@ -119,6 +123,14 @@ type Model struct {
 	drawOfferedByBlack bool
 	// drawByAgreement indicates if the game ended by draw agreement
 	drawByAgreement bool
+
+	// Bot vs Bot fields
+	// bvbWhiteDiff stores the selected bot difficulty for White in BvB mode
+	bvbWhiteDiff BotDifficulty
+	// bvbBlackDiff stores the selected bot difficulty for Black in BvB mode
+	bvbBlackDiff BotDifficulty
+	// bvbSelectingWhite indicates whether we're selecting the White bot (true) or Black bot (false)
+	bvbSelectingWhite bool
 }
 
 // NewModel creates and initializes a new Model with the provided configuration.

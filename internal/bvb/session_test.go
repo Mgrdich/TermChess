@@ -355,7 +355,8 @@ func TestGameSessionResumeAfterPause(t *testing.T) {
 		t.Fatalf("failed to create black engine: %v", err)
 	}
 
-	speed := SpeedInstant
+	// Use SpeedSlow to ensure the game doesn't finish between Resume() and state check.
+	speed := SpeedSlow
 	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
 
 	done := make(chan struct{})
@@ -378,17 +379,18 @@ func TestGameSessionResumeAfterPause(t *testing.T) {
 		t.Errorf("state after resume = %d, want StateRunning (%d)", session.State(), StateRunning)
 	}
 
-	// Wait for the game to finish or timeout.
+	// Abort the session (it's using SpeedSlow so it won't finish naturally in a test).
+	session.Abort()
+
+	// Wait for the goroutine to finish.
 	select {
 	case <-done:
-		// Game completed after resume.
-	case <-time.After(60 * time.Second):
-		session.Abort()
-		t.Fatal("game did not complete within timeout after resume")
+	case <-time.After(5 * time.Second):
+		t.Fatal("session did not stop within timeout after abort")
 	}
 
 	if !session.IsFinished() {
-		t.Error("session should be finished after game completes")
+		t.Error("session should be finished after abort")
 	}
 }
 
