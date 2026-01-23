@@ -1507,6 +1507,37 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+
+	case "f":
+		// Export FEN of the focused game
+		if m.bvbManager != nil {
+			sessions := m.bvbManager.Sessions()
+			var targetSession *bvb.GameSession
+			if m.bvbViewMode == BvBSingleView {
+				if m.bvbSelectedGame < len(sessions) {
+					targetSession = sessions[m.bvbSelectedGame]
+				}
+			} else {
+				// In grid view, use first visible game on current page
+				boardsPerPage := m.bvbGridRows * m.bvbGridCols
+				startIdx := m.bvbPageIndex * boardsPerPage
+				if startIdx < len(sessions) {
+					targetSession = sessions[startIdx]
+				}
+			}
+			if targetSession != nil {
+				board := targetSession.CurrentBoard()
+				if board != nil {
+					fen := board.ToFEN()
+					err := util.CopyToClipboard(fen)
+					if err != nil {
+						m.statusMsg = fmt.Sprintf("FEN: %s (Failed to copy: %v)", fen, err)
+					} else {
+						m.statusMsg = fmt.Sprintf("FEN copied to clipboard")
+					}
+				}
+			}
+		}
 	}
 
 	return m, nil

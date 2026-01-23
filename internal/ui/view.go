@@ -1096,7 +1096,7 @@ func (m Model) renderBvBGridView() string {
 	b.WriteString("\n")
 
 	// Help text
-	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: pages | Tab: single view | ESC: abort", m.config)
+	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: pages | Tab: single view | f: FEN | ESC: abort", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1490,7 +1490,7 @@ func (m Model) renderBvBSingleView() string {
 	}
 
 	// Help text
-	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: games | Tab: view | ESC: abort", m.config)
+	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: games | Tab: view | f: FEN | ESC: abort", m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)

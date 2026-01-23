@@ -2246,6 +2246,93 @@ func TestBvBStats_EscGoesToMenu(t *testing.T) {
 	}
 }
 
+// TestBvBGamePlay_FENExportSingleView tests FEN export in single view.
+func TestBvBGamePlay_FENExportSingleView(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	m.bvbViewMode = BvBSingleView
+	m.bvbSelectedGame = 0
+
+	// Press 'f' to export FEN
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	// Status message should contain FEN-related text
+	if m.statusMsg == "" {
+		t.Error("Expected status message after FEN export")
+	}
+	if !strings.Contains(m.statusMsg, "FEN") {
+		t.Errorf("Expected status to mention FEN, got: %s", m.statusMsg)
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_FENExportGridView tests FEN export in grid view.
+func TestBvBGamePlay_FENExportGridView(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	m.bvbViewMode = BvBGridView
+	m.bvbPageIndex = 0
+
+	// Press 'f' to export FEN
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	// Status message should contain FEN-related text
+	if m.statusMsg == "" {
+		t.Error("Expected status message after FEN export in grid view")
+	}
+	if !strings.Contains(m.statusMsg, "FEN") {
+		t.Errorf("Expected status to mention FEN, got: %s", m.statusMsg)
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGamePlay_FENExportNoManager tests FEN export with no manager.
+func TestBvBGamePlay_FENExportNoManager(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGamePlay
+	m.bvbManager = nil
+
+	// Press 'f' should not crash
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}}
+	result, _ := m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	// No status message since no manager
+	if m.statusMsg != "" {
+		t.Errorf("Expected no status message without manager, got: %s", m.statusMsg)
+	}
+}
+
 // TestParsePositiveInt tests the parsePositiveInt helper.
 func TestParsePositiveInt(t *testing.T) {
 	tests := []struct {

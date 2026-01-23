@@ -326,15 +326,18 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 13: Add FEN Export During BvB Gameplay
 **Goal:** User can export FEN of the currently focused game to clipboard.
 
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] On 'f' key press during ScreenBvBGamePlay:
-    - [ ] Get focused game (bvbSelectedGame in single view, first visible in grid view)
-    - [ ] Get current board from session via `CurrentBoard()`
-    - [ ] Call `board.ToFEN()` to get FEN string
-    - [ ] Copy to clipboard using existing clipboard utility
-    - [ ] Show status message "FEN copied to clipboard"
-- [ ] Test: Press 'f' during game, verify FEN copied
-- [ ] Verify: Correct game's FEN is exported
+- [x] Update `internal/ui/update.go`:
+  - [x] On 'f' key press during ScreenBvBGamePlay:
+    - [x] Get focused game (bvbSelectedGame in single view, first visible in grid view)
+    - [x] Get current board from session via `CurrentBoard()`
+    - [x] Call `board.ToFEN()` to get FEN string
+    - [x] Copy to clipboard using existing clipboard utility
+    - [x] Show status message "FEN copied to clipboard"
+  - [x] Updated help text in both views to show 'f: FEN'
+- [x] Test: Press 'f' during game in single view
+- [x] Test: Press 'f' during game in grid view
+- [x] Test: Press 'f' with no manager (no crash)
+- [x] Verify: Correct game's FEN is exported
 
 **Deliverable:** FEN export working during BvB gameplay.
 
