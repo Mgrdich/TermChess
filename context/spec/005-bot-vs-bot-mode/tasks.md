@@ -48,19 +48,19 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 2: Add Pause/Resume/Abort to GameSession
 **Goal:** GameSession supports pause, resume, and abort via channel signals.
 
-- [ ] Update `internal/bvb/session.go`:
-  - [ ] Implement pause handling in `Run()` loop (block on resumeCh when paused)
-  - [ ] Implement `Pause()` method
-  - [ ] Implement `Resume()` method
-  - [ ] Implement `Abort()` method (signals stopCh, closes engines)
-  - [ ] Ensure engines are closed on any exit path (finish, abort)
-- [ ] Update `internal/bvb/session_test.go`:
-  - [ ] Test pause blocks game progress
-  - [ ] Test resume continues game after pause
-  - [ ] Test abort stops game mid-play, engines closed
-  - [ ] Test abort during pause works correctly
-- [ ] Run tests: `go test ./internal/bvb/`
-- [ ] Verify: Sessions can be controlled externally
+- [x] Update `internal/bvb/session.go`:
+  - [x] Implement pause handling in `Run()` loop (block on resumeCh when paused)
+  - [x] Implement `Pause()` method
+  - [x] Implement `Resume()` method
+  - [x] Implement `Abort()` method (signals stopCh, closes engines)
+  - [x] Ensure engines are closed on any exit path (finish, abort)
+- [x] Update `internal/bvb/session_test.go`:
+  - [x] Test pause blocks game progress
+  - [x] Test resume continues game after pause
+  - [x] Test abort stops game mid-play, engines closed
+  - [x] Test abort during pause works correctly
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Sessions can be controlled externally
 
 **Deliverable:** GameSession fully controllable (pause/resume/abort).
 

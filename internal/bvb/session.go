@@ -26,10 +26,13 @@ type GameSession struct {
 	blackName   string
 	moveHistory []engine.Move
 	state       SessionState
+	paused      bool
 	result      *GameResult
 	startTime   time.Time
 	speed       *PlaybackSpeed
 	stopCh      chan struct{}
+	pauseCh     chan struct{}
+	resumeCh    chan struct{}
 }
 
 // NewGameSession creates a new game session ready to be run.
@@ -47,6 +50,8 @@ func NewGameSession(gameNumber int, whiteEngine bot.Engine, blackEngine bot.Engi
 		state:       StateRunning,
 		speed:       speed,
 		stopCh:      make(chan struct{}),
+		pauseCh:     make(chan struct{}, 1),
+		resumeCh:    make(chan struct{}, 1),
 	}
 }
 
@@ -69,6 +74,28 @@ func (s *GameSession) Run() {
 			s.mu.Unlock()
 			return
 		default:
+		}
+
+		// Check for pause signal.
+		select {
+		case <-s.pauseCh:
+			// Wait for resume or stop.
+			select {
+			case <-s.resumeCh:
+				// Continue.
+			case <-s.stopCh:
+				s.mu.Lock()
+				s.state = StateFinished
+				s.mu.Unlock()
+				return
+			}
+		case <-s.stopCh:
+			s.mu.Lock()
+			s.state = StateFinished
+			s.mu.Unlock()
+			return
+		default:
+			// Not paused, continue.
 		}
 
 		// Determine the current engine based on active color.
@@ -146,8 +173,46 @@ func (s *GameSession) Run() {
 	}
 }
 
-// Stop signals the game session to abort. It is safe to call multiple times.
-func (s *GameSession) Stop() {
+// Pause signals the game session to pause. It is safe to call multiple times.
+// If the session is already paused or finished, this is a no-op.
+func (s *GameSession) Pause() {
+	s.mu.Lock()
+	if s.paused || s.state == StateFinished {
+		s.mu.Unlock()
+		return
+	}
+	s.paused = true
+	s.state = StatePaused
+	s.mu.Unlock()
+
+	// Non-blocking send on buffered channel.
+	select {
+	case s.pauseCh <- struct{}{}:
+	default:
+	}
+}
+
+// Resume signals the game session to continue after a pause.
+// If the session is not paused, this is a no-op.
+func (s *GameSession) Resume() {
+	s.mu.Lock()
+	if !s.paused {
+		s.mu.Unlock()
+		return
+	}
+	s.paused = false
+	s.state = StateRunning
+	s.mu.Unlock()
+
+	// Non-blocking send on buffered channel.
+	select {
+	case s.resumeCh <- struct{}{}:
+	default:
+	}
+}
+
+// Abort signals the game session to stop immediately. It is safe to call multiple times.
+func (s *GameSession) Abort() {
 	select {
 	case <-s.stopCh:
 		// Already closed.

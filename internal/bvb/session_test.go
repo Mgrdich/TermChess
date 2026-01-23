@@ -55,7 +55,7 @@ func TestGameSessionRunsToCompletion(t *testing.T) {
 	case <-done:
 		// Game completed.
 	case <-time.After(60 * time.Second):
-		session.Stop()
+		session.Abort()
 		t.Fatal("game did not complete within timeout")
 	}
 
@@ -86,7 +86,7 @@ func TestGameSessionResultPopulated(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(60 * time.Second):
-		session.Stop()
+		session.Abort()
 		t.Fatal("game did not complete within timeout")
 	}
 
@@ -134,7 +134,7 @@ func TestGameSessionResultPopulated(t *testing.T) {
 	}
 }
 
-func TestGameSessionStop(t *testing.T) {
+func TestGameSessionAbort(t *testing.T) {
 	whiteEngine, err := bot.NewRandomEngine()
 	if err != nil {
 		t.Fatalf("failed to create white engine: %v", err)
@@ -156,7 +156,7 @@ func TestGameSessionStop(t *testing.T) {
 
 	// Give it a moment to start, then stop.
 	time.Sleep(50 * time.Millisecond)
-	session.Stop()
+	session.Abort()
 
 	select {
 	case <-done:
@@ -216,7 +216,7 @@ func TestGameSessionConcurrentAccessors(t *testing.T) {
 	wg.Wait()
 
 	// Stop the game and wait for completion.
-	session.Stop()
+	session.Abort()
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
@@ -288,5 +288,186 @@ func TestGameSessionInitialState(t *testing.T) {
 func TestMaxMoveCountConstant(t *testing.T) {
 	if maxMoveCount != 500 {
 		t.Errorf("maxMoveCount = %d, want 500", maxMoveCount)
+	}
+}
+
+func TestGameSessionPauseBlocksProgress(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	// Use SpeedFast so the game does not finish before we can pause it.
+	speed := SpeedFast
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Give it a moment to start and make some moves.
+	time.Sleep(100 * time.Millisecond)
+
+	session.Pause()
+
+	// Allow any in-flight move to complete after pause signal is sent.
+	time.Sleep(50 * time.Millisecond)
+
+	// Record move count after pausing and settling.
+	movesBefore := len(session.CurrentMoveHistory())
+
+	// Wait and verify no progress is made.
+	time.Sleep(300 * time.Millisecond)
+
+	movesAfter := len(session.CurrentMoveHistory())
+	if movesAfter != movesBefore {
+		t.Errorf("moves changed during pause: before=%d, after=%d", movesBefore, movesAfter)
+	}
+
+	if session.State() != StatePaused {
+		t.Errorf("state = %d, want StatePaused (%d)", session.State(), StatePaused)
+	}
+
+	// Resume and abort to clean up.
+	session.Resume()
+	session.Abort()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("session did not stop within timeout")
+	}
+}
+
+func TestGameSessionResumeAfterPause(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedInstant
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Give it a moment to start.
+	time.Sleep(50 * time.Millisecond)
+
+	// Pause the game.
+	session.Pause()
+	time.Sleep(100 * time.Millisecond)
+
+	// Resume the game.
+	session.Resume()
+
+	if session.State() != StateRunning {
+		t.Errorf("state after resume = %d, want StateRunning (%d)", session.State(), StateRunning)
+	}
+
+	// Wait for the game to finish or timeout.
+	select {
+	case <-done:
+		// Game completed after resume.
+	case <-time.After(60 * time.Second):
+		session.Abort()
+		t.Fatal("game did not complete within timeout after resume")
+	}
+
+	if !session.IsFinished() {
+		t.Error("session should be finished after game completes")
+	}
+}
+
+func TestGameSessionAbortStopsGame(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedSlow
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Give it a moment to start.
+	time.Sleep(50 * time.Millisecond)
+
+	// Abort.
+	session.Abort()
+
+	// Verify Run() returns quickly.
+	select {
+	case <-done:
+		// Stopped successfully.
+	case <-time.After(2 * time.Second):
+		t.Fatal("session did not abort within timeout")
+	}
+
+	if !session.IsFinished() {
+		t.Error("session should be finished after abort")
+	}
+}
+
+func TestGameSessionAbortDuringPause(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedFast
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Give it a moment to start.
+	time.Sleep(50 * time.Millisecond)
+
+	// Pause the game.
+	session.Pause()
+	time.Sleep(50 * time.Millisecond)
+
+	// Abort while paused.
+	session.Abort()
+
+	// Verify Run() returns quickly.
+	select {
+	case <-done:
+		// Stopped successfully.
+	case <-time.After(2 * time.Second):
+		t.Fatal("session did not abort during pause within timeout")
+	}
+
+	if !session.IsFinished() {
+		t.Error("session should be finished after abort during pause")
 	}
 }
