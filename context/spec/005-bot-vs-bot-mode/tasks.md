@@ -19,27 +19,27 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 1: Create BvB Types and GameSession (Single Game, No UI)
 **Goal:** Establish the `internal/bvb/` package with types and a working single-game session that runs to completion.
 
-- [ ] Create `internal/bvb/` package directory
-- [ ] Create `internal/bvb/types.go`:
-  - [ ] Define `PlaybackSpeed` enum (Instant, Fast, Normal, Slow) with `Duration()` method
-  - [ ] Define `SessionState` enum (Running, Paused, Finished)
-  - [ ] Define `GameResult` struct (GameNumber, Winner, WinnerColor, EndReason, MoveCount, Duration, FinalFEN, MoveHistory)
-- [ ] Create `internal/bvb/session.go`:
-  - [ ] Define `GameSession` struct with board, engines, state, mutex, channels
-  - [ ] Implement `NewGameSession(gameNumber, whiteEngine, blackEngine, whiteName, blackName, speed *PlaybackSpeed) *GameSession`
-  - [ ] Implement `Run()` goroutine: loop computing moves, applying them, checking game over
-  - [ ] Implement `CurrentBoard()` thread-safe board snapshot
-  - [ ] Implement `CurrentMoveHistory()` thread-safe history copy
-  - [ ] Implement `IsFinished() bool`
-  - [ ] Implement `Result() *GameResult`
-  - [ ] Implement max move limit (500 moves → forced draw)
-- [ ] Create `internal/bvb/session_test.go`:
-  - [ ] Test single Easy vs Easy game runs to completion
-  - [ ] Test game result is populated correctly
-  - [ ] Test max move limit triggers forced draw
-  - [ ] Test thread-safe accessors work during active game
-- [ ] Run tests: `go test ./internal/bvb/`
-- [ ] Verify: Single game session runs in a goroutine and completes
+- [x] Create `internal/bvb/` package directory
+- [x] Create `internal/bvb/types.go`:
+  - [x] Define `PlaybackSpeed` enum (Instant, Fast, Normal, Slow) with `Duration()` method
+  - [x] Define `SessionState` enum (Running, Paused, Finished)
+  - [x] Define `GameResult` struct (GameNumber, Winner, WinnerColor, EndReason, MoveCount, Duration, FinalFEN, MoveHistory)
+- [x] Create `internal/bvb/session.go`:
+  - [x] Define `GameSession` struct with board, engines, state, mutex, channels
+  - [x] Implement `NewGameSession(gameNumber, whiteEngine, blackEngine, whiteName, blackName, speed *PlaybackSpeed) *GameSession`
+  - [x] Implement `Run()` goroutine: loop computing moves, applying them, checking game over
+  - [x] Implement `CurrentBoard()` thread-safe board snapshot
+  - [x] Implement `CurrentMoveHistory()` thread-safe history copy
+  - [x] Implement `IsFinished() bool`
+  - [x] Implement `Result() *GameResult`
+  - [x] Implement max move limit (500 moves → forced draw)
+- [x] Create `internal/bvb/session_test.go`:
+  - [x] Test single Easy vs Easy game runs to completion
+  - [x] Test game result is populated correctly
+  - [x] Test max move limit triggers forced draw
+  - [x] Test thread-safe accessors work during active game
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Single game session runs in a goroutine and completes
 
 **Deliverable:** BvB package exists with working single-game execution. Foundation for manager.
 
