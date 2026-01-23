@@ -65,7 +65,8 @@ _Enhanced user interaction and visual experience._
   - [ ] **Click-to-Select Pieces:** Allow users to click on a piece to select it for moving.
   - [ ] **Click-to-Move:** Allow users to click on a destination square to complete a move.
   - [ ] **Visual Feedback:** Highlight selected pieces and valid move destinations on hover/click.
-  - [ ] **Beautiful Board Themes:** Offer multiple color schemes and board styles (classic, modern, minimalist, etc.).
+  - [ ] **Make the Menu more intuitive** make sure the menu on the buttom is more intuitive.
+  - [ ] **Beautiful Board Themes:** Offer multiple color schemes and board styles and make sure the text of the user and the color match for the piece (classic, modern, minimalist, etc.).
   - [ ] **Smooth Animations:** Add subtle animations for piece movement and board transitions.
   - [ ] **Enhanced Typography:** Improve text rendering with better fonts and spacing for readability.
   - [ ] **Visual Polish:** Refine borders, shadows, and spacing to create a polished, professional appearance.
