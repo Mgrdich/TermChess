@@ -1,7 +1,7 @@
 # Functional Specification: Bot vs Bot Mode
 
 - **Roadmap Item:** Bot vs Bot Mode - Automated gameplay for testing, entertainment, and analysis
-- **Status:** Draft
+- **Status:** Implemented
 - **Author:** AI Assistant
 
 ---
@@ -36,8 +36,8 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want to** see "Bot vs Bot" as a separate option in the game type selection menu, **so that** I can easily access this mode.
   - **Acceptance Criteria:**
-    - [ ] "Bot vs Bot" appears as a menu option alongside "Player vs Player" and "Player vs Bot"
-    - [ ] Selecting "Bot vs Bot" navigates to the bot selection screen
+    - [x] "Bot vs Bot" appears as a menu option alongside "Player vs Player" and "Player vs Bot"
+    - [x] Selecting "Bot vs Bot" navigates to the bot selection screen
 
 ---
 
@@ -45,11 +45,12 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want to** select which bot difficulty plays as White and which plays as Black, **so that** I can configure the matchup I want to watch.
   - **Acceptance Criteria:**
-    - [ ] User selects bot difficulty for White (Easy, Medium, Hard)
-    - [ ] User selects bot difficulty for Black (Easy, Medium, Hard)
-    - [ ] Same difficulty can be selected for both sides (e.g., Medium vs Medium)
-    - [ ] Selection screen clearly indicates which selection is for White and which is for Black
-    - [ ] User can navigate back (ESC) to game type selection
+    - [x] User selects bot difficulty for White (Easy, Medium, Hard)
+    - [x] User selects bot difficulty for Black (Easy, Medium, Hard)
+    - [x] Same difficulty can be selected for both sides (e.g., Medium vs Medium)
+    - [x] Selection screen clearly indicates which selection is for White and which is for Black
+    - [x] User can navigate back (ESC) to game type selection
+    - [x] Two-step selection: first White, then Black (ESC from Black goes back to White)
 
 ---
 
@@ -57,10 +58,11 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want to** choose between a single game or multiple games, **so that** I can either watch one game or run a batch for statistics.
   - **Acceptance Criteria:**
-    - [ ] After bot selection, user chooses "Single Game" or "Multi-Game"
-    - [ ] If "Multi-Game" selected, user enters the number of games (free-form input)
-    - [ ] Input validation: must be a positive integer
-    - [ ] User can navigate back (ESC) to bot selection
+    - [x] After bot selection, user chooses "Single Game" or "Multi-Game"
+    - [x] If "Multi-Game" selected, user enters the number of games (free-form digit input)
+    - [x] Input validation: must be a positive integer, rejects letters and zero
+    - [x] Backspace removes characters from input
+    - [x] User can navigate back (ESC) to bot selection (ESC from input goes back to menu)
 
 ---
 
@@ -68,15 +70,15 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want to** control the speed at which moves are played, **so that** I can watch at my preferred pace.
   - **Acceptance Criteria:**
-    - [ ] Four speed options available: Instant, Fast, Normal, Slow
-    - [ ] Default speed is "Normal"
-    - [ ] Speed can be changed at any time during gameplay
-    - [ ] Speed values:
-      - Instant: 0 delay (moves execute immediately)
-      - Fast: ~0.5 seconds per move
-      - Normal: ~1.5 seconds per move
-      - Slow: ~3 seconds per move
-    - [ ] Speed change applies to all running games immediately
+    - [x] Four speed options available: Instant, Fast, Normal, Slow
+    - [x] Default speed is "Normal"
+    - [x] Speed can be changed at any time during gameplay via keys 1-4
+    - [x] Speed values:
+      - Instant: 0 delay (moves execute immediately, UI polls at 100ms)
+      - Fast: 500ms per move
+      - Normal: 1500ms per move
+      - Slow: 3000ms per move
+    - [x] Speed change applies to all running games immediately
 
 ---
 
@@ -84,26 +86,27 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want to** view games in a customizable grid or single-board view, **so that** I can watch multiple games or focus on one.
   - **Acceptance Criteria:**
-    - [ ] Preset grid options: 1x1, 2x2, 2x3, 2x4
-    - [ ] Custom grid option: user can input rows and columns
-    - [ ] Maximum grid size: 8 boards (2x4) for UI clarity
-    - [ ] Toggle between grid view and single-board view
-    - [ ] In single-board view, user can navigate to watch any specific game (e.g., "Watching Game 3 of 10")
-    - [ ] When more games than grid slots, auto-cycle through pages
-    - [ ] **Grid View Display (per board - minimal info only):**
-      - Current board position
-      - Game number
+    - [x] Preset grid options: 1x1, 2x2, 2x3, 2x4
+    - [x] Custom grid option: user can input "RxC" format (e.g., "3x2")
+    - [x] Maximum grid size: 8 boards total for UI clarity
+    - [x] Toggle between grid view and single-board view via Tab
+    - [x] In single-board view, user can navigate between games via ←/→ with wrap-around
+    - [x] In grid view, manual page navigation via ←/→ (no wrap, clamped to valid range)
+    - [x] **Grid View Display (per board - minimal info only):**
+      - Current board position (compact, no coordinates, no color styling)
+      - Game number header
       - Move count
-      - Game status (ongoing/finished)
-    - [ ] **Single-Board View Display (selected game only - full detail):**
-      - Current board position
-      - Game number
-      - Move count
-      - Move history (formatted as "1. e4 e5 2. Nf3 Nc6...")
-      - Bot difficulties (e.g., "Easy Bot (White) vs Hard Bot (Black)")
-      - Current game status
-      - All detailed information
-    - [ ] Move history and detailed info are ONLY shown for the selected game in single-board view (not visible in grid view to avoid clutter)
+      - Game status (winner shown if finished)
+      - Finished games visually distinguished with dimmed style
+    - [x] **Single-Board View Display (selected game only - full detail):**
+      - Current board position (full size with coordinates)
+      - Game number and total (e.g., "Game 3 of 10")
+      - Move count and active color or result
+      - Move history (formatted as "1. e2e4 e7e5 2. g1f3...")
+      - Bot matchup (e.g., "Easy Bot (White) vs Hard Bot (Black)")
+      - Speed indicator
+    - [x] Move history and detailed info are ONLY shown in single-board view
+    - [x] Terminal size detection: if terminal too small for grid, shows warning with suggestion to switch to single view
 
 ---
 
@@ -111,10 +114,10 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want** all games to run simultaneously in parallel, **so that** the batch completes faster.
   - **Acceptance Criteria:**
-    - [ ] All games in multi-game mode start and run at the same time
-    - [ ] Grid view shows different games at different stages of completion
-    - [ ] Games that finish early display their final position and result
-    - [ ] Completed games are visually distinguished from ongoing games
+    - [x] All games in multi-game mode start and run at the same time via goroutines
+    - [x] Grid view shows different games at different stages of completion
+    - [x] Games that finish early display their final position and result
+    - [x] Completed games are visually distinguished (dimmed foreground color)
 
 ---
 
@@ -122,12 +125,14 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want to** pause, resume, export FEN, change speed, and abort games, **so that** I have full control over the viewing experience.
   - **Acceptance Criteria:**
-    - [ ] **Pause/Resume:** Pauses ALL running games simultaneously; resume continues all
-    - [ ] **Export FEN:** Copy FEN of the currently selected/focused game to clipboard
-    - [ ] **Change Speed:** Adjust playback speed at any time (applies to all games)
-    - [ ] **Abort:** Cancel current session and return to menu
-    - [ ] **Navigate:** In single-board view, navigate between games (next/previous or jump to specific game number)
-    - [ ] Help text displays available controls (respects ShowHelpText config)
+    - [x] **Pause/Resume (Space):** Pauses ALL running games simultaneously; resume continues all
+    - [x] **Export FEN (f):** Copy FEN of the focused game to clipboard (single view: selected game; grid view: first visible game on current page)
+    - [x] **Change Speed (1-4):** Adjust playback speed at any time (applies to all games)
+    - [x] **Abort (ESC):** Cancel current session and return to menu
+    - [x] **Navigate (←/→):** In single-board view, navigate between games (with wrap); in grid view, navigate between pages (no wrap)
+    - [x] **View Toggle (Tab):** Switch between grid and single-board view
+    - [x] Help text displays available controls (respects ShowHelpText config)
+    - [x] Ctrl+C and 'q' properly clean up bvbManager before exiting
 
 ---
 
@@ -135,23 +140,21 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 - **As a** user, **I want to** see comprehensive statistics after games complete, **so that** I can analyze bot performance.
   - **Acceptance Criteria:**
-    - [ ] Statistics shown for both single games and multi-game sessions
-    - [ ] Statistics reference bot difficulty (e.g., "Easy Bot" not just "White")
-    - [ ] **Single Game Statistics:**
-      - Winner (e.g., "Hard Bot (White) wins by checkmate")
+    - [x] Statistics shown automatically when all games finish (tick-triggered transition)
+    - [x] Statistics reference bot difficulty names (e.g., "Easy Bot" not just "White")
+    - [x] **Single Game Statistics:**
+      - Winner or draw result with end reason (e.g., "checkmate", "stalemate")
       - Total moves
-      - Game duration
-      - Final position displayed
-    - [ ] **Multi-Game Statistics:**
-      - Wins per bot difficulty (e.g., "Easy Bot: 3 wins, Hard Bot: 7 wins")
+      - Game duration (rounded to milliseconds)
+    - [x] **Multi-Game Statistics:**
+      - Wins per bot with win percentage
       - Draws count
-      - Win percentage for each bot
-      - Average game length (moves)
-      - Average game duration (time)
-      - Shortest game (moves and which game number)
-      - Longest game (moves and which game number)
-      - List of individual game results (Game 1: Hard Bot won in 34 moves, Game 2: Draw by stalemate, etc.)
-    - [ ] Option to start new session or return to main menu
+      - Average move count and average duration
+      - Shortest game (game number and moves)
+      - Longest game (game number and moves)
+      - List of individual game results (winner/draw, end reason, move count)
+    - [x] Options: "New Session" (returns to bot select) or "Return to Menu"
+    - [x] Up/down navigation between options, Enter to select, ESC to return to menu
 
 ---
 
@@ -160,18 +163,21 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 ### In-Scope
 
 - Bot vs Bot menu entry point and navigation flow
-- Bot difficulty selection for White and Black
+- Bot difficulty selection for White and Black (two-step)
 - Single game and multi-game modes
 - Playback speed control (Instant, Fast, Normal, Slow)
 - Grid view with presets (1x1, 2x2, 2x3, 2x4) and custom configuration (max 8 boards)
 - Single-board view with game navigation and full detail (move history, etc.)
-- Auto-cycling pagination for large game batches
+- Manual page navigation for large game batches
 - Parallel game execution for multi-game mode
 - Pause/Resume all games
 - FEN export during gameplay
 - Abort/cancel functionality
 - Comprehensive statistics display (single and multi-game)
 - Statistics referencing bot difficulty names
+- Terminal size awareness with fallback warning
+- Per-move timeout (30 seconds) to prevent infinite computation
+- Proper cleanup on quit (Ctrl+C, 'q', ESC)
 
 ### Out-of-Scope
 
@@ -184,3 +190,5 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 - Tournament bracket mode
 - Custom time controls per bot
 - Commentary or move annotations during playback
+- Scrollable individual results list (rendered inline for now)
+- Final board rendering on statistics screen
