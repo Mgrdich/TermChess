@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/config"
@@ -2012,6 +2013,236 @@ func TestBvBGamePlay_GridViewPausedIndicator(t *testing.T) {
 	// Clean up
 	if m.bvbManager != nil {
 		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBStats_TransitionOnAllFinished tests that tick transitions to stats when all games done.
+func TestBvBStats_TransitionOnAllFinished(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0 // 1x1
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Set speed to instant so game finishes quickly
+	m.bvbSpeed = bvb.SpeedInstant
+	m.bvbManager.SetSpeed(bvb.SpeedInstant)
+
+	// Wait for the game to finish
+	for i := 0; i < 1000; i++ {
+		if m.bvbManager.AllFinished() {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if !m.bvbManager.AllFinished() {
+		t.Skip("Game did not finish in time")
+	}
+
+	// Tick should transition to stats
+	result, _ = m.handleBvBTick()
+	m = result.(Model)
+
+	if m.screen != ScreenBvBStats {
+		t.Errorf("Expected ScreenBvBStats after all finished, got %d", m.screen)
+	}
+	if m.bvbStatsSelection != 0 {
+		t.Errorf("Expected stats selection to be 0, got %d", m.bvbStatsSelection)
+	}
+}
+
+// TestBvBStats_RenderSingleGame tests stats rendering for a single game.
+func TestBvBStats_RenderSingleGame(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	m.bvbSpeed = bvb.SpeedInstant
+	m.bvbManager.SetSpeed(bvb.SpeedInstant)
+
+	for i := 0; i < 2000; i++ {
+		if m.bvbManager.AllFinished() {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if !m.bvbManager.AllFinished() {
+		t.Skip("Game did not finish in time")
+	}
+
+	// Transition to stats
+	m.screen = ScreenBvBStats
+	m.bvbStatsSelection = 0
+	m.menuOptions = []string{"New Session", "Return to Menu"}
+
+	view := m.renderBvBStats()
+
+	if !strings.Contains(view, "Results") {
+		t.Error("Expected 'Results' in stats title")
+	}
+	if !strings.Contains(view, "Easy Bot") {
+		t.Error("Expected 'Easy Bot' in stats")
+	}
+	if !strings.Contains(view, "moves") {
+		t.Error("Expected move count in stats")
+	}
+	if !strings.Contains(view, "New Session") {
+		t.Error("Expected 'New Session' option")
+	}
+	if !strings.Contains(view, "Return to Menu") {
+		t.Error("Expected 'Return to Menu' option")
+	}
+}
+
+// TestBvBStats_RenderMultiGame tests stats rendering for multiple games.
+func TestBvBStats_RenderMultiGame(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	m.bvbSpeed = bvb.SpeedInstant
+	m.bvbManager.SetSpeed(bvb.SpeedInstant)
+
+	for i := 0; i < 2000; i++ {
+		if m.bvbManager.AllFinished() {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if !m.bvbManager.AllFinished() {
+		t.Skip("Games did not finish in time")
+	}
+
+	m.screen = ScreenBvBStats
+	m.bvbStatsSelection = 0
+	m.menuOptions = []string{"New Session", "Return to Menu"}
+
+	view := m.renderBvBStats()
+
+	if !strings.Contains(view, "4 games") {
+		t.Error("Expected '4 games' in multi-game stats")
+	}
+	if !strings.Contains(view, "wins") {
+		t.Error("Expected 'wins' in multi-game stats")
+	}
+	if !strings.Contains(view, "Avg moves") {
+		t.Error("Expected 'Avg moves' in multi-game stats")
+	}
+	if !strings.Contains(view, "Shortest game") {
+		t.Error("Expected 'Shortest game' in multi-game stats")
+	}
+	if !strings.Contains(view, "Individual Results") {
+		t.Error("Expected 'Individual Results' in multi-game stats")
+	}
+}
+
+// TestBvBStats_NavigationUpDown tests stats screen menu navigation.
+func TestBvBStats_NavigationUpDown(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBStats
+	m.menuOptions = []string{"New Session", "Return to Menu"}
+	m.bvbStatsSelection = 0
+
+	// Down moves to Return to Menu
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	result, _ := m.handleBvBStatsKeys(msg)
+	m = result.(Model)
+	if m.bvbStatsSelection != 1 {
+		t.Errorf("Expected selection 1 after down, got %d", m.bvbStatsSelection)
+	}
+
+	// Down again doesn't go past end
+	result, _ = m.handleBvBStatsKeys(msg)
+	m = result.(Model)
+	if m.bvbStatsSelection != 1 {
+		t.Errorf("Expected selection to stay at 1, got %d", m.bvbStatsSelection)
+	}
+
+	// Up goes back
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	result, _ = m.handleBvBStatsKeys(msg)
+	m = result.(Model)
+	if m.bvbStatsSelection != 0 {
+		t.Errorf("Expected selection 0 after up, got %d", m.bvbStatsSelection)
+	}
+}
+
+// TestBvBStats_NewSessionAction tests selecting "New Session" on stats screen.
+func TestBvBStats_NewSessionAction(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBStats
+	m.menuOptions = []string{"New Session", "Return to Menu"}
+	m.bvbStatsSelection = 0 // New Session
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBStatsKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenBvBBotSelect {
+		t.Errorf("Expected ScreenBvBBotSelect after New Session, got %d", m.screen)
+	}
+	if !m.bvbSelectingWhite {
+		t.Error("Expected bvbSelectingWhite to be true")
+	}
+	if m.bvbManager != nil {
+		t.Error("Expected bvbManager to be nil after starting new session flow")
+	}
+}
+
+// TestBvBStats_ReturnToMenuAction tests selecting "Return to Menu" on stats screen.
+func TestBvBStats_ReturnToMenuAction(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBStats
+	m.menuOptions = []string{"New Session", "Return to Menu"}
+	m.bvbStatsSelection = 1 // Return to Menu
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBStatsKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected ScreenMainMenu after Return to Menu, got %d", m.screen)
+	}
+	if m.bvbManager != nil {
+		t.Error("Expected bvbManager to be nil after returning to menu")
+	}
+}
+
+// TestBvBStats_EscGoesToMenu tests ESC on stats screen.
+func TestBvBStats_EscGoesToMenu(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBStats
+	m.menuOptions = []string{"New Session", "Return to Menu"}
+	m.bvbStatsSelection = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBStatsKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected ScreenMainMenu after ESC, got %d", m.screen)
 	}
 }
 

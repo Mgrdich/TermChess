@@ -109,6 +109,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBvBGridConfigKeys(msg)
 	case ScreenBvBGamePlay:
 		return m.handleBvBGamePlayKeys(msg)
+	case ScreenBvBStats:
+		return m.handleBvBStatsKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -1529,13 +1531,54 @@ func (m Model) handleBvBTick() (tea.Model, tea.Cmd) {
 	}
 
 	if m.bvbManager.AllFinished() {
-		// All games done - transition to stats (Task 12)
-		// For now, just stop ticking
+		m.screen = ScreenBvBStats
+		m.bvbStatsSelection = 0
+		m.menuOptions = []string{"New Session", "Return to Menu"}
 		return m, nil
 	}
 
 	// Schedule next tick
 	return m, bvbTickCmd(m.bvbSpeed)
+}
+
+// handleBvBStatsKeys handles keyboard input on the BvB statistics screen.
+func (m Model) handleBvBStatsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		if m.bvbStatsSelection > 0 {
+			m.bvbStatsSelection--
+		}
+	case "down", "j":
+		if m.bvbStatsSelection < len(m.menuOptions)-1 {
+			m.bvbStatsSelection++
+		}
+	case "enter":
+		return m.handleBvBStatsSelection()
+	case "esc":
+		m.screen = ScreenMainMenu
+		m.menuOptions = buildMainMenuOptions()
+		m.menuSelection = 0
+		m.bvbManager = nil
+	}
+	return m, nil
+}
+
+// handleBvBStatsSelection handles the selected action on the stats screen.
+func (m Model) handleBvBStatsSelection() (tea.Model, tea.Cmd) {
+	switch m.bvbStatsSelection {
+	case 0: // New Session
+		m.screen = ScreenBvBBotSelect
+		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		m.menuSelection = 0
+		m.bvbSelectingWhite = true
+		m.bvbManager = nil
+	case 1: // Return to Menu
+		m.screen = ScreenMainMenu
+		m.menuOptions = buildMainMenuOptions()
+		m.menuSelection = 0
+		m.bvbManager = nil
+	}
+	return m, nil
 }
 
 // handleColorSelectKeys handles keyboard input for the color selection screen.

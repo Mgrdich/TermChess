@@ -43,6 +43,8 @@ const (
 	ScreenBvBGridConfig
 	// ScreenBvBGamePlay is the main screen for watching Bot vs Bot games
 	ScreenBvBGamePlay
+	// ScreenBvBStats is displayed after all Bot vs Bot games finish
+	ScreenBvBStats
 )
 
 // GameType represents the type of chess game being played.
@@ -164,6 +166,8 @@ type Model struct {
 	bvbPaused bool
 	// bvbPageIndex tracks the current page in grid view
 	bvbPageIndex int
+	// bvbStatsSelection tracks the selected option on the stats screen (0=New Session, 1=Return to Menu)
+	bvbStatsSelection int
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.

@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/engine"
@@ -96,6 +97,8 @@ func (m Model) View() string {
 		return m.renderBvBGridConfig()
 	case ScreenBvBGamePlay:
 		return m.renderBvBGamePlay()
+	case ScreenBvBStats:
+		return m.renderBvBStats()
 	default:
 		return "Unknown screen"
 	}
@@ -1269,6 +1272,113 @@ func (m Model) renderBvBGamePlay() string {
 		return m.renderBvBSingleView()
 	}
 	return m.renderBvBGridView()
+}
+
+// renderBvBStats renders the Bot vs Bot statistics screen after all games finish.
+func (m Model) renderBvBStats() string {
+	var b strings.Builder
+
+	title := titleStyle.Render("TermChess - Bot vs Bot Results")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	if m.bvbManager == nil {
+		b.WriteString("No session data available.\n")
+		return b.String()
+	}
+
+	stats := m.bvbManager.Stats()
+	if stats == nil || stats.TotalGames == 0 {
+		b.WriteString("No games completed.\n")
+		return b.String()
+	}
+
+	infoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#50FA7B")).
+		Padding(0, 2)
+
+	statStyle := lipgloss.NewStyle().
+		Padding(0, 2)
+
+	dimStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#626262")).
+		Padding(0, 2)
+
+	if stats.TotalGames == 1 {
+		// Single game stats
+		r := stats.IndividualResults[0]
+		b.WriteString(infoStyle.Render(fmt.Sprintf("%s (White) vs %s (Black)", stats.WhiteBotName, stats.BlackBotName)))
+		b.WriteString("\n\n")
+
+		if r.Winner == "Draw" {
+			b.WriteString(statStyle.Render(fmt.Sprintf("Result: Draw (%s)", r.EndReason)))
+		} else {
+			b.WriteString(statStyle.Render(fmt.Sprintf("Winner: %s (%s)", r.Winner, r.EndReason)))
+		}
+		b.WriteString("\n")
+		b.WriteString(statStyle.Render(fmt.Sprintf("Total moves: %d", r.MoveCount)))
+		b.WriteString("\n")
+		b.WriteString(statStyle.Render(fmt.Sprintf("Duration: %s", r.Duration.Round(time.Millisecond))))
+		b.WriteString("\n")
+	} else {
+		// Multi-game stats
+		b.WriteString(infoStyle.Render(fmt.Sprintf("%s (White) vs %s (Black) — %d games", stats.WhiteBotName, stats.BlackBotName, stats.TotalGames)))
+		b.WriteString("\n\n")
+
+		// Win/loss/draw summary
+		b.WriteString(statStyle.Render(fmt.Sprintf("%s wins: %d (%.1f%%)", stats.WhiteBotName, stats.WhiteWins, stats.WhiteWinPct)))
+		b.WriteString("\n")
+		b.WriteString(statStyle.Render(fmt.Sprintf("%s wins: %d (%.1f%%)", stats.BlackBotName, stats.BlackWins, stats.BlackWinPct)))
+		b.WriteString("\n")
+		b.WriteString(statStyle.Render(fmt.Sprintf("Draws: %d", stats.Draws)))
+		b.WriteString("\n\n")
+
+		// Averages
+		b.WriteString(statStyle.Render(fmt.Sprintf("Avg moves: %.1f | Avg duration: %s", stats.AvgMoveCount, stats.AvgDuration.Round(time.Millisecond))))
+		b.WriteString("\n")
+
+		// Shortest/longest
+		b.WriteString(statStyle.Render(fmt.Sprintf("Shortest game: #%d (%d moves) | Longest game: #%d (%d moves)",
+			stats.ShortestGame.GameNumber, stats.ShortestGame.MoveCount,
+			stats.LongestGame.GameNumber, stats.LongestGame.MoveCount)))
+		b.WriteString("\n\n")
+
+		// Individual results
+		b.WriteString(dimStyle.Render("Individual Results:"))
+		b.WriteString("\n")
+		for _, r := range stats.IndividualResults {
+			var resultText string
+			if r.Winner == "Draw" {
+				resultText = fmt.Sprintf("  Game %d: Draw (%s) — %d moves", r.GameNumber, r.EndReason, r.MoveCount)
+			} else {
+				resultText = fmt.Sprintf("  Game %d: %s wins (%s) — %d moves", r.GameNumber, r.Winner, r.EndReason, r.MoveCount)
+			}
+			b.WriteString(dimStyle.Render(resultText))
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n")
+
+	// Menu options
+	for i, opt := range m.menuOptions {
+		cursor := "  "
+		optionText := menuItemStyle.Render(opt)
+		if i == m.bvbStatsSelection {
+			cursor = cursorStyle.Render("> ")
+			optionText = selectedItemStyle.Render(opt)
+		}
+		b.WriteString(cursor + optionText)
+		b.WriteString("\n")
+	}
+
+	helpText := renderHelpText("↑/↓: navigate | Enter: select | ESC: menu", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	return b.String()
 }
 
 // renderBvBSingleView renders a single game with full detail.

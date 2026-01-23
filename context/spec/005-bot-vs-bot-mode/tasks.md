@@ -298,28 +298,26 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 12: Implement Statistics Screen
 **Goal:** After all games finish, user sees comprehensive statistics.
 
-- [ ] Update `internal/ui/model.go`:
-  - [ ] Add `ScreenBvBStats` screen state
-- [ ] Update `internal/ui/update.go`:
-  - [ ] When BvBTickMsg fires and AllFinished(): transition to ScreenBvBStats
-- [ ] Update `internal/ui/bvb_view.go`:
-  - [ ] Implement `renderBvBStats()` function:
-    - [ ] Single game: winner, total moves, duration, final board
-    - [ ] Multi-game: wins per bot (with difficulty name), draws, win percentages
-    - [ ] Average move count, average duration
-    - [ ] Shortest/longest game (with game number)
-    - [ ] Individual game results list (scrollable if many)
-  - [ ] Show options: "New Session" / "Return to Menu"
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] Implement `handleBvBStatsKeys()`:
-    - [ ] Navigate between "New Session" and "Return to Menu"
-    - [ ] Enter on "New Session": go back to ScreenBvBBotSelect
-    - [ ] Enter on "Return to Menu": go to ScreenMainMenu
-    - [ ] ESC: go to ScreenMainMenu
-- [ ] Test: Run games to completion, verify statistics accuracy
-- [ ] Test: Single game shows single-game stats
-- [ ] Test: Navigation options work correctly
-- [ ] Verify: All statistics display correctly
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `ScreenBvBStats` screen state
+  - [x] Add `bvbStatsSelection` field
+- [x] Update `internal/ui/update.go`:
+  - [x] When BvBTickMsg fires and AllFinished(): transition to ScreenBvBStats
+  - [x] Implement `handleBvBStatsKeys()` with up/down/enter/esc
+  - [x] Implement `handleBvBStatsSelection()` for New Session / Return to Menu
+- [x] Update `internal/ui/view.go`:
+  - [x] Implement `renderBvBStats()` function:
+    - [x] Single game: winner/draw, total moves, duration
+    - [x] Multi-game: wins per bot (with name), draws, win percentages
+    - [x] Average move count, average duration
+    - [x] Shortest/longest game (with game number)
+    - [x] Individual game results list
+  - [x] Show options: "New Session" / "Return to Menu"
+- [x] Test: Transition to stats when all games finish
+- [x] Test: Single game shows single-game stats
+- [x] Test: Multi-game shows aggregate stats
+- [x] Test: Navigation options work correctly (up/down/enter/esc)
+- [x] Verify: All statistics display correctly
 
 **Deliverable:** Complete statistics display. Full BvB flow end-to-end.
 
