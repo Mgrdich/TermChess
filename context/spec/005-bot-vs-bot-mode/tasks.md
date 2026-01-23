@@ -275,19 +275,19 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 11: Implement Page Navigation and Game Selection
 **Goal:** User can navigate pages in grid view and select specific games in single view.
 
-- [ ] Update `internal/ui/model.go`:
-  - [ ] Add field: bvbPageIndex
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] Grid view: ←/→ changes bvbPageIndex (clamp to valid range)
-  - [ ] Single view: ←/→ changes bvbSelectedGame (clamp to valid range)
-  - [ ] Show current page/game indicator
-- [ ] Update `internal/ui/bvb_view.go`:
-  - [ ] Grid view: display correct subset of games based on page index
-  - [ ] Single view: display selected game's full details (board, move history, bot names)
-  - [ ] Page indicator: "Page 1/3" or "Game 3/10"
-- [ ] Test: Navigate between pages, navigate between games in single view
-- [ ] Test: Page clamp works (can't go past last page)
-- [ ] Verify: Navigation smooth, correct games displayed
+- [x] Update `internal/ui/model.go`:
+  - [x] Add field: bvbPageIndex (implemented in Task 10)
+- [x] Update `internal/ui/update.go`:
+  - [x] Grid view: ←/→ changes bvbPageIndex (clamped, no wrap) (Task 10)
+  - [x] Single view: ←/→ changes bvbSelectedGame (with wrap) (Task 9)
+  - [x] Show current page/game indicator
+- [x] Update `internal/ui/view.go`:
+  - [x] Grid view: display correct subset of games based on page index (Task 10)
+  - [x] Single view: display selected game's full details (board, move history, bot names) (Task 9)
+  - [x] Page indicator: "Page 1/3" in grid view, "Game X of Y" in single view
+- [x] Test: Navigate between pages, navigate between games in single view
+- [x] Test: Page clamp works (can't go past last page)
+- [x] Verify: Navigation smooth, correct games displayed
 
 **Deliverable:** Full navigation between pages and games working.
 
