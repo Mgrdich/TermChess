@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Mgrdich/TermChess/internal/bot"
+	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/Mgrdich/TermChess/internal/util"
@@ -99,6 +100,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBvBBotSelectKeys(msg)
 	case ScreenBvBGameMode:
 		return m.handleBvBGameModeKeys(msg)
+	case ScreenBvBGridConfig:
+		return m.handleBvBGridConfigKeys(msg)
+	case ScreenBvBGamePlay:
+		return m.handleBvBGamePlayKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -1155,10 +1160,11 @@ func (m Model) handleBvBGameModeSelection() (tea.Model, tea.Cmd) {
 	switch selected {
 	case "Single Game":
 		m.bvbGameCount = 1
-		// Transition to grid config screen (Task 8)
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
+		m.screen = ScreenBvBGridConfig
+		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
 		m.menuSelection = 0
+		m.bvbInputtingGrid = false
+		m.bvbCustomGridInput = ""
 		m.statusMsg = ""
 		m.errorMsg = ""
 
@@ -1196,10 +1202,11 @@ func (m Model) handleBvBCountInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.bvbGameCount = count
 		m.bvbInputtingCount = false
-		// Transition to grid config screen (Task 8)
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
+		m.screen = ScreenBvBGridConfig
+		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
 		m.menuSelection = 0
+		m.bvbInputtingGrid = false
+		m.bvbCustomGridInput = ""
 		m.statusMsg = ""
 		m.errorMsg = ""
 
@@ -1231,6 +1238,186 @@ func parsePositiveInt(s string) (int, error) {
 		return 0, fmt.Errorf("must be at least 1")
 	}
 	return n, nil
+}
+
+// handleBvBGridConfigKeys handles keyboard input for the BvB grid configuration screen.
+// Supports preset selection (1x1, 2x2, 2x3, 2x4) or custom grid input.
+func (m Model) handleBvBGridConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.errorMsg = ""
+
+	if m.bvbInputtingGrid {
+		return m.handleBvBGridInput(msg)
+	}
+
+	switch msg.String() {
+	case "up", "k":
+		if m.menuSelection > 0 {
+			m.menuSelection--
+		} else {
+			m.menuSelection = len(m.menuOptions) - 1
+		}
+
+	case "down", "j":
+		if m.menuSelection < len(m.menuOptions)-1 {
+			m.menuSelection++
+		} else {
+			m.menuSelection = 0
+		}
+
+	case "enter":
+		return m.handleBvBGridSelection()
+
+	case "esc":
+		// Go back to game mode selection
+		m.screen = ScreenBvBGameMode
+		m.menuOptions = []string{"Single Game", "Multi-Game"}
+		m.menuSelection = 0
+		m.bvbInputtingGrid = false
+		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBGridSelection handles the selection of a grid preset or custom option.
+func (m Model) handleBvBGridSelection() (tea.Model, tea.Cmd) {
+	selected := m.menuOptions[m.menuSelection]
+
+	switch selected {
+	case "1x1":
+		m.bvbGridRows, m.bvbGridCols = 1, 1
+	case "2x2":
+		m.bvbGridRows, m.bvbGridCols = 2, 2
+	case "2x3":
+		m.bvbGridRows, m.bvbGridCols = 2, 3
+	case "2x4":
+		m.bvbGridRows, m.bvbGridCols = 2, 4
+	case "Custom":
+		m.bvbInputtingGrid = true
+		m.bvbCustomGridInput = ""
+		return m, nil
+	}
+
+	return m.startBvBSession()
+}
+
+// handleBvBGridInput handles text input for custom grid dimensions.
+// Expected format: "RxC" (e.g., "2x3").
+func (m Model) handleBvBGridInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.bvbInputtingGrid = false
+		m.bvbCustomGridInput = ""
+		m.errorMsg = ""
+
+	case tea.KeyBackspace:
+		if len(m.bvbCustomGridInput) > 0 {
+			m.bvbCustomGridInput = m.bvbCustomGridInput[:len(m.bvbCustomGridInput)-1]
+		}
+
+	case tea.KeyEnter:
+		rows, cols, err := parseGridDimensions(m.bvbCustomGridInput)
+		if err != nil {
+			m.errorMsg = err.Error()
+			return m, nil
+		}
+		m.bvbGridRows = rows
+		m.bvbGridCols = cols
+		m.bvbInputtingGrid = false
+		return m.startBvBSession()
+
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			if (r >= '0' && r <= '9') || r == 'x' || r == 'X' {
+				m.bvbCustomGridInput += string(r)
+			}
+		}
+	}
+
+	return m, nil
+}
+
+// parseGridDimensions parses a grid string like "2x3" into rows and cols.
+// Validates that total boards (rows*cols) does not exceed 8.
+func parseGridDimensions(s string) (int, int, error) {
+	// Find the 'x' or 'X' separator
+	sep := -1
+	for i, r := range s {
+		if r == 'x' || r == 'X' {
+			sep = i
+			break
+		}
+	}
+	if sep < 0 {
+		return 0, 0, fmt.Errorf("use format RxC (e.g., 2x3)")
+	}
+
+	rows, err := parsePositiveInt(s[:sep])
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid rows: %v", err)
+	}
+	cols, err := parsePositiveInt(s[sep+1:])
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid cols: %v", err)
+	}
+
+	if rows*cols > 8 {
+		return 0, 0, fmt.Errorf("max 8 boards (got %dx%d = %d)", rows, cols, rows*cols)
+	}
+
+	return rows, cols, nil
+}
+
+// startBvBSession creates a SessionManager with the configured settings and starts it.
+func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
+	// Map UI bot difficulty to bvb bot difficulty
+	whiteDiff := uiBotDiffToBvB(m.bvbWhiteDiff)
+	blackDiff := uiBotDiffToBvB(m.bvbBlackDiff)
+	whiteName := botDifficultyName(m.bvbWhiteDiff) + " Bot"
+	blackName := botDifficultyName(m.bvbBlackDiff) + " Bot"
+
+	manager := bvb.NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, m.bvbGameCount)
+	manager.Start()
+
+	m.bvbManager = manager
+	m.screen = ScreenBvBGamePlay
+	m.statusMsg = ""
+	m.errorMsg = ""
+	return m, nil
+}
+
+// uiBotDiffToBvB maps the UI BotDifficulty to the bot package Difficulty.
+func uiBotDiffToBvB(d BotDifficulty) bot.Difficulty {
+	switch d {
+	case BotEasy:
+		return bot.Easy
+	case BotMedium:
+		return bot.Medium
+	case BotHard:
+		return bot.Hard
+	default:
+		return bot.Easy
+	}
+}
+
+// handleBvBGamePlayKeys handles keyboard input during BvB game viewing.
+// For now, only ESC to abort and return to menu is supported.
+func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		// Abort the session and return to menu
+		if m.bvbManager != nil {
+			m.bvbManager.Abort()
+			m.bvbManager = nil
+		}
+		m.screen = ScreenMainMenu
+		m.menuOptions = buildMainMenuOptions()
+		m.menuSelection = 0
+		m.statusMsg = ""
+		m.errorMsg = ""
+	}
+
+	return m, nil
 }
 
 // handleColorSelectKeys handles keyboard input for the color selection screen.

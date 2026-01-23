@@ -1295,6 +1295,262 @@ func TestRenderBvBGameMode_InputView(t *testing.T) {
 	}
 }
 
+// TestBvBGridConfig_PresetSelection tests selecting grid presets.
+func TestBvBGridConfig_PresetSelection(t *testing.T) {
+	tests := []struct {
+		name     string
+		index    int
+		wantRows int
+		wantCols int
+	}{
+		{"1x1", 0, 1, 1},
+		{"2x2", 1, 2, 2},
+		{"2x3", 2, 2, 3},
+		{"2x4", 3, 2, 4},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			m.screen = ScreenBvBGridConfig
+			m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+			m.menuSelection = tt.index
+			m.bvbGameCount = 5
+			m.bvbWhiteDiff = BotEasy
+			m.bvbBlackDiff = BotHard
+
+			result, _ := m.handleBvBGridSelection()
+			m = result.(Model)
+
+			if m.bvbGridRows != tt.wantRows {
+				t.Errorf("Expected bvbGridRows=%d, got %d", tt.wantRows, m.bvbGridRows)
+			}
+			if m.bvbGridCols != tt.wantCols {
+				t.Errorf("Expected bvbGridCols=%d, got %d", tt.wantCols, m.bvbGridCols)
+			}
+			if m.screen != ScreenBvBGamePlay {
+				t.Errorf("Expected screen to be ScreenBvBGamePlay, got %v", m.screen)
+			}
+			if m.bvbManager == nil {
+				t.Error("Expected bvbManager to be initialized")
+			}
+			// Clean up
+			if m.bvbManager != nil {
+				m.bvbManager.Abort()
+			}
+		})
+	}
+}
+
+// TestBvBGridConfig_CustomSelection tests selecting "Custom" shows input mode.
+func TestBvBGridConfig_CustomSelection(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 4 // Custom
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	if !m.bvbInputtingGrid {
+		t.Error("Expected bvbInputtingGrid to be true")
+	}
+	if m.screen != ScreenBvBGridConfig {
+		t.Errorf("Expected to stay on ScreenBvBGridConfig, got %v", m.screen)
+	}
+}
+
+// TestBvBGridConfig_CustomInputValid tests valid custom grid input.
+func TestBvBGridConfig_CustomInputValid(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.bvbInputtingGrid = true
+	m.bvbCustomGridInput = "2x3"
+	m.bvbGameCount = 10
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBGridInput(msg)
+	m = result.(Model)
+
+	if m.bvbGridRows != 2 || m.bvbGridCols != 3 {
+		t.Errorf("Expected grid 2x3, got %dx%d", m.bvbGridRows, m.bvbGridCols)
+	}
+	if m.screen != ScreenBvBGamePlay {
+		t.Errorf("Expected screen to be ScreenBvBGamePlay, got %v", m.screen)
+	}
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGridConfig_CustomInputExceeds8 tests that grid > 8 boards is rejected.
+func TestBvBGridConfig_CustomInputExceeds8(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.bvbInputtingGrid = true
+	m.bvbCustomGridInput = "3x3"
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBGridInput(msg)
+	m = result.(Model)
+
+	if m.errorMsg == "" {
+		t.Error("Expected error for grid exceeding 8 boards")
+	}
+	if !m.bvbInputtingGrid {
+		t.Error("Should remain in input mode on error")
+	}
+}
+
+// TestBvBGridConfig_CustomInputInvalid tests invalid format is rejected.
+func TestBvBGridConfig_CustomInputInvalid(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.bvbInputtingGrid = true
+	m.bvbCustomGridInput = "22"
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBGridInput(msg)
+	m = result.(Model)
+
+	if m.errorMsg == "" {
+		t.Error("Expected error for invalid grid format")
+	}
+}
+
+// TestBvBGridConfig_EscGoesBack tests ESC returns to game mode screen.
+func TestBvBGridConfig_EscGoesBack(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBGridConfigKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenBvBGameMode {
+		t.Errorf("Expected screen to be ScreenBvBGameMode, got %v", m.screen)
+	}
+}
+
+// TestBvBGridConfig_EscFromInputGoesBack tests ESC from input mode cancels input.
+func TestBvBGridConfig_EscFromInputGoesBack(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.bvbInputtingGrid = true
+	m.bvbCustomGridInput = "2x"
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBGridInput(msg)
+	m = result.(Model)
+
+	if m.bvbInputtingGrid {
+		t.Error("Expected bvbInputtingGrid to be false after ESC")
+	}
+	if m.bvbCustomGridInput != "" {
+		t.Errorf("Expected input to be cleared, got %q", m.bvbCustomGridInput)
+	}
+}
+
+// TestParseGridDimensions tests the parseGridDimensions helper.
+func TestParseGridDimensions(t *testing.T) {
+	tests := []struct {
+		input    string
+		wantRows int
+		wantCols int
+		wantErr  bool
+	}{
+		{"1x1", 1, 1, false},
+		{"2x3", 2, 3, false},
+		{"2x4", 2, 4, false},
+		{"1X1", 1, 1, false},
+		{"3x3", 0, 0, true},  // exceeds 8
+		{"22", 0, 0, true},   // no separator
+		{"0x1", 0, 0, true},  // zero rows
+		{"2x0", 0, 0, true},  // zero cols
+		{"x1", 0, 0, true},   // empty rows
+		{"2x", 0, 0, true},   // empty cols
+	}
+
+	for _, tt := range tests {
+		rows, cols, err := parseGridDimensions(tt.input)
+		if tt.wantErr && err == nil {
+			t.Errorf("parseGridDimensions(%q) expected error", tt.input)
+			continue
+		}
+		if !tt.wantErr && err != nil {
+			t.Errorf("parseGridDimensions(%q) unexpected error: %v", tt.input, err)
+			continue
+		}
+		if !tt.wantErr {
+			if rows != tt.wantRows || cols != tt.wantCols {
+				t.Errorf("parseGridDimensions(%q) = (%d,%d), want (%d,%d)", tt.input, rows, cols, tt.wantRows, tt.wantCols)
+			}
+		}
+	}
+}
+
+// TestRenderBvBGridConfig tests rendering of the grid config screen.
+func TestRenderBvBGridConfig(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.bvbGameCount = 10
+	m.bvbWhiteDiff = BotMedium
+	m.bvbBlackDiff = BotHard
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+
+	view := m.renderBvBGridConfig()
+
+	if !strings.Contains(view, "Select Grid Layout:") {
+		t.Error("Expected 'Select Grid Layout:' in view")
+	}
+	if !strings.Contains(view, "10 game(s)") {
+		t.Error("Expected game count in view")
+	}
+	if !strings.Contains(view, "Medium Bot (White) vs Hard Bot (Black)") {
+		t.Error("Expected matchup info in view")
+	}
+	if !strings.Contains(view, "1x1") {
+		t.Error("Expected '1x1' preset in view")
+	}
+}
+
+// TestBvBGamePlay_EscAbortsSession tests ESC during gameplay aborts and returns to menu.
+func TestBvBGamePlay_EscAbortsSession(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	// Start a session
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
+
+	// Press ESC to abort
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected screen to be ScreenMainMenu, got %v", m.screen)
+	}
+	if m.bvbManager != nil {
+		t.Error("Expected bvbManager to be nil after abort")
+	}
+}
+
 // TestParsePositiveInt tests the parsePositiveInt helper.
 func TestParsePositiveInt(t *testing.T) {
 	tests := []struct {

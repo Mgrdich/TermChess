@@ -191,23 +191,26 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 8: Add Grid Configuration Screen
 **Goal:** User can select grid layout (presets or custom) before starting games.
 
-- [ ] Update `internal/ui/model.go`:
-  - [ ] Add `ScreenBvBGridConfig` screen state
-  - [ ] Add fields: bvbGridRows, bvbGridCols, bvbGridInput, bvbGridPresetIndex
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] Implement `handleBvBGridConfigKeys()`:
-    - [ ] Show preset options: 1x1, 2x2, 2x3, 2x4
-    - [ ] Show "Custom" option with row/col input
-    - [ ] Validate max 8 boards total (rows * cols <= 8)
-    - [ ] Enter starts the BvB session
-    - [ ] ESC returns to game mode screen
-  - [ ] On Enter: create SessionManager, call Start(), transition to ScreenBvBGamePlay
-- [ ] Update `internal/ui/view.go`:
-  - [ ] Add rendering for ScreenBvBGridConfig
-  - [ ] Show grid presets and custom input option
-  - [ ] Add help text
-- [ ] Test: Select grid presets, enter custom dimensions, validate max 8
-- [ ] Verify: Grid config stored, session started on confirm
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `ScreenBvBGridConfig` and `ScreenBvBGamePlay` screen states
+  - [x] Add fields: bvbGridRows, bvbGridCols, bvbCustomGridInput, bvbInputtingGrid
+  - [x] Add bvbManager field (*bvb.SessionManager)
+- [x] Update `internal/ui/update.go`:
+  - [x] Implement `handleBvBGridConfigKeys()`:
+    - [x] Show preset options: 1x1, 2x2, 2x3, 2x4
+    - [x] Show "Custom" option with row/col input (format: RxC)
+    - [x] Validate max 8 boards total (rows * cols <= 8)
+    - [x] Enter starts the BvB session
+    - [x] ESC returns to game mode screen
+  - [x] Implement `startBvBSession()`: create SessionManager, call Start(), transition to ScreenBvBGamePlay
+  - [x] Implement minimal `handleBvBGamePlayKeys()` (ESC to abort)
+  - [x] Implement `parseGridDimensions()` helper
+- [x] Update `internal/ui/view.go`:
+  - [x] Add rendering for ScreenBvBGridConfig (presets and custom input)
+  - [x] Add minimal rendering for ScreenBvBGamePlay (status display)
+  - [x] Add help text
+- [x] Test: Select grid presets, enter custom dimensions, validate max 8
+- [x] Verify: Grid config stored, session started on confirm
 
 **Deliverable:** Full BvB configuration flow complete. Games start after grid selection.
 

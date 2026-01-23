@@ -91,6 +91,10 @@ func (m Model) View() string {
 		return m.renderBvBBotSelect()
 	case ScreenBvBGameMode:
 		return m.renderBvBGameMode()
+	case ScreenBvBGridConfig:
+		return m.renderBvBGridConfig()
+	case ScreenBvBGamePlay:
+		return m.renderBvBGamePlay()
 	default:
 		return "Unknown screen"
 	}
@@ -1004,6 +1008,130 @@ func (m Model) renderBvBGameMode() string {
 		b.WriteString("\n\n")
 		statusText := statusStyle.Render(m.statusMsg)
 		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// renderBvBGridConfig renders the Bot vs Bot grid configuration screen.
+func (m Model) renderBvBGridConfig() string {
+	var b strings.Builder
+
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Grid Layout:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Show game count info
+	infoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#50FA7B")).
+		Padding(0, 2)
+	gameInfo := fmt.Sprintf("%d game(s) | %s Bot (White) vs %s Bot (Black)",
+		m.bvbGameCount, botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
+	b.WriteString(infoStyle.Render(gameInfo))
+	b.WriteString("\n\n")
+
+	if m.bvbInputtingGrid {
+		promptStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFDF5")).
+			Padding(0, 2)
+		b.WriteString(promptStyle.Render("Enter grid dimensions (RxC, max 8 total):"))
+		b.WriteString("\n\n")
+
+		inputStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4")).
+			Padding(0, 2)
+		inputDisplay := m.bvbCustomGridInput
+		if inputDisplay == "" {
+			inputDisplay = "_"
+		}
+		b.WriteString(inputStyle.Render("> " + inputDisplay))
+		b.WriteString("\n")
+
+		helpText := renderHelpText("ESC: back | enter: confirm | e.g. 2x3", m.config)
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
+	} else {
+		for i, option := range m.menuOptions {
+			cursor := "  "
+			optionText := option
+
+			if i == m.menuSelection {
+				cursor = cursorStyle.Render("> ")
+				optionText = selectedItemStyle.Render(option)
+			} else {
+				optionText = menuItemStyle.Render(option)
+			}
+
+			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		}
+
+		helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
+	}
+
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// renderBvBGamePlay renders the Bot vs Bot gameplay screen.
+// Shows the current state of the running games.
+func (m Model) renderBvBGamePlay() string {
+	var b strings.Builder
+
+	title := titleStyle.Render("TermChess - Bot vs Bot")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	if m.bvbManager == nil {
+		b.WriteString("No session running.\n")
+		return b.String()
+	}
+
+	// Show basic status
+	infoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#50FA7B")).
+		Padding(0, 2)
+
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
+		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
+	b.WriteString(infoStyle.Render(matchup))
+	b.WriteString("\n\n")
+
+	sessions := m.bvbManager.Sessions()
+	finished := 0
+	for _, s := range sessions {
+		if s.IsFinished() {
+			finished++
+		}
+	}
+
+	statusText := fmt.Sprintf("Games: %d/%d completed | Grid: %dx%d",
+		finished, len(sessions), m.bvbGridRows, m.bvbGridCols)
+	b.WriteString(infoStyle.Render(statusText))
+	b.WriteString("\n")
+
+	helpText := renderHelpText("ESC: abort and return to menu", m.config)
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
 	}
 
 	return b.String()

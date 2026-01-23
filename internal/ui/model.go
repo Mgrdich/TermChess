@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/Mgrdich/TermChess/internal/bot"
+	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -38,6 +39,10 @@ const (
 	ScreenBvBBotSelect
 	// ScreenBvBGameMode allows the user to choose single game or multi-game mode
 	ScreenBvBGameMode
+	// ScreenBvBGridConfig allows the user to select grid layout for viewing games
+	ScreenBvBGridConfig
+	// ScreenBvBGamePlay is the main screen for watching Bot vs Bot games
+	ScreenBvBGamePlay
 )
 
 // GameType represents the type of chess game being played.
@@ -139,6 +144,16 @@ type Model struct {
 	bvbCountInput string
 	// bvbInputtingCount indicates whether we're in text input mode for game count
 	bvbInputtingCount bool
+	// bvbGridRows stores the number of rows in the grid layout
+	bvbGridRows int
+	// bvbGridCols stores the number of columns in the grid layout
+	bvbGridCols int
+	// bvbCustomGridInput holds the text input for custom grid dimensions
+	bvbCustomGridInput string
+	// bvbInputtingGrid indicates whether we're in text input mode for custom grid
+	bvbInputtingGrid bool
+	// bvbManager holds the session manager for the current BvB session
+	bvbManager *bvb.SessionManager
 }
 
 // NewModel creates and initializes a new Model with the provided configuration.
