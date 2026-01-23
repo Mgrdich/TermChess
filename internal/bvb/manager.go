@@ -166,3 +166,20 @@ func (m *SessionManager) Speed() PlaybackSpeed {
 	defer m.mu.Unlock()
 	return m.speed
 }
+
+// Stats computes aggregate statistics from all finished sessions.
+func (m *SessionManager) Stats() *AggregateStats {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var results []GameResult
+	for _, s := range m.sessions {
+		if s != nil && s.IsFinished() {
+			if r := s.Result(); r != nil {
+				results = append(results, *r)
+			}
+		}
+	}
+
+	return ComputeStats(results, m.whiteName, m.blackName)
+}

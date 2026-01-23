@@ -117,19 +117,19 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 5: Implement Statistics Collection
 **Goal:** Compute aggregate statistics from completed game results.
 
-- [ ] Create `internal/bvb/stats.go`:
-  - [ ] Define `AggregateStats` struct (TotalGames, WhiteBotName, BlackBotName, WhiteWins, BlackWins, Draws, WhiteWinPct, BlackWinPct, AvgMoveCount, AvgDuration, ShortestGame, LongestGame, IndividualResults)
-  - [ ] Implement `ComputeStats(results []GameResult, whiteName, blackName string) *AggregateStats`
-  - [ ] Implement `(m *SessionManager) Stats() *AggregateStats` - collects results from finished sessions
-- [ ] Create `internal/bvb/stats_test.go`:
-  - [ ] Test with known results: correct win counts, percentages
-  - [ ] Test draws counted correctly
-  - [ ] Test average move count and duration
-  - [ ] Test shortest/longest game identified correctly
-  - [ ] Test with single game (stats still work)
-  - [ ] Test with all draws
-- [ ] Run tests: `go test ./internal/bvb/`
-- [ ] Verify: Statistics computed accurately
+- [x] Create `internal/bvb/stats.go`:
+  - [x] Define `AggregateStats` struct (TotalGames, WhiteBotName, BlackBotName, WhiteWins, BlackWins, Draws, WhiteWinPct, BlackWinPct, AvgMoveCount, AvgDuration, ShortestGame, LongestGame, IndividualResults)
+  - [x] Implement `ComputeStats(results []GameResult, whiteName, blackName string) *AggregateStats`
+  - [x] Implement `(m *SessionManager) Stats() *AggregateStats` - collects results from finished sessions
+- [x] Create `internal/bvb/stats_test.go`:
+  - [x] Test with known results: correct win counts, percentages
+  - [x] Test draws counted correctly
+  - [x] Test average move count and duration
+  - [x] Test shortest/longest game identified correctly
+  - [x] Test with single game (stats still work)
+  - [x] Test with all draws
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Statistics computed accurately
 
 **Deliverable:** Statistics collection complete. Ready for UI integration.
 
