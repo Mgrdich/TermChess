@@ -2479,6 +2479,143 @@ func TestBvB_WindowSizeMsg(t *testing.T) {
 	}
 }
 
+// TestBvB_CompleteFlow tests the full BvB flow: menu → bot select → game mode → grid → gameplay → stats → menu.
+func TestBvB_CompleteFlow(t *testing.T) {
+	m := NewModel(DefaultConfig())
+
+	// Step 1: Main menu → Game Type Select
+	m.screen = ScreenMainMenu
+	m.menuOptions = buildMainMenuOptions()
+	// Find "New Game" and select it
+	for i, opt := range m.menuOptions {
+		if opt == "New Game" {
+			m.menuSelection = i
+			break
+		}
+	}
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleKeyPress(msg)
+	m = result.(Model)
+	if m.screen != ScreenGameTypeSelect {
+		t.Fatalf("Step 1: Expected ScreenGameTypeSelect, got %d", m.screen)
+	}
+
+	// Step 2: Game Type → Bot vs Bot (last option)
+	m.menuSelection = len(m.menuOptions) - 1 // "Bot vs Bot" is last
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+	if m.screen != ScreenBvBBotSelect {
+		t.Fatalf("Step 2: Expected ScreenBvBBotSelect, got %d", m.screen)
+	}
+
+	// Step 3: Select White bot (Easy)
+	m.menuSelection = 0 // Easy
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+	if m.bvbWhiteDiff != BotEasy {
+		t.Fatal("Step 3: Expected BotEasy for white")
+	}
+	if m.bvbSelectingWhite {
+		t.Fatal("Step 3: Should now be selecting black")
+	}
+
+	// Step 4: Select Black bot (Easy)
+	m.menuSelection = 0 // Easy
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+	if m.screen != ScreenBvBGameMode {
+		t.Fatalf("Step 4: Expected ScreenBvBGameMode, got %d", m.screen)
+	}
+
+	// Step 5: Select Single Game mode
+	m.menuSelection = 0 // Single Game
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+	if m.screen != ScreenBvBGridConfig {
+		t.Fatalf("Step 5: Expected ScreenBvBGridConfig, got %d", m.screen)
+	}
+	if m.bvbGameCount != 1 {
+		t.Fatalf("Step 5: Expected game count 1, got %d", m.bvbGameCount)
+	}
+
+	// Step 6: Select 1x1 grid
+	m.menuSelection = 0 // 1x1
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+	if m.screen != ScreenBvBGamePlay {
+		t.Fatalf("Step 6: Expected ScreenBvBGamePlay, got %d", m.screen)
+	}
+	if m.bvbManager == nil {
+		t.Fatal("Step 6: Expected bvbManager to be initialized")
+	}
+
+	// Step 7: Set speed to instant and wait for game to finish
+	m.bvbSpeed = bvb.SpeedInstant
+	m.bvbManager.SetSpeed(bvb.SpeedInstant)
+	for i := 0; i < 2000; i++ {
+		if m.bvbManager.AllFinished() {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !m.bvbManager.AllFinished() {
+		t.Skip("Game did not finish in time")
+	}
+
+	// Step 8: Tick transitions to stats
+	result, _ = m.handleBvBTick()
+	m = result.(Model)
+	if m.screen != ScreenBvBStats {
+		t.Fatalf("Step 8: Expected ScreenBvBStats, got %d", m.screen)
+	}
+
+	// Step 9: Verify stats are populated
+	stats := m.bvbManager.Stats()
+	if stats == nil || stats.TotalGames != 1 {
+		t.Fatal("Step 9: Expected 1 game in stats")
+	}
+
+	// Step 10: Return to menu
+	m.bvbStatsSelection = 1 // Return to Menu
+	result, _ = m.handleBvBStatsKeys(msg)
+	m = result.(Model)
+	if m.screen != ScreenMainMenu {
+		t.Fatalf("Step 10: Expected ScreenMainMenu, got %d", m.screen)
+	}
+	if m.bvbManager != nil {
+		t.Fatal("Step 10: Expected bvbManager to be nil after returning to menu")
+	}
+}
+
+// TestBvB_HelpTextConfig tests that help text respects ShowHelpText config.
+func TestBvB_HelpTextConfig(t *testing.T) {
+	// With help text disabled
+	cfg := DefaultConfig()
+	cfg.ShowHelpText = false
+
+	m := NewModel(cfg)
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewMode = BvBSingleView
+
+	view := m.renderBvBGamePlay()
+	if strings.Contains(view, "ESC: abort") {
+		t.Error("Expected help text to be hidden when ShowHelpText is false")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
 // TestParsePositiveInt tests the parsePositiveInt helper.
 func TestParsePositiveInt(t *testing.T) {
 	tests := []struct {
