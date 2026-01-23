@@ -59,6 +59,7 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 - **As a** user, **I want to** choose between a single game or multiple games, **so that** I can either watch one game or run a batch for statistics.
   - **Acceptance Criteria:**
     - [x] After bot selection, user chooses "Single Game" or "Multi-Game"
+    - [x] "Single Game" starts gameplay directly (skips grid configuration, uses 1x1 grid in single-board view)
     - [x] If "Multi-Game" selected, user enters the number of games (free-form digit input)
     - [x] Input validation: must be a positive integer, rejects letters and zero
     - [x] Backspace removes characters from input

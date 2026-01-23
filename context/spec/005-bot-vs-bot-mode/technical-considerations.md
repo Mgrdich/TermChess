@@ -225,8 +225,9 @@ Navigation flow:
 ScreenGameTypeSelect → "Bot vs Bot"
     → ScreenBvBBotSelect (select White difficulty, then Black difficulty)
     → ScreenBvBGameMode (Single Game / Multi-Game + count input)
-    → ScreenBvBGridConfig (grid size presets or custom input)
-    → ScreenBvBGamePlay (watching games, tick-based updates)
+        → Single Game: directly to ScreenBvBGamePlay (1x1 grid, single-board view)
+        → Multi-Game: → ScreenBvBGridConfig (grid size presets or custom input)
+                      → ScreenBvBGamePlay (watching games, tick-based updates)
     → ScreenBvBStats (statistics, New Session or Return to Menu)
 ```
 

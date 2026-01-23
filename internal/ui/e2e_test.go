@@ -1074,18 +1074,34 @@ func TestBotDifficultyName(t *testing.T) {
 	}
 }
 
-// TestBvBGameMode_SingleGameSetsCount tests single game selection sets count to 1.
-func TestBvBGameMode_SingleGameSetsCount(t *testing.T) {
+// TestBvBGameMode_SingleGameStartsDirectly tests single game skips grid config and starts gameplay.
+func TestBvBGameMode_SingleGameStartsDirectly(t *testing.T) {
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenBvBGameMode
 	m.menuOptions = []string{"Single Game", "Multi-Game"}
 	m.menuSelection = 0 // Single Game
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
 
 	result, _ := m.handleBvBGameModeSelection()
 	m = result.(Model)
 
 	if m.bvbGameCount != 1 {
 		t.Errorf("Expected bvbGameCount to be 1, got: %d", m.bvbGameCount)
+	}
+	if m.screen != ScreenBvBGamePlay {
+		t.Errorf("Expected ScreenBvBGamePlay (skip grid config), got: %d", m.screen)
+	}
+	if m.bvbViewMode != BvBSingleView {
+		t.Error("Expected single view mode for single game")
+	}
+	if m.bvbManager == nil {
+		t.Error("Expected bvbManager to be initialized")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
 	}
 }
 
@@ -2527,29 +2543,21 @@ func TestBvB_CompleteFlow(t *testing.T) {
 		t.Fatalf("Step 4: Expected ScreenBvBGameMode, got %d", m.screen)
 	}
 
-	// Step 5: Select Single Game mode
+	// Step 5: Select Single Game mode (skips grid config, goes straight to gameplay)
 	m.menuSelection = 0 // Single Game
 	result, _ = m.handleKeyPress(msg)
 	m = result.(Model)
-	if m.screen != ScreenBvBGridConfig {
-		t.Fatalf("Step 5: Expected ScreenBvBGridConfig, got %d", m.screen)
+	if m.screen != ScreenBvBGamePlay {
+		t.Fatalf("Step 5: Expected ScreenBvBGamePlay (single game skips grid), got %d", m.screen)
 	}
 	if m.bvbGameCount != 1 {
 		t.Fatalf("Step 5: Expected game count 1, got %d", m.bvbGameCount)
 	}
-
-	// Step 6: Select 1x1 grid
-	m.menuSelection = 0 // 1x1
-	result, _ = m.handleKeyPress(msg)
-	m = result.(Model)
-	if m.screen != ScreenBvBGamePlay {
-		t.Fatalf("Step 6: Expected ScreenBvBGamePlay, got %d", m.screen)
-	}
 	if m.bvbManager == nil {
-		t.Fatal("Step 6: Expected bvbManager to be initialized")
+		t.Fatal("Step 5: Expected bvbManager to be initialized")
 	}
 
-	// Step 7: Set speed to instant and wait for game to finish
+	// Step 6: Set speed to instant and wait for game to finish
 	m.bvbSpeed = bvb.SpeedInstant
 	m.bvbManager.SetSpeed(bvb.SpeedInstant)
 	for i := 0; i < 2000; i++ {

@@ -1181,13 +1181,10 @@ func (m Model) handleBvBGameModeSelection() (tea.Model, tea.Cmd) {
 	switch selected {
 	case "Single Game":
 		m.bvbGameCount = 1
-		m.screen = ScreenBvBGridConfig
-		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
-		m.menuSelection = 0
-		m.bvbInputtingGrid = false
-		m.bvbCustomGridInput = ""
-		m.statusMsg = ""
-		m.errorMsg = ""
+		m.bvbGridRows = 1
+		m.bvbGridCols = 1
+		m.bvbViewMode = BvBSingleView
+		return m.startBvBSession()
 
 	case "Multi-Game":
 		// Switch to text input mode for game count
