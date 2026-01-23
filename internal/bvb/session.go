@@ -211,6 +211,14 @@ func (s *GameSession) Resume() {
 	}
 }
 
+// SetSpeed updates the playback speed for this session.
+// It is safe to call concurrently while the session is running.
+func (s *GameSession) SetSpeed(speed PlaybackSpeed) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	*s.speed = speed
+}
+
 // Abort signals the game session to stop immediately. It is safe to call multiple times.
 func (s *GameSession) Abort() {
 	select {

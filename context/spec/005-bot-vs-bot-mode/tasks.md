@@ -69,17 +69,17 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 3: Add Speed Control to GameSession
 **Goal:** GameSession respects playback speed and speed changes mid-game.
 
-- [ ] Update `internal/bvb/session.go`:
-  - [ ] Add speed-based sleep between moves in `Run()` loop
-  - [ ] For Instant: no sleep (compute as fast as possible)
-  - [ ] For Fast/Normal/Slow: sleep for configured duration
-  - [ ] Speed changes picked up on next iteration (shared pointer)
-- [ ] Update `internal/bvb/session_test.go`:
-  - [ ] Test Instant speed completes game quickly (< 5s for Easy vs Easy)
-  - [ ] Test Normal speed has measurable delays between moves
-  - [ ] Test speed change mid-game takes effect
-- [ ] Run tests: `go test ./internal/bvb/`
-- [ ] Verify: Speed control works correctly
+- [x] Update `internal/bvb/session.go`:
+  - [x] Add speed-based sleep between moves in `Run()` loop
+  - [x] For Instant: no sleep (compute as fast as possible)
+  - [x] For Fast/Normal/Slow: sleep for configured duration
+  - [x] Speed changes picked up on next iteration (shared pointer)
+- [x] Update `internal/bvb/session_test.go`:
+  - [x] Test Instant speed completes game quickly (< 5s for Easy vs Easy)
+  - [x] Test Normal speed has measurable delays between moves
+  - [x] Test speed change mid-game takes effect
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Speed control works correctly
 
 **Deliverable:** Sessions pace themselves according to configured speed.
 

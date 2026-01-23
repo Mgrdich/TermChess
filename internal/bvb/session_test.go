@@ -471,3 +471,136 @@ func TestGameSessionAbortDuringPause(t *testing.T) {
 		t.Error("session should be finished after abort during pause")
 	}
 }
+
+func TestGameSessionInstantSpeed(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedInstant
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Instant speed with random engines should complete well within 5 seconds.
+	select {
+	case <-done:
+		// Game completed quickly as expected.
+	case <-time.After(5 * time.Second):
+		session.Abort()
+		t.Fatal("instant speed game did not complete within 5 seconds")
+	}
+
+	if !session.IsFinished() {
+		t.Error("session should be finished after Run() returns")
+	}
+
+	result := session.Result()
+	if result == nil {
+		t.Fatal("result should not be nil after game completes")
+	}
+	if result.MoveCount <= 0 {
+		t.Errorf("MoveCount = %d, want > 0", result.MoveCount)
+	}
+}
+
+func TestGameSessionNormalSpeedHasDelays(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	// Normal speed = 1500ms delay per move.
+	speed := SpeedNormal
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Wait 2 seconds. With 1500ms delay per move, expect at most 1-2 moves.
+	time.Sleep(2 * time.Second)
+
+	moveCount := len(session.CurrentMoveHistory())
+	if moveCount > 3 {
+		t.Errorf("expected at most 3 moves in 2s at normal speed (1500ms/move), got %d", moveCount)
+	}
+
+	// Clean up.
+	session.Abort()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("session did not stop within timeout after abort")
+	}
+}
+
+func TestGameSessionSpeedChangeMidGame(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	// Start with slow speed (3000ms per move).
+	speed := SpeedSlow
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Wait 1 second. At 3000ms/move, game should have 0-1 moves.
+	time.Sleep(1 * time.Second)
+
+	movesBeforeChange := len(session.CurrentMoveHistory())
+	if movesBeforeChange > 1 {
+		t.Errorf("expected at most 1 move in 1s at slow speed (3000ms/move), got %d", movesBeforeChange)
+	}
+
+	// Change speed to instant using the thread-safe SetSpeed method.
+	session.SetSpeed(SpeedInstant)
+
+	// Wait 3 seconds for the game to progress rapidly at instant speed.
+	time.Sleep(3 * time.Second)
+
+	movesAfterChange := len(session.CurrentMoveHistory())
+
+	// After switching to instant, many more moves should have been made
+	// (or the game should have finished entirely).
+	if !session.IsFinished() && movesAfterChange <= movesBeforeChange+2 {
+		t.Errorf("expected significant progress after speed change to instant: before=%d, after=%d",
+			movesBeforeChange, movesAfterChange)
+	}
+
+	// Clean up if not already finished.
+	if !session.IsFinished() {
+		session.Abort()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("session did not stop within timeout after abort")
+		}
+	}
+}
