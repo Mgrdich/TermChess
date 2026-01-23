@@ -89,6 +89,8 @@ func (m Model) View() string {
 		return m.renderDrawPrompt()
 	case ScreenBvBBotSelect:
 		return m.renderBvBBotSelect()
+	case ScreenBvBGameMode:
+		return m.renderBvBGameMode()
 	default:
 		return "Unknown screen"
 	}
@@ -897,6 +899,97 @@ func (m Model) renderBvBBotSelect() string {
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
+	}
+
+	// Render error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Render status message if present
+	if m.statusMsg != "" {
+		b.WriteString("\n\n")
+		statusText := statusStyle.Render(m.statusMsg)
+		b.WriteString(statusText)
+	}
+
+	return b.String()
+}
+
+// renderBvBGameMode renders the Bot vs Bot game mode selection screen.
+// Shows Single Game / Multi-Game options, or a text input for game count.
+func (m Model) renderBvBGameMode() string {
+	var b strings.Builder
+
+	// Render the application title
+	title := titleStyle.Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Render screen header
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Game Mode:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Show matchup info
+	infoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#50FA7B")).
+		Padding(0, 2)
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
+		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
+	b.WriteString(infoStyle.Render(matchup))
+	b.WriteString("\n\n")
+
+	if m.bvbInputtingCount {
+		// Show text input for game count
+		promptStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFDF5")).
+			Padding(0, 2)
+		b.WriteString(promptStyle.Render("Number of games:"))
+		b.WriteString("\n\n")
+
+		inputStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4")).
+			Padding(0, 2)
+		inputDisplay := m.bvbCountInput
+		if inputDisplay == "" {
+			inputDisplay = "_"
+		}
+		b.WriteString(inputStyle.Render("> " + inputDisplay))
+		b.WriteString("\n")
+
+		helpText := renderHelpText("ESC: back | enter: confirm | type number", m.config)
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
+	} else {
+		// Show menu options
+		for i, option := range m.menuOptions {
+			cursor := "  "
+			optionText := option
+
+			if i == m.menuSelection {
+				cursor = cursorStyle.Render("> ")
+				optionText = selectedItemStyle.Render(option)
+			} else {
+				optionText = menuItemStyle.Render(option)
+			}
+
+			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		}
+
+		helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
 	}
 
 	// Render error message if present

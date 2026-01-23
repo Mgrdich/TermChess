@@ -36,6 +36,8 @@ const (
 	ScreenDrawPrompt
 	// ScreenBvBBotSelect allows the user to choose bot difficulties for Bot vs Bot mode
 	ScreenBvBBotSelect
+	// ScreenBvBGameMode allows the user to choose single game or multi-game mode
+	ScreenBvBGameMode
 )
 
 // GameType represents the type of chess game being played.
@@ -131,6 +133,12 @@ type Model struct {
 	bvbBlackDiff BotDifficulty
 	// bvbSelectingWhite indicates whether we're selecting the White bot (true) or Black bot (false)
 	bvbSelectingWhite bool
+	// bvbGameCount stores the number of games to play in multi-game mode
+	bvbGameCount int
+	// bvbCountInput holds the text input for game count entry
+	bvbCountInput string
+	// bvbInputtingCount indicates whether we're in text input mode for game count
+	bvbInputtingCount bool
 }
 
 // NewModel creates and initializes a new Model with the provided configuration.

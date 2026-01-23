@@ -1071,3 +1071,255 @@ func TestBotDifficultyName(t *testing.T) {
 		}
 	}
 }
+
+// TestBvBGameMode_SingleGameSetsCount tests single game selection sets count to 1.
+func TestBvBGameMode_SingleGameSetsCount(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.menuOptions = []string{"Single Game", "Multi-Game"}
+	m.menuSelection = 0 // Single Game
+
+	result, _ := m.handleBvBGameModeSelection()
+	m = result.(Model)
+
+	if m.bvbGameCount != 1 {
+		t.Errorf("Expected bvbGameCount to be 1, got: %d", m.bvbGameCount)
+	}
+}
+
+// TestBvBGameMode_MultiGameShowsInput tests multi-game switches to input mode.
+func TestBvBGameMode_MultiGameShowsInput(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.menuOptions = []string{"Single Game", "Multi-Game"}
+	m.menuSelection = 1 // Multi-Game
+
+	result, _ := m.handleBvBGameModeSelection()
+	m = result.(Model)
+
+	if !m.bvbInputtingCount {
+		t.Error("Expected bvbInputtingCount to be true after selecting Multi-Game")
+	}
+	if m.bvbCountInput != "" {
+		t.Errorf("Expected empty bvbCountInput, got: %q", m.bvbCountInput)
+	}
+}
+
+// TestBvBGameMode_CountInputAcceptsDigits tests that count input accepts digit characters.
+func TestBvBGameMode_CountInputAcceptsDigits(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+	m.bvbCountInput = ""
+
+	// Type "10"
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}}
+	result, _ := m.handleBvBCountInput(msg)
+	m = result.(Model)
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'0'}}
+	result, _ = m.handleBvBCountInput(msg)
+	m = result.(Model)
+
+	if m.bvbCountInput != "10" {
+		t.Errorf("Expected bvbCountInput to be '10', got: %q", m.bvbCountInput)
+	}
+}
+
+// TestBvBGameMode_CountInputRejectsLetters tests that letters are ignored.
+func TestBvBGameMode_CountInputRejectsLetters(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+	m.bvbCountInput = "5"
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	result, _ := m.handleBvBCountInput(msg)
+	m = result.(Model)
+
+	if m.bvbCountInput != "5" {
+		t.Errorf("Expected bvbCountInput to remain '5', got: %q", m.bvbCountInput)
+	}
+}
+
+// TestBvBGameMode_CountInputSubmit tests submitting a valid count.
+func TestBvBGameMode_CountInputSubmit(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+	m.bvbCountInput = "25"
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBCountInput(msg)
+	m = result.(Model)
+
+	if m.bvbGameCount != 25 {
+		t.Errorf("Expected bvbGameCount to be 25, got: %d", m.bvbGameCount)
+	}
+	if m.bvbInputtingCount {
+		t.Error("Expected bvbInputtingCount to be false after submit")
+	}
+}
+
+// TestBvBGameMode_CountInputRejectsZero tests that 0 is rejected.
+func TestBvBGameMode_CountInputRejectsZero(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+	m.bvbCountInput = "0"
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBCountInput(msg)
+	m = result.(Model)
+
+	if m.errorMsg == "" {
+		t.Error("Expected an error message for zero input")
+	}
+	if !m.bvbInputtingCount {
+		t.Error("Should remain in input mode on validation error")
+	}
+}
+
+// TestBvBGameMode_CountInputRejectsEmpty tests that empty input is rejected.
+func TestBvBGameMode_CountInputRejectsEmpty(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+	m.bvbCountInput = ""
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBCountInput(msg)
+	m = result.(Model)
+
+	if m.errorMsg == "" {
+		t.Error("Expected an error message for empty input")
+	}
+}
+
+// TestBvBGameMode_EscFromMenuGoesBackToBotSelect tests ESC navigates back.
+func TestBvBGameMode_EscFromMenuGoesBackToBotSelect(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.menuOptions = []string{"Single Game", "Multi-Game"}
+	m.menuSelection = 0
+	m.bvbInputtingCount = false
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBGameModeKeys(msg)
+	m = result.(Model)
+
+	if m.screen != ScreenBvBBotSelect {
+		t.Errorf("Expected screen to be ScreenBvBBotSelect, got: %v", m.screen)
+	}
+	if m.bvbSelectingWhite {
+		t.Error("Expected bvbSelectingWhite to be false (should return to Black selection)")
+	}
+}
+
+// TestBvBGameMode_EscFromInputGoesBackToMenu tests ESC from count input returns to menu.
+func TestBvBGameMode_EscFromInputGoesBackToMenu(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+	m.bvbCountInput = "123"
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBCountInput(msg)
+	m = result.(Model)
+
+	if m.bvbInputtingCount {
+		t.Error("Expected bvbInputtingCount to be false after ESC")
+	}
+	if m.bvbCountInput != "" {
+		t.Errorf("Expected bvbCountInput to be cleared, got: %q", m.bvbCountInput)
+	}
+}
+
+// TestBvBGameMode_BackspaceRemovesCharacter tests backspace in count input.
+func TestBvBGameMode_BackspaceRemovesCharacter(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+	m.bvbCountInput = "123"
+
+	msg := tea.KeyMsg{Type: tea.KeyBackspace}
+	result, _ := m.handleBvBCountInput(msg)
+	m = result.(Model)
+
+	if m.bvbCountInput != "12" {
+		t.Errorf("Expected bvbCountInput to be '12', got: %q", m.bvbCountInput)
+	}
+}
+
+// TestRenderBvBGameMode_MenuView tests rendering in menu mode.
+func TestRenderBvBGameMode_MenuView(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotHard
+	m.menuOptions = []string{"Single Game", "Multi-Game"}
+	m.menuSelection = 0
+	m.bvbInputtingCount = false
+
+	view := m.renderBvBGameMode()
+
+	if !strings.Contains(view, "Select Game Mode:") {
+		t.Error("Expected view to contain 'Select Game Mode:'")
+	}
+	if !strings.Contains(view, "Easy Bot (White) vs Hard Bot (Black)") {
+		t.Error("Expected view to show matchup info")
+	}
+	if !strings.Contains(view, "Single Game") {
+		t.Error("Expected view to contain 'Single Game'")
+	}
+	if !strings.Contains(view, "Multi-Game") {
+		t.Error("Expected view to contain 'Multi-Game'")
+	}
+}
+
+// TestRenderBvBGameMode_InputView tests rendering in count input mode.
+func TestRenderBvBGameMode_InputView(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbWhiteDiff = BotMedium
+	m.bvbBlackDiff = BotMedium
+	m.bvbInputtingCount = true
+	m.bvbCountInput = "42"
+
+	view := m.renderBvBGameMode()
+
+	if !strings.Contains(view, "Number of games:") {
+		t.Error("Expected view to contain 'Number of games:'")
+	}
+	if !strings.Contains(view, "42") {
+		t.Error("Expected view to show the current input '42'")
+	}
+}
+
+// TestParsePositiveInt tests the parsePositiveInt helper.
+func TestParsePositiveInt(t *testing.T) {
+	tests := []struct {
+		input string
+		want  int
+		err   bool
+	}{
+		{"1", 1, false},
+		{"10", 10, false},
+		{"999", 999, false},
+		{"0", 0, true},
+		{"", 0, true},
+		{"abc", 0, true},
+		{"12abc", 0, true},
+	}
+	for _, tt := range tests {
+		got, err := parsePositiveInt(tt.input)
+		if tt.err && err == nil {
+			t.Errorf("parsePositiveInt(%q) expected error, got %d", tt.input, got)
+		}
+		if !tt.err && err != nil {
+			t.Errorf("parsePositiveInt(%q) unexpected error: %v", tt.input, err)
+		}
+		if !tt.err && got != tt.want {
+			t.Errorf("parsePositiveInt(%q) = %d, want %d", tt.input, got, tt.want)
+		}
+	}
+}

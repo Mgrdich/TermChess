@@ -164,22 +164,25 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 7: Add Game Mode Selection Screen (Single/Multi-Game)
 **Goal:** User can choose single game or enter number of games for multi-game mode.
 
-- [ ] Update `internal/ui/model.go`:
-  - [ ] Add `ScreenBvBGameMode` screen state
-  - [ ] Add fields: bvbGameCount, bvbCountInput, bvbGameModeChoice
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] Implement `handleBvBGameModeKeys()`:
-    - [ ] Navigate between "Single Game" and "Multi-Game" options
-    - [ ] If Multi-Game selected, show text input for game count
-    - [ ] Validate input (positive integer)
-    - [ ] Enter advances to grid config screen
-    - [ ] ESC returns to BvB bot select
-- [ ] Update `internal/ui/view.go`:
-  - [ ] Add rendering for ScreenBvBGameMode
-  - [ ] Show game mode options and input field for count
-  - [ ] Add help text
-- [ ] Test: Select single game, select multi-game with count input, validate error on invalid input
-- [ ] Verify: Game mode and count stored correctly
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `ScreenBvBGameMode` screen state
+  - [x] Add fields: bvbGameCount, bvbCountInput, bvbInputtingCount
+- [x] Update `internal/ui/update.go`:
+  - [x] Implement `handleBvBGameModeKeys()`:
+    - [x] Navigate between "Single Game" and "Multi-Game" options
+    - [x] If Multi-Game selected, show text input for game count
+    - [x] Validate input (positive integer, only digits allowed)
+    - [x] Enter advances to next screen
+    - [x] ESC returns to BvB bot select (Black selection)
+  - [x] Implement `handleBvBCountInput()` for text input mode
+  - [x] Implement `parsePositiveInt()` helper
+- [x] Update `internal/ui/view.go`:
+  - [x] Add rendering for ScreenBvBGameMode
+  - [x] Show game mode options and input field for count
+  - [x] Show matchup info (bot difficulties)
+  - [x] Add help text
+- [x] Test: Select single game, select multi-game with count input, validate error on invalid input
+- [x] Verify: Game mode and count stored correctly
 
 **Deliverable:** User can choose single or multi-game mode with count.
 

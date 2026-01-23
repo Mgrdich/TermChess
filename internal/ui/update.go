@@ -97,6 +97,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleDrawPromptKeys(msg)
 	case ScreenBvBBotSelect:
 		return m.handleBvBBotSelectKeys(msg)
+	case ScreenBvBGameMode:
+		return m.handleBvBGameModeKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -1093,17 +1095,142 @@ func (m Model) handleBvBBotDifficultySelection() (tea.Model, tea.Cmd) {
 		m.statusMsg = ""
 		m.errorMsg = ""
 	} else {
-		// Store Black difficulty and transition to game mode selection (Task 7)
+		// Store Black difficulty and transition to game mode selection
 		m.bvbBlackDiff = diff
-		// For now, return to main menu until game mode screen is implemented
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
+		m.screen = ScreenBvBGameMode
+		m.menuOptions = []string{"Single Game", "Multi-Game"}
 		m.menuSelection = 0
+		m.bvbInputtingCount = false
+		m.bvbCountInput = ""
 		m.statusMsg = ""
 		m.errorMsg = ""
 	}
 
 	return m, nil
+}
+
+// handleBvBGameModeKeys handles keyboard input for the BvB game mode selection screen.
+// Supports menu navigation for Single/Multi-Game selection, and text input for game count.
+func (m Model) handleBvBGameModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.errorMsg = ""
+
+	if m.bvbInputtingCount {
+		return m.handleBvBCountInput(msg)
+	}
+
+	switch msg.String() {
+	case "up", "k":
+		if m.menuSelection > 0 {
+			m.menuSelection--
+		} else {
+			m.menuSelection = len(m.menuOptions) - 1
+		}
+
+	case "down", "j":
+		if m.menuSelection < len(m.menuOptions)-1 {
+			m.menuSelection++
+		} else {
+			m.menuSelection = 0
+		}
+
+	case "enter":
+		return m.handleBvBGameModeSelection()
+
+	case "esc":
+		// Go back to BvB bot select (Black selection)
+		m.screen = ScreenBvBBotSelect
+		m.bvbSelectingWhite = false
+		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		m.menuSelection = 0
+		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBGameModeSelection executes the action for the selected game mode.
+func (m Model) handleBvBGameModeSelection() (tea.Model, tea.Cmd) {
+	selected := m.menuOptions[m.menuSelection]
+
+	switch selected {
+	case "Single Game":
+		m.bvbGameCount = 1
+		// Transition to grid config screen (Task 8)
+		m.screen = ScreenMainMenu
+		m.menuOptions = buildMainMenuOptions()
+		m.menuSelection = 0
+		m.statusMsg = ""
+		m.errorMsg = ""
+
+	case "Multi-Game":
+		// Switch to text input mode for game count
+		m.bvbInputtingCount = true
+		m.bvbCountInput = ""
+		m.statusMsg = ""
+		m.errorMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBCountInput handles text input for the multi-game count.
+func (m Model) handleBvBCountInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		// Cancel count input, go back to menu mode
+		m.bvbInputtingCount = false
+		m.bvbCountInput = ""
+		m.errorMsg = ""
+
+	case tea.KeyBackspace:
+		if len(m.bvbCountInput) > 0 {
+			m.bvbCountInput = m.bvbCountInput[:len(m.bvbCountInput)-1]
+		}
+
+	case tea.KeyEnter:
+		// Validate and submit count
+		count, err := parsePositiveInt(m.bvbCountInput)
+		if err != nil {
+			m.errorMsg = "Please enter a positive integer"
+			return m, nil
+		}
+		m.bvbGameCount = count
+		m.bvbInputtingCount = false
+		// Transition to grid config screen (Task 8)
+		m.screen = ScreenMainMenu
+		m.menuOptions = buildMainMenuOptions()
+		m.menuSelection = 0
+		m.statusMsg = ""
+		m.errorMsg = ""
+
+	case tea.KeyRunes:
+		// Only allow digits
+		for _, r := range msg.Runes {
+			if r >= '0' && r <= '9' {
+				m.bvbCountInput += string(r)
+			}
+		}
+	}
+
+	return m, nil
+}
+
+// parsePositiveInt parses a string as a positive integer (>= 1).
+func parsePositiveInt(s string) (int, error) {
+	if s == "" {
+		return 0, fmt.Errorf("empty input")
+	}
+	n := 0
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return 0, fmt.Errorf("not a number")
+		}
+		n = n*10 + int(r-'0')
+	}
+	if n < 1 {
+		return 0, fmt.Errorf("must be at least 1")
+	}
+	return n, nil
 }
 
 // handleColorSelectKeys handles keyboard input for the color selection screen.
