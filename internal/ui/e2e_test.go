@@ -2333,6 +2333,152 @@ func TestBvBGamePlay_FENExportNoManager(t *testing.T) {
 	}
 }
 
+// TestBvB_CtrlCCleansBvBManager tests that Ctrl+C cleans up the BvB manager.
+func TestBvB_CtrlCCleansBvBManager(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be set")
+	}
+
+	// Press Ctrl+C
+	msg := tea.KeyMsg{Type: tea.KeyCtrlC}
+	result, cmd := m.handleKeyPress(msg)
+	m = result.(Model)
+
+	if m.bvbManager != nil {
+		t.Error("Expected bvbManager to be nil after Ctrl+C")
+	}
+	if cmd == nil {
+		t.Error("Expected tea.Quit command after Ctrl+C")
+	}
+}
+
+// TestBvB_QuitCleansBvBManager tests that 'q' cleans up the BvB manager.
+func TestBvB_QuitCleansBvBManager(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGamePlay // Not ScreenGamePlay, so q should quit
+	m.bvbManager = nil           // Start fresh
+
+	// Set up a manager
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 0
+	m.bvbGameCount = 1
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Change screen to something that allows 'q' to quit
+	m.screen = ScreenBvBStats
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be set")
+	}
+
+	// Press 'q'
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	result, cmd := m.handleKeyPress(msg)
+	m = result.(Model)
+
+	if m.bvbManager != nil {
+		t.Error("Expected bvbManager to be nil after 'q'")
+	}
+	if cmd == nil {
+		t.Error("Expected tea.Quit command after 'q'")
+	}
+}
+
+// TestBvB_GridViewTerminalTooSmall tests grid view fallback for small terminals.
+func TestBvB_GridViewTerminalTooSmall(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	m.bvbViewMode = BvBGridView
+	// Set terminal size too small for 2x2 grid
+	m.termWidth = 20
+	m.termHeight = 15
+
+	view := m.renderBvBGamePlay()
+
+	if !strings.Contains(view, "Terminal too small") {
+		t.Error("Expected 'Terminal too small' warning for small terminal")
+	}
+	if !strings.Contains(view, "Tab") {
+		t.Error("Expected suggestion to switch to single view")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvB_GridViewTerminalLargeEnough tests no warning for large terminal.
+func TestBvB_GridViewTerminalLargeEnough(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	m.bvbViewMode = BvBGridView
+	// Set terminal size large enough
+	m.termWidth = 100
+	m.termHeight = 50
+
+	view := m.renderBvBGamePlay()
+
+	if strings.Contains(view, "Terminal too small") {
+		t.Error("Should not show terminal warning for large terminal")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvB_WindowSizeMsg tests that WindowSizeMsg updates terminal dimensions.
+func TestBvB_WindowSizeMsg(t *testing.T) {
+	m := NewModel(DefaultConfig())
+
+	msg := tea.WindowSizeMsg{Width: 120, Height: 40}
+	result, _ := m.Update(msg)
+	m = result.(Model)
+
+	if m.termWidth != 120 {
+		t.Errorf("Expected termWidth 120, got %d", m.termWidth)
+	}
+	if m.termHeight != 40 {
+		t.Errorf("Expected termHeight 40, got %d", m.termHeight)
+	}
+}
+
 // TestParsePositiveInt tests the parsePositiveInt helper.
 func TestParsePositiveInt(t *testing.T) {
 	tests := []struct {

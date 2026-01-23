@@ -1025,6 +1025,21 @@ func (m Model) renderBvBGridView() string {
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
+	// Check terminal size - each cell needs ~14 width and ~11 height
+	minWidth := m.bvbGridCols * 14
+	minHeight := m.bvbGridRows*11 + 8 // 8 lines for header/footer
+	if m.termWidth > 0 && m.termHeight > 0 && (m.termWidth < minWidth || m.termHeight < minHeight) {
+		warnStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF5555")).
+			Padding(0, 2)
+		b.WriteString(warnStyle.Render(fmt.Sprintf("Terminal too small for %dx%d grid (need %dx%d, have %dx%d)",
+			m.bvbGridRows, m.bvbGridCols, minWidth, minHeight, m.termWidth, m.termHeight)))
+		b.WriteString("\n")
+		b.WriteString(warnStyle.Render("Press Tab to switch to single-board view"))
+		b.WriteString("\n")
+		return b.String()
+	}
+
 	sessions := m.bvbManager.Sessions()
 	if len(sessions) == 0 {
 		b.WriteString("No games available.\n")

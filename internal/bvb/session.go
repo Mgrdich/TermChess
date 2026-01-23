@@ -113,8 +113,10 @@ func (s *GameSession) Run() {
 		boardCopy := s.board.Copy()
 		s.mu.Unlock()
 
-		// Ask the engine to select a move.
-		move, err := currentEngine.SelectMove(context.Background(), boardCopy)
+		// Ask the engine to select a move with a timeout to prevent infinite computation.
+		moveCtx, moveCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		move, err := currentEngine.SelectMove(moveCtx, boardCopy)
+		moveCancel()
 		if err != nil {
 			s.finishWithError(currentName, activeColor, err)
 			return

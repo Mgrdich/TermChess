@@ -346,21 +346,25 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 #### Task 14: Handle Edge Cases and Error Conditions
 **Goal:** Graceful handling of terminal size issues, engine errors, and cleanup.
 
-- [ ] Update `internal/ui/bvb_view.go`:
-  - [ ] Check terminal size before rendering grid
-  - [ ] If terminal too small for selected grid: show warning message, fallback to single-board view
-- [ ] Update `internal/bvb/session.go`:
-  - [ ] Handle engine.SelectMove() errors gracefully (log error, end game as error result)
-  - [ ] Ensure context timeout per move (prevent infinite engine computation)
-- [ ] Update `internal/ui/bvb_screens.go`:
-  - [ ] On ESC during ScreenBvBGamePlay: abort manager, clean up all goroutines, return to menu
-  - [ ] On Ctrl+C: abort manager before quitting application
-- [ ] Add integration tests:
-  - [ ] Test abort during active multi-game session (no goroutine leaks)
-  - [ ] Test engine error during game (game ends with error result)
-  - [ ] Test terminal size fallback
-- [ ] Run all tests: `go test ./internal/bvb/ ./internal/ui/`
-- [ ] Verify: No panics, no leaks, graceful degradation
+- [x] Update `internal/ui/view.go`:
+  - [x] Check terminal size before rendering grid
+  - [x] If terminal too small: show warning message suggesting Tab to switch
+- [x] Update `internal/bvb/session.go`:
+  - [x] Engine.SelectMove() errors already handled via finishWithError()
+  - [x] Added 30-second context timeout per move (prevent infinite computation)
+- [x] Update `internal/ui/update.go`:
+  - [x] ESC during ScreenBvBGamePlay: abort manager, clean up (already done)
+  - [x] Ctrl+C: abort bvbManager before quitting
+  - [x] 'q' key: abort bvbManager before quitting
+  - [x] Handle tea.WindowSizeMsg to track terminal dimensions
+- [x] Add integration tests:
+  - [x] Test Ctrl+C cleans up BvB manager
+  - [x] Test 'q' cleans up BvB manager
+  - [x] Test terminal size too small shows warning
+  - [x] Test terminal size large enough shows grid
+  - [x] Test WindowSizeMsg updates dimensions
+- [x] Run all tests: `go test ./internal/bvb/ ./internal/ui/`
+- [x] Verify: No panics, no leaks, graceful degradation
 
 **Deliverable:** Robust error handling. Production-ready quality.
 

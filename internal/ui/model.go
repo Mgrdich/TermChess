@@ -86,6 +86,10 @@ type Model struct {
 	screen Screen
 	// config holds display configuration options
 	config Config
+	// termWidth holds the current terminal width in characters
+	termWidth int
+	// termHeight holds the current terminal height in lines
+	termHeight int
 
 	// Input state
 	// input holds the current user input text

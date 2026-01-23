@@ -42,6 +42,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.handleKeyPress(msg)
+	case tea.WindowSizeMsg:
+		m.termWidth = msg.Width
+		m.termHeight = msg.Height
+		return m, nil
 	case BvBTickMsg:
 		return m.handleBvBTick()
 	case BotMoveMsg:
@@ -64,6 +68,11 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.botEngine != nil {
 			_ = m.botEngine.Close()
 		}
+		// Clean up BvB manager if running
+		if m.bvbManager != nil {
+			m.bvbManager.Abort()
+			m.bvbManager = nil
+		}
 		return m, tea.Quit
 	case "q":
 		// Only quit directly if not in GamePlay screen
@@ -71,6 +80,11 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Clean up bot engine if it exists
 			if m.botEngine != nil {
 				_ = m.botEngine.Close()
+			}
+			// Clean up BvB manager if running
+			if m.bvbManager != nil {
+				m.bvbManager.Abort()
+				m.bvbManager = nil
 			}
 			return m, tea.Quit
 		}
