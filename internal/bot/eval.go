@@ -4,6 +4,13 @@ import (
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
+// totalStartingMaterial is the sum of non-pawn, non-king piece values at game start.
+// 2*Queen(9) + 4*Rook(5) + 4*Bishop(3.25) + 4*Knight(3) = 18 + 20 + 13 + 12 = 63
+const totalStartingMaterial = 63.0
+
+// endgameThreshold is the material level below which the position is considered a pure endgame.
+const endgameThreshold = 16.0
+
 // pieceValues defines standard chess piece values in pawns.
 var pieceValues = map[engine.PieceType]float64{
 	engine.Pawn:   1.0,
@@ -420,4 +427,36 @@ func evaluateAttackersInKingZone(board *engine.Board, kingSq int, color engine.C
 	penalty := float64(attackerCount) * 0.1 // 0.1 penalty per attacked square
 
 	return penalty
+}
+
+// computeGamePhase returns a value between 0.0 (endgame) and 1.0 (opening)
+// based on remaining non-pawn material on the board.
+// Phase is 1.0 at the starting position and 0.0 when only kings/pawns remain.
+func computeGamePhase(board *engine.Board) float64 {
+	material := countNonPawnMaterial(board)
+	if material <= endgameThreshold {
+		return 0.0
+	}
+	if material >= totalStartingMaterial {
+		return 1.0
+	}
+	return (material - endgameThreshold) / (totalStartingMaterial - endgameThreshold)
+}
+
+// countNonPawnMaterial sums the piece values for all non-pawn, non-king pieces
+// on the board (both colors combined).
+func countNonPawnMaterial(board *engine.Board) float64 {
+	material := 0.0
+	for sq := 0; sq < 64; sq++ {
+		piece := board.PieceAt(engine.Square(sq))
+		if piece.IsEmpty() {
+			continue
+		}
+		pieceType := piece.Type()
+		if pieceType == engine.Pawn || pieceType == engine.King {
+			continue
+		}
+		material += pieceValues[pieceType]
+	}
+	return material
 }

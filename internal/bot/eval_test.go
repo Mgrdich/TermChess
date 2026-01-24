@@ -858,6 +858,167 @@ func TestEvaluate_KingSafetyOnlyHard(t *testing.T) {
 	}
 }
 
+func TestComputeGamePhase_StartingPosition(t *testing.T) {
+	// Starting position has full material (63.0), should return 1.0
+	board := engine.NewBoard()
+	phase := computeGamePhase(board)
+
+	if math.Abs(phase-1.0) > 0.01 {
+		t.Errorf("Starting position: computeGamePhase() = %v, want 1.0", phase)
+	}
+}
+
+func TestComputeGamePhase_BareKings(t *testing.T) {
+	// Only kings on the board - should return 0.0
+	fen := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+	if phase != 0.0 {
+		t.Errorf("Bare kings: computeGamePhase() = %v, want 0.0", phase)
+	}
+}
+
+func TestComputeGamePhase_KingsAndPawns(t *testing.T) {
+	// Kings and pawns only - no non-pawn material, should return 0.0
+	fen := "4k3/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+	if phase != 0.0 {
+		t.Errorf("Kings and pawns: computeGamePhase() = %v, want 0.0", phase)
+	}
+}
+
+func TestComputeGamePhase_MinorPieceAboveThreshold(t *testing.T) {
+	// Material just above threshold: 16 + 3 = 19 (threshold material + one knight)
+	// Use 2 rooks (10) + 2 bishops (6.5) = 16.5 which is at threshold,
+	// then add a knight (3) = 19.5 total non-pawn material.
+	// phase = (19.5 - 16) / (63 - 16) = 3.5 / 47 ~ 0.0745
+	// Position: White has Rook, Bishop, Knight; Black has Rook, Bishop
+	// White: R(5) + B(3.25) + N(3) = 11.25; Black: R(5) + B(3.25) = 8.25; Total = 19.5
+	fen := "1rb1k3/8/8/8/8/8/8/1RB1KN2 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+
+	// Expected: (19.5 - 16) / (63 - 16) = 3.5/47 ~ 0.0745
+	expectedPhase := (19.5 - endgameThreshold) / (totalStartingMaterial - endgameThreshold)
+	if math.Abs(phase-expectedPhase) > 0.01 {
+		t.Errorf("Minor piece above threshold: computeGamePhase() = %v, want ~%v", phase, expectedPhase)
+	}
+
+	// Should be a small positive value
+	if phase <= 0.0 {
+		t.Errorf("Phase should be positive above threshold, got %v", phase)
+	}
+}
+
+func TestComputeGamePhase_HalfMaterial(t *testing.T) {
+	// Approximately half material to get phase ~0.5
+	// Need material = endgameThreshold + (totalStartingMaterial - endgameThreshold) * 0.5
+	// = 16 + 47 * 0.5 = 39.5
+	// White: Q(9) + 2R(10) + B(3.25) = 22.25; Black: Q(9) + R(5) + B(3.25) = 17.25
+	// Total = 39.5
+	fen := "1r1qkb2/8/8/8/8/8/8/1RRQKB2 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+
+	// Expected: (39.5 - 16) / (63 - 16) = 23.5/47 = 0.5
+	if math.Abs(phase-0.5) > 0.01 {
+		t.Errorf("Half material: computeGamePhase() = %v, want ~0.5", phase)
+	}
+}
+
+func TestCountNonPawnMaterial(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		expected float64
+	}{
+		{
+			name:     "StartingPosition",
+			fen:      "", // Use NewBoard
+			expected: 63.0,
+		},
+		{
+			name:     "BareKings",
+			fen:      "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+			expected: 0.0,
+		},
+		{
+			name:     "KingsAndPawns",
+			fen:      "4k3/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1",
+			expected: 0.0,
+		},
+		{
+			name:     "OneWhiteQueen",
+			fen:      "4k3/8/8/8/8/8/8/3QK3 w - - 0 1",
+			expected: 9.0,
+		},
+		{
+			name:     "OneBlackRook",
+			fen:      "r3k3/8/8/8/8/8/8/4K3 w - - 0 1",
+			expected: 5.0,
+		},
+		{
+			name:     "MixedPieces",
+			fen:      "rnb1k3/8/8/8/8/8/8/RNB1K3 w - - 0 1",
+			// White: R(5) + N(3) + B(3.25) = 11.25
+			// Black: R(5) + N(3) + B(3.25) = 11.25
+			// Total = 22.5
+			expected: 22.5,
+		},
+		{
+			name:     "PawnsDoNotCount",
+			fen:      "4k3/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1",
+			expected: 0.0,
+		},
+		{
+			name:     "AllQueensAndRooks",
+			fen:      "r2qk2r/8/8/8/8/8/8/R2QK2R w - - 0 1",
+			// White: R(5) + Q(9) + R(5) = 19
+			// Black: R(5) + Q(9) + R(5) = 19
+			// Total = 38
+			expected: 38.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var board *engine.Board
+			if tt.fen == "" {
+				board = engine.NewBoard()
+			} else {
+				var err error
+				board, err = engine.FromFEN(tt.fen)
+				if err != nil {
+					t.Fatalf("Failed to parse FEN: %v", err)
+				}
+			}
+
+			material := countNonPawnMaterial(board)
+			if math.Abs(material-tt.expected) > 0.01 {
+				t.Errorf("%s: countNonPawnMaterial() = %v, want %v",
+					tt.name, material, tt.expected)
+			}
+		})
+	}
+}
+
 func TestEvaluateKingSafety_Symmetry(t *testing.T) {
 	// Test that king safety evaluation is symmetric for both colors
 

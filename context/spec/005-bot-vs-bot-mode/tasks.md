@@ -401,18 +401,18 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 
 **Goal:** Compute a game phase value (0.0 = endgame, 1.0 = opening) based on remaining non-pawn material.
 
-- [ ] Add `computeGamePhase(board) float64` function to `internal/bot/eval.go`
-- [ ] Add `countNonPawnMaterial(board) float64` helper function
-- [ ] Define constants: `totalStartingMaterial` (63.0), `endgameThreshold` (16.0)
-- [ ] Phase = 1.0 at starting position, 0.0 when only kings/pawns remain
-- [ ] Add unit tests in `internal/bot/eval_test.go`:
-  - [ ] Starting position returns ~1.0
-  - [ ] Bare kings return 0.0
-  - [ ] Kings + pawns only return 0.0
-  - [ ] One minor piece above threshold returns small positive phase
-  - [ ] Half material returns ~0.5
-- [ ] Run tests: `go test ./internal/bot/ -run TestComputeGamePhase`
-- [ ] Verify: Phase detection works correctly
+- [x] Add `computeGamePhase(board) float64` function to `internal/bot/eval.go`
+- [x] Add `countNonPawnMaterial(board) float64` helper function
+- [x] Define constants: `totalStartingMaterial` (63.0), `endgameThreshold` (16.0)
+- [x] Phase = 1.0 at starting position, 0.0 when only kings/pawns remain
+- [x] Add unit tests in `internal/bot/eval_test.go`:
+  - [x] Starting position returns ~1.0
+  - [x] Bare kings return 0.0
+  - [x] Kings + pawns only return 0.0
+  - [x] One minor piece above threshold returns small positive phase
+  - [x] Half material returns ~0.5
+- [x] Run tests: `go test ./internal/bot/ -run TestComputeGamePhase`
+- [x] Verify: Phase detection works correctly
 
 **Deliverable:** Game phase detection function ready for use by other evaluation terms.
 
