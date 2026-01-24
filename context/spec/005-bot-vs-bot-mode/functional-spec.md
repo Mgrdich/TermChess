@@ -159,6 +159,25 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 
 ---
 
+### 2.9 Bot Evaluation Improvement (Endgame Awareness)
+
+- **As a** bot engine, **I need to** evaluate positions differently based on game phase, **so that** games produce more decisive results instead of excessive draws.
+  - **Acceptance Criteria:**
+    - [ ] Game phase detected from remaining non-pawn material (0.0 = endgame, 1.0 = opening)
+    - [ ] King evaluation interpolates between middlegame (stay safe) and endgame (centralize) tables
+    - [ ] Passed pawns detected and rewarded with rank-scaled bonus (higher = closer to promotion)
+    - [ ] Passed pawn bonus amplified in endgame phase
+    - [ ] Mop-up evaluation active when significantly ahead in material in endgame:
+      - [ ] Rewards enemy king being far from center
+      - [ ] Rewards own king being close to enemy king
+    - [ ] Pawn advancement bonus increases in endgame phase
+    - [ ] Passed pawns available for Medium+ difficulty
+    - [ ] Mop-up evaluation available for Hard difficulty only
+    - [ ] Draw rate between Medium vs Hard significantly reduced
+    - [ ] No regression in opening/middlegame play quality
+
+---
+
 ## 3. Scope and Boundaries
 
 ### In-Scope
@@ -179,6 +198,8 @@ Users can configure and launch automated bot vs bot games, watch them play out i
 - Terminal size awareness with fallback warning
 - Per-move timeout (30 seconds) to prevent infinite computation
 - Proper cleanup on quit (Ctrl+C, 'q', ESC)
+- Bot evaluation improvement: game phase detection, passed pawns, mop-up evaluation
+- Random tie-breaking in minimax engine for varied games
 
 ### Out-of-Scope
 

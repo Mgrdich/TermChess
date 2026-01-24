@@ -355,14 +355,125 @@ Start() called:
 | `update.go` | `internal/ui/` | BvBTickMsg, all BvB key handlers, tick scheduling, session startup |
 | `view.go` | `internal/ui/` | All BvB render functions (bot select, game mode, grid config, gameplay, stats) |
 
-**Files NOT modified:** `internal/bot/*`, `internal/engine/*`, `internal/ui/board.go` (reused as-is)
+**Files NOT modified:** `internal/engine/*`, `internal/ui/board.go` (reused as-is)
+
+---
+
+### 2.12 Bot Evaluation Improvement (`internal/bot/eval.go`)
+
+To reduce excessive draws between Medium and Hard bots, the evaluation function gains endgame awareness:
+
+#### Game Phase Detection
+
+```go
+const totalStartingMaterial = 63.0  // 2Q + 4R + 4B + 4N
+const endgameThreshold = 16.0       // Below this = pure endgame
+
+// computeGamePhase returns 0.0 (endgame) to 1.0 (opening).
+func computeGamePhase(board *engine.Board) float64 {
+    material := countNonPawnMaterial(board)
+    if material <= endgameThreshold { return 0.0 }
+    if material >= totalStartingMaterial { return 1.0 }
+    return (material - endgameThreshold) / (totalStartingMaterial - endgameThreshold)
+}
+
+func countNonPawnMaterial(board *engine.Board) float64
+```
+
+#### Phase-Interpolated King Tables
+
+```go
+var kingMiddlegameTable = [64]float64{...} // Rewards castled positions, penalizes exposed king
+
+// In evaluatePiecePositions:
+case engine.King:
+    mgBonus := kingMiddlegameTable[squareIndex]
+    egBonus := kingEndgameTable[squareIndex]
+    bonus = phase*mgBonus + (1.0-phase)*egBonus
+```
+
+#### Passed Pawn Evaluation
+
+```go
+var passedPawnBonus = [8]float64{0.0, 0.1, 0.2, 0.35, 0.6, 1.0, 1.5, 0.0}
+
+func isPassedPawn(board *engine.Board, sq int, color engine.Color) bool
+func evaluatePassedPawns(board *engine.Board, phase float64) float64
+// Bonus scaled by (1.0 + (1.0 - phase)) — doubles in pure endgame
+```
+
+#### Mop-Up Evaluation (Hard only)
+
+```go
+const mopUpMaterialThreshold = 3.0
+
+func evaluateMopUp(board *engine.Board, phase float64, materialBalance float64) float64
+// Active when phase < 0.5 AND abs(materialBalance) >= 3.0
+// Rewards: enemy king far from center, own king close to enemy king
+
+func centerDistance(sq int) float64 // Manhattan distance from center
+```
+
+#### Updated evaluate() Function
+
+```go
+func evaluate(board *engine.Board, difficulty Difficulty) float64 {
+    // 1. Terminal states (unchanged)
+    // 2. Material count
+    material := countMaterial(board)
+    score := material
+    // 3. Game phase (NEW)
+    phase := computeGamePhase(board)
+    // 4. Piece-square tables with phase-interpolated king (UPDATED - Medium+)
+    if difficulty >= Medium { score += evaluatePiecePositions(board, phase) }
+    // 5. Mobility (unchanged - Medium+)
+    if difficulty >= Medium { score += evaluateMobility(board) * 0.1 }
+    // 6. King safety (unchanged - Hard only)
+    if difficulty >= Hard { score += evaluateKingSafety(board) }
+    // 7. Passed pawns (NEW - Medium+)
+    if difficulty >= Medium { score += evaluatePassedPawns(board, phase) }
+    // 8. Mop-up evaluation (NEW - Hard only)
+    if difficulty >= Hard { score += evaluateMopUp(board, phase, material) }
+    return score
+}
+```
+
+#### Difficulty Level Features
+
+| Feature | Easy | Medium | Hard |
+|---------|------|--------|------|
+| Material count | Yes | Yes | Yes |
+| Piece-square tables | No | Yes (phase-interpolated) | Yes (phase-interpolated) |
+| Mobility | No | Yes (10%) | Yes (10%) |
+| King safety | No | No | Yes |
+| Passed pawns | No | Yes | Yes |
+| Mop-up evaluation | No | No | Yes |
+
+---
+
+### 2.13 Random Tie-Breaking in Minimax (`internal/bot/minimax.go`)
+
+To prevent identical games with the same matchup, `searchDepth()` uses reservoir sampling when multiple moves share the best score:
+
+```go
+if score > bestScore {
+    bestScore = score
+    bestMove = move
+    bestCount = 1
+} else if score == bestScore {
+    bestCount++
+    if rand.Intn(bestCount) == 0 {
+        bestMove = move
+    }
+}
+```
 
 ---
 
 ## 3. Impact and Risk Analysis
 
 ### System Dependencies
-- **`internal/bot/`** — Used as-is. Factory functions create engine instances per session. No changes needed.
+- **`internal/bot/`** — Extended with evaluation improvements (game phase, passed pawns, mop-up) and random tie-breaking. Factory functions create engine instances per session.
 - **`internal/engine/`** — Board and move types used by sessions. No changes needed.
 - **`internal/ui/`** — Extended with new screens, message types, and view functions. Existing PvP and PvBot flows unchanged.
 
@@ -376,6 +487,9 @@ Start() called:
 | Engines never finishing (infinite loops) | Games hang indefinitely | Max 500 moves → forced draw; 30s context timeout per move |
 | Terminal too small for grid | Broken layout | Detect terminal size via WindowSizeMsg; show warning if too small |
 | Goroutine leaks on abort | Resource leak | Explicit stopCh close; deferred cleanup in Run(); manager aborts all on Ctrl+C/q/ESC |
+| Eval performance regression from phase computation | Slower move computation | Phase computation is O(64) board scan — negligible vs search tree |
+| Over-aggressive mop-up distorts middlegame eval | Worse middlegame play | Only active when phase < 0.5 AND material diff > 3.0 |
+| King table interpolation changes existing balance | Medium bot plays differently | Phase interpolation preserves existing endgame table values |
 
 ---
 
@@ -397,7 +511,11 @@ Start() called:
 - WindowSizeMsg updates dimensions
 - Stats accuracy with real game completions (Easy vs Easy at instant speed)
 
+### Unit Tests (`internal/bot/`)
+- `eval_test.go`: Game phase detection (starting position, bare kings, intermediate); passed pawn detection (isolated, blocked, rank-based bonus); mop-up evaluation (activation conditions, corner vs center, king proximity); king phase interpolation; countNonPawnMaterial
+
 ### Test Coverage Summary
 - 60+ BvB-specific tests across `internal/bvb/` and `internal/ui/`
+- Evaluation improvement tests in `internal/bot/`
 - All tests pass with `go test ./...`
 - `go vet ./...` clean
