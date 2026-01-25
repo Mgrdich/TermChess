@@ -142,6 +142,19 @@ var kingEndgameTable = [64]float64{
 	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
 }
 
+// passedPawnBonus gives bonuses for passed pawns by rank (index = rank 0-7).
+// Higher ranks = closer to promotion = bigger bonus.
+var passedPawnBonus = [8]float64{
+	0.0,  // rank 0 (impossible for pawns)
+	0.0,  // rank 1 (White starting rank, Black promotion)
+	0.1,  // rank 2
+	0.2,  // rank 3
+	0.35, // rank 4
+	0.6,  // rank 5
+	1.0,  // rank 6
+	1.5,  // rank 7 (White promotion rank, Black starting)
+}
+
 // evaluate returns a score for the position from White's perspective.
 // Positive = White advantage, Negative = Black advantage
 func evaluate(board *engine.Board, difficulty Difficulty) float64 {
@@ -167,18 +180,15 @@ func evaluate(board *engine.Board, difficulty Difficulty) float64 {
 	// 2. Material count (all difficulties)
 	score += countMaterial(board)
 
-	// 3. Piece-square tables (Medium+)
+	// 3. Piece-square tables, passed pawns, and mobility (Medium+)
 	if difficulty >= Medium {
 		phase := computeGamePhase(board)
 		score += evaluatePiecePositions(board, phase)
-	}
-
-	// 4. Mobility (Medium+)
-	if difficulty >= Medium {
+		score += evaluatePassedPawns(board, phase)
 		score += evaluateMobility(board) * 0.1 // Weight mobility at 10%
 	}
 
-	// 5. King safety (Hard only)
+	// 4. King safety (Hard only)
 	if difficulty >= Hard {
 		score += evaluateKingSafety(board)
 	}
@@ -480,4 +490,69 @@ func countNonPawnMaterial(board *engine.Board) float64 {
 		material += pieceValues[pieceType]
 	}
 	return material
+}
+
+// isPassedPawn checks if a pawn at the given square is a passed pawn.
+// A passed pawn is a pawn with no enemy pawns on the same file or adjacent
+// files that can block or capture it.
+func isPassedPawn(board *engine.Board, sq int, color engine.Color) bool {
+	file := sq % 8
+	rank := sq / 8
+
+	// Check files: current file and adjacent files
+	for f := max(0, file-1); f <= min(7, file+1); f++ {
+		// Check ranks ahead of this pawn
+		if color == engine.White {
+			// White pawns move up (higher ranks)
+			for r := rank + 1; r <= 7; r++ {
+				checkSq := r*8 + f
+				piece := board.PieceAt(engine.Square(checkSq))
+				if !piece.IsEmpty() && piece.Type() == engine.Pawn && piece.Color() == engine.Black {
+					return false // Blocked by enemy pawn
+				}
+			}
+		} else {
+			// Black pawns move down (lower ranks)
+			for r := rank - 1; r >= 0; r-- {
+				checkSq := r*8 + f
+				piece := board.PieceAt(engine.Square(checkSq))
+				if !piece.IsEmpty() && piece.Type() == engine.Pawn && piece.Color() == engine.White {
+					return false // Blocked by enemy pawn
+				}
+			}
+		}
+	}
+	return true
+}
+
+// evaluatePassedPawns scores passed pawns from White's perspective.
+// Bonus is scaled by (1.0 + (1.0 - phase)) to double in pure endgame.
+func evaluatePassedPawns(board *engine.Board, phase float64) float64 {
+	score := 0.0
+	phaseMultiplier := 1.0 + (1.0 - phase) // 1.0 in opening, 2.0 in endgame
+
+	for sq := 0; sq < 64; sq++ {
+		piece := board.PieceAt(engine.Square(sq))
+		if piece.IsEmpty() || piece.Type() != engine.Pawn {
+			continue
+		}
+
+		color := piece.Color()
+		if !isPassedPawn(board, sq, color) {
+			continue
+		}
+
+		rank := sq / 8
+		var bonus float64
+		if color == engine.White {
+			bonus = passedPawnBonus[rank] * phaseMultiplier
+			score += bonus
+		} else {
+			// For Black, flip the rank (rank 1 for Black = rank 6 equivalent)
+			flippedRank := 7 - rank
+			bonus = passedPawnBonus[flippedRank] * phaseMultiplier
+			score -= bonus
+		}
+	}
+	return score
 }

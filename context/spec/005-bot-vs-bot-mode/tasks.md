@@ -441,23 +441,23 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 
 **Goal:** Detect passed pawns and assign rank-scaled bonuses that increase in the endgame.
 
-- [ ] Add `passedPawnBonus` table (rank-indexed bonuses, higher for advanced pawns)
-- [ ] Add `isPassedPawn(board, sq, color) bool` helper function
-  - [ ] Check same file and adjacent files for enemy pawns ahead
-- [ ] Add `evaluatePassedPawns(board, phase) float64` function
-  - [ ] For each pawn, check if passed
-  - [ ] Apply rank-based bonus scaled by `(1.0 + (1.0 - phase))` (doubles in endgame)
-  - [ ] Score from White's perspective
-- [ ] Wire into `evaluate()` for Medium+ difficulty
-- [ ] Add unit tests:
-  - [ ] Isolated passed pawn on e5 detected correctly
-  - [ ] Pawn blocked by enemy pawn on same file is NOT passed
-  - [ ] Pawn blocked by enemy pawn on adjacent file is NOT passed
-  - [ ] Advanced passed pawn (rank 6-7) gets higher bonus than rank 3-4
-  - [ ] Endgame phase amplifies passed pawn bonus
-  - [ ] Both White and Black passed pawns scored correctly
-- [ ] Run tests: `go test ./internal/bot/ -run TestPassedPawn`
-- [ ] Verify: Passed pawn evaluation correct
+- [x] Add `passedPawnBonus` table (rank-indexed bonuses, higher for advanced pawns)
+- [x] Add `isPassedPawn(board, sq, color) bool` helper function
+  - [x] Check same file and adjacent files for enemy pawns ahead
+- [x] Add `evaluatePassedPawns(board, phase) float64` function
+  - [x] For each pawn, check if passed
+  - [x] Apply rank-based bonus scaled by `(1.0 + (1.0 - phase))` (doubles in endgame)
+  - [x] Score from White's perspective
+- [x] Wire into `evaluate()` for Medium+ difficulty
+- [x] Add unit tests:
+  - [x] Isolated passed pawn on e5 detected correctly
+  - [x] Pawn blocked by enemy pawn on same file is NOT passed
+  - [x] Pawn blocked by enemy pawn on adjacent file is NOT passed
+  - [x] Advanced passed pawn (rank 6-7) gets higher bonus than rank 3-4
+  - [x] Endgame phase amplifies passed pawn bonus
+  - [x] Both White and Black passed pawns scored correctly
+- [x] Run tests: `go test ./internal/bot/ -run TestPassedPawn`
+- [x] Verify: Passed pawn evaluation correct
 
 **Deliverable:** Bots recognize and push passed pawns, especially in endgames.
 

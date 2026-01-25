@@ -1123,3 +1123,171 @@ func TestKingPhaseInterpolation_HalfPhase(t *testing.T) {
 			scoreHalf, expectedBonus, mgBonus, egBonus)
 	}
 }
+
+// Passed pawn tests
+
+func TestIsPassedPawn_IsolatedPassed(t *testing.T) {
+	// White pawn on e5 with no Black pawns on d, e, f files -> is passed
+	// FEN: White King on a1, Black King on h8, White Pawn on e5
+	fen := "7k/8/8/4P3/8/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e5 = rank 4 (0-indexed), file 4 = 4*8 + 4 = 36
+	sq := 36
+	if !isPassedPawn(board, sq, engine.White) {
+		t.Errorf("White pawn on e5 with no blocking pawns should be passed")
+	}
+}
+
+func TestIsPassedPawn_BlockedSameFile(t *testing.T) {
+	// White pawn on e4 with Black pawn on e6 -> NOT passed
+	// FEN: White King on a1, Black King on h8, White Pawn on e4, Black Pawn on e6
+	fen := "7k/8/4p3/8/4P3/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e4 = rank 3, file 4 = 3*8 + 4 = 28
+	sq := 28
+	if isPassedPawn(board, sq, engine.White) {
+		t.Errorf("White pawn on e4 with Black pawn on e6 should NOT be passed")
+	}
+}
+
+func TestIsPassedPawn_BlockedAdjacentFile(t *testing.T) {
+	// White pawn on e4 with Black pawn on d5 -> NOT passed
+	// FEN: White King on a1, Black King on h8, White Pawn on e4, Black Pawn on d5
+	fen := "7k/8/8/3p4/4P3/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e4 = rank 3, file 4 = 3*8 + 4 = 28
+	sq := 28
+	if isPassedPawn(board, sq, engine.White) {
+		t.Errorf("White pawn on e4 with Black pawn on d5 should NOT be passed")
+	}
+}
+
+func TestIsPassedPawn_BlackPawn(t *testing.T) {
+	// Black pawn on d4 with no White pawns blocking -> is passed
+	// FEN: White King on a1, Black King on h8, Black Pawn on d4
+	fen := "7k/8/8/8/3p4/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// d4 = rank 3, file 3 = 3*8 + 3 = 27
+	sq := 27
+	if !isPassedPawn(board, sq, engine.Black) {
+		t.Errorf("Black pawn on d4 with no blocking pawns should be passed")
+	}
+}
+
+func TestEvaluatePassedPawns_SingleWhite(t *testing.T) {
+	// Single White passed pawn on e6 -> positive bonus
+	// FEN: White King on a1, Black King on h8, White Pawn on e6
+	fen := "7k/8/4P3/8/8/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// Phase 1.0 (opening) means phaseMultiplier = 1.0
+	score := evaluatePassedPawns(board, 1.0)
+	if score <= 0 {
+		t.Errorf("Single White passed pawn should give positive score, got %v", score)
+	}
+
+	// e6 is rank 5 (0-indexed), so bonus should be passedPawnBonus[5] = 1.0
+	expectedBonus := passedPawnBonus[5] * 1.0 // 1.0 * 1.0 = 1.0
+	if math.Abs(score-expectedBonus) > 0.01 {
+		t.Errorf("White passed pawn on e6: expected %v, got %v", expectedBonus, score)
+	}
+}
+
+func TestEvaluatePassedPawns_SingleBlack(t *testing.T) {
+	// Single Black passed pawn on d3 -> negative score (from White's perspective)
+	// FEN: White King on a1, Black King on h8, Black Pawn on d3
+	fen := "7k/8/8/8/8/3p4/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// Phase 1.0 (opening) means phaseMultiplier = 1.0
+	score := evaluatePassedPawns(board, 1.0)
+	if score >= 0 {
+		t.Errorf("Single Black passed pawn should give negative score, got %v", score)
+	}
+
+	// d3 is rank 2, flipped rank = 7-2 = 5, so bonus = passedPawnBonus[5] = 1.0
+	expectedBonus := -passedPawnBonus[5] * 1.0 // -1.0 * 1.0 = -1.0
+	if math.Abs(score-expectedBonus) > 0.01 {
+		t.Errorf("Black passed pawn on d3: expected %v, got %v", expectedBonus, score)
+	}
+}
+
+func TestEvaluatePassedPawns_RankBonus(t *testing.T) {
+	// Advanced pawn (rank 6) gets higher bonus than rank 3
+	// e7 = rank 6 (0-indexed)
+	fenAdvanced := "7k/4P3/8/8/8/8/8/K7 w - - 0 1"
+	boardAdvanced, err := engine.FromFEN(fenAdvanced)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e4 = rank 3 (0-indexed)
+	fenEarly := "7k/8/8/8/4P3/8/8/K7 w - - 0 1"
+	boardEarly, err := engine.FromFEN(fenEarly)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreAdvanced := evaluatePassedPawns(boardAdvanced, 1.0)
+	scoreEarly := evaluatePassedPawns(boardEarly, 1.0)
+
+	if scoreAdvanced <= scoreEarly {
+		t.Errorf("Advanced pawn (e7, rank 6) should score higher than early pawn (e4, rank 3): advanced=%v, early=%v",
+			scoreAdvanced, scoreEarly)
+	}
+
+	// Verify specific values: e7=rank6 -> bonus=1.5, e4=rank3 -> bonus=0.2
+	expectedAdvanced := passedPawnBonus[6] * 1.0 // 1.5
+	expectedEarly := passedPawnBonus[3] * 1.0    // 0.2
+	if math.Abs(scoreAdvanced-expectedAdvanced) > 0.01 {
+		t.Errorf("Advanced pawn bonus: expected %v, got %v", expectedAdvanced, scoreAdvanced)
+	}
+	if math.Abs(scoreEarly-expectedEarly) > 0.01 {
+		t.Errorf("Early pawn bonus: expected %v, got %v", expectedEarly, scoreEarly)
+	}
+}
+
+func TestEvaluatePassedPawns_EndgameAmplification(t *testing.T) {
+	// Same pawn scores higher with phase=0.0 (endgame) than phase=1.0 (opening)
+	// FEN: White King on a1, Black King on h8, White Pawn on e6
+	fen := "7k/8/4P3/8/8/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreOpening := evaluatePassedPawns(board, 1.0) // phaseMultiplier = 1.0
+	scoreEndgame := evaluatePassedPawns(board, 0.0) // phaseMultiplier = 2.0
+
+	if scoreEndgame <= scoreOpening {
+		t.Errorf("Passed pawn should score higher in endgame than opening: endgame=%v, opening=%v",
+			scoreEndgame, scoreOpening)
+	}
+
+	// Verify the endgame bonus is exactly double the opening bonus
+	if math.Abs(scoreEndgame-2*scoreOpening) > 0.01 {
+		t.Errorf("Endgame score should be 2x opening score: endgame=%v, opening=%v", scoreEndgame, scoreOpening)
+	}
+}
