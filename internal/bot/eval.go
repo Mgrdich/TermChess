@@ -105,6 +105,22 @@ var rookTable = [64]float64{
 	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 }
 
+// kingMiddlegameTable rewards castled king positions and penalizes exposed kings.
+// Used during the opening/middlegame phase for king safety via piece-square evaluation.
+var kingMiddlegameTable = [64]float64{
+	// Rank 1 - castled king positions are best
+	0.2, 0.3, 0.1, 0.0, 0.0, 0.1, 0.3, 0.2,
+	// Rank 2 - behind pawns is OK
+	0.2, 0.2, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2,
+	// Rank 3-8 - penalize exposed king progressively
+	-0.1, -0.2, -0.2, -0.3, -0.3, -0.2, -0.2, -0.1,
+	-0.2, -0.3, -0.3, -0.4, -0.4, -0.3, -0.3, -0.2,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+}
+
 // kingEndgameTable encourages king centralization in the endgame.
 // In opening/middlegame, the king should stay protected (corners).
 var kingEndgameTable = [64]float64{
@@ -153,7 +169,8 @@ func evaluate(board *engine.Board, difficulty Difficulty) float64 {
 
 	// 3. Piece-square tables (Medium+)
 	if difficulty >= Medium {
-		score += evaluatePiecePositions(board)
+		phase := computeGamePhase(board)
+		score += evaluatePiecePositions(board, phase)
 	}
 
 	// 4. Mobility (Medium+)
@@ -197,8 +214,10 @@ func countMaterial(board *engine.Board) float64 {
 }
 
 // evaluatePiecePositions calculates positional bonuses using piece-square tables.
+// The phase parameter (0.0=endgame to 1.0=opening) is used to interpolate
+// between middlegame and endgame king piece-square tables.
 // Returns score from White's perspective.
-func evaluatePiecePositions(board *engine.Board) float64 {
+func evaluatePiecePositions(board *engine.Board, phase float64) float64 {
 	score := 0.0
 
 	for sq := 0; sq < 64; sq++ {
@@ -231,7 +250,9 @@ func evaluatePiecePositions(board *engine.Board) float64 {
 		case engine.Rook:
 			bonus = rookTable[squareIndex]
 		case engine.King:
-			bonus = kingEndgameTable[squareIndex]
+			mgBonus := kingMiddlegameTable[squareIndex]
+			egBonus := kingEndgameTable[squareIndex]
+			bonus = phase*mgBonus + (1.0-phase)*egBonus
 		case engine.Queen:
 			// Queens don't have a specific table, use 0
 			bonus = 0.0

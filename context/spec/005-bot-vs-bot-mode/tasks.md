@@ -422,16 +422,16 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 
 **Goal:** King evaluation uses middlegame table (safety) vs endgame table (centralization) based on game phase.
 
-- [ ] Add `kingMiddlegameTable` to `internal/bot/eval.go` (rewards castled positions, penalizes exposed king)
-- [ ] Update `evaluatePiecePositions` signature to accept `phase float64` parameter
-- [ ] Interpolate king bonus: `phase*mgBonus + (1.0-phase)*egBonus`
-- [ ] Update `evaluate()` to pass phase to `evaluatePiecePositions`
-- [ ] Add unit tests:
-  - [ ] King in center scores higher in endgame (phase=0) than middlegame (phase=1)
-  - [ ] King on g1 (castled) scores higher in middlegame than endgame
-  - [ ] Interpolation produces intermediate values at phase=0.5
-- [ ] Run tests: `go test ./internal/bot/ -run "TestKing|TestEvaluate"`
-- [ ] Verify: Existing tests still pass with phase-aware king eval
+- [x] Add `kingMiddlegameTable` to `internal/bot/eval.go` (rewards castled positions, penalizes exposed king)
+- [x] Update `evaluatePiecePositions` signature to accept `phase float64` parameter
+- [x] Interpolate king bonus: `phase*mgBonus + (1.0-phase)*egBonus`
+- [x] Update `evaluate()` to pass phase to `evaluatePiecePositions`
+- [x] Add unit tests:
+  - [x] King in center scores higher in endgame (phase=0) than middlegame (phase=1)
+  - [x] King on g1 (castled) scores higher in middlegame than endgame
+  - [x] Interpolation produces intermediate values at phase=0.5
+- [x] Run tests: `go test ./internal/bot/ -run "TestKing|TestEvaluate"`
+- [x] Verify: Existing tests still pass with phase-aware king eval
 
 **Deliverable:** King evaluation is phase-appropriate — safe early, centralized late.
 

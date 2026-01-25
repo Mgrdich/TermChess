@@ -387,8 +387,8 @@ func TestEvaluatePiecePositions(t *testing.T) {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
 
-	scoreCentral := evaluatePiecePositions(boardCentral)
-	scoreCorner := evaluatePiecePositions(boardCorner)
+	scoreCentral := evaluatePiecePositions(boardCentral, 0.5)
+	scoreCorner := evaluatePiecePositions(boardCorner, 0.5)
 
 	if scoreCentral <= scoreCorner {
 		t.Errorf("Central knight should score higher than corner knight: central=%v, corner=%v",
@@ -408,8 +408,8 @@ func TestEvaluatePiecePositions(t *testing.T) {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
 
-	scoreAdvanced := evaluatePiecePositions(boardAdvanced)
-	scoreStarting := evaluatePiecePositions(boardStarting)
+	scoreAdvanced := evaluatePiecePositions(boardAdvanced, 0.5)
+	scoreStarting := evaluatePiecePositions(boardStarting, 0.5)
 
 	if scoreAdvanced <= scoreStarting {
 		t.Errorf("Advanced pawn (rank 7) should score higher than starting pawn (rank 2): advanced=%v, starting=%v",
@@ -430,8 +430,8 @@ func TestEvaluatePiecePositions(t *testing.T) {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
 
-	scoreWhiteKnight := evaluatePiecePositions(boardWhite)
-	scoreBlackKnight := evaluatePiecePositions(boardBlack)
+	scoreWhiteKnight := evaluatePiecePositions(boardWhite, 0.5)
+	scoreBlackKnight := evaluatePiecePositions(boardBlack, 0.5)
 
 	// Scores should be opposite (White positive, Black negative)
 	if math.Abs(scoreWhiteKnight+scoreBlackKnight) > 0.01 {
@@ -588,7 +588,7 @@ func TestEvaluatePiecePositions_AllPieces(t *testing.T) {
 				t.Fatalf("Failed to parse FEN: %v", err)
 			}
 
-			score := evaluatePiecePositions(board)
+			score := evaluatePiecePositions(board, 0.5)
 			if score < tt.minScore || score > tt.maxScore {
 				t.Errorf("%s: evaluatePiecePositions() = %v, want between %v and %v",
 					tt.name, score, tt.minScore, tt.maxScore)
@@ -1048,5 +1048,78 @@ func TestEvaluateKingSafety_Symmetry(t *testing.T) {
 	// Both kings should have similar safety, so net should be ~0
 	if math.Abs(safetyGoodShields) > 0.1 {
 		t.Errorf("Symmetric position with shields should have ~0 king safety score, got %v", safetyGoodShields)
+	}
+}
+
+func TestKingPhaseInterpolation_EndgameCenter(t *testing.T) {
+	// King in center (e4) should score higher when phase=0.0 (endgame)
+	// than when phase=1.0 (middlegame), because the endgame table rewards
+	// centralization while the middlegame table penalizes exposed kings.
+	// White King on e4 = square 28
+	// kingEndgameTable[28] = 0.2 (rewards center)
+	// kingMiddlegameTable[28] = -0.4 (penalizes center)
+	fen := "8/8/8/8/4K3/8/8/8 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreEndgame := evaluatePiecePositions(board, 0.0)   // Pure endgame
+	scoreMiddlegame := evaluatePiecePositions(board, 1.0) // Pure middlegame
+
+	// In endgame, center king gets positive bonus (+0.2 from endgame table)
+	// In middlegame, center king gets penalty (-0.4 from middlegame table)
+	if scoreEndgame <= scoreMiddlegame {
+		t.Errorf("King in center should score higher in endgame than middlegame: endgame=%v, middlegame=%v",
+			scoreEndgame, scoreMiddlegame)
+	}
+}
+
+func TestKingPhaseInterpolation_MiddlegameCastled(t *testing.T) {
+	// King on g1 (castled position) should score higher when phase=1.0 (middlegame)
+	// than when phase=0.0 (endgame), because the middlegame table rewards castled
+	// positions while the endgame table penalizes edge squares.
+	// White King on g1 = square 6
+	// kingMiddlegameTable[6] = 0.3 (rewards castled position)
+	// kingEndgameTable[6] = -0.4 (penalizes edge in endgame)
+	fen := "8/8/8/8/8/8/8/6K1 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreMiddlegame := evaluatePiecePositions(board, 1.0) // Pure middlegame
+	scoreEndgame := evaluatePiecePositions(board, 0.0)    // Pure endgame
+
+	// In middlegame, castled king gets bonus (+0.3 from middlegame table)
+	// In endgame, edge king gets penalty (-0.4 from endgame table)
+	if scoreMiddlegame <= scoreEndgame {
+		t.Errorf("Castled king should score higher in middlegame than endgame: middlegame=%v, endgame=%v",
+			scoreMiddlegame, scoreEndgame)
+	}
+}
+
+func TestKingPhaseInterpolation_HalfPhase(t *testing.T) {
+	// At phase=0.5, the king bonus should be the average of the middlegame
+	// and endgame table values.
+	// White King on g1 = square 6
+	// kingMiddlegameTable[6] = 0.3
+	// kingEndgameTable[6] = -0.4
+	// Expected at phase=0.5: 0.5*0.3 + 0.5*(-0.4) = 0.15 - 0.2 = -0.05
+	fen := "8/8/8/8/8/8/8/6K1 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreHalf := evaluatePiecePositions(board, 0.5)
+
+	mgBonus := kingMiddlegameTable[6]  // 0.3
+	egBonus := kingEndgameTable[6]     // -0.4
+	expectedBonus := 0.5*mgBonus + 0.5*egBonus // -0.05
+
+	if math.Abs(scoreHalf-expectedBonus) > 0.001 {
+		t.Errorf("At phase=0.5, king bonus should be average of mg and eg tables: got %v, want %v (mg=%v, eg=%v)",
+			scoreHalf, expectedBonus, mgBonus, egBonus)
 	}
 }
