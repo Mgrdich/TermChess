@@ -20,6 +20,7 @@ A terminal-based chess application written in Go. Play chess against friends loc
 - **Draw System** — Draw offers, resignation, automatic draw detection
 - **Move History** — Optional move list display in SAN format
 - **Bot Opponents** — AI players with easy, medium, and hard difficulty levels
+- **Bot vs Bot Mode** — Watch AI opponents battle each other with configurable speed
 
 ## Installation
 
@@ -47,10 +48,36 @@ make run
 
 The application features a full interactive menu system:
 - **Main Menu** — New game, load game from FEN, resume saved game, settings, exit
-- **Game Types** — Player vs Player (local), Bot Opponents (easy/medium/hard)
+- **Game Types** — Player vs Player (local), Player vs Bot, Bot vs Bot
 - **Gameplay** — Enter moves using SAN notation (e4, Nf3, Bxc5, O-O, etc.)
 - **Commands** — Type `resign`, `offerdraw`, `showfen`, or `menu` during gameplay
 - **Navigation** — Use arrow keys or j/k, press ESC to go back, Ctrl+C to exit
+
+**Main Menu:**
+```
+TermChess
+
+> New Game
+  Load from FEN
+  Resume Game
+  Settings
+  Exit
+
+↑/↓: navigate | Enter: select
+```
+
+**Game Type Selection:**
+```
+TermChess
+
+Select Game Type:
+
+> Player vs Player
+  Player vs Bot
+  Bot vs Bot
+
+↑/↓: navigate | Enter: select | ESC: back
+```
 
 ### Board Display
 
@@ -82,6 +109,49 @@ The board can be displayed in ASCII or Unicode mode (configurable in Settings):
   a b c d e f g h
 ```
 
+### Bot vs Bot Mode
+
+Watch two AI opponents play against each other:
+
+1. Select **Bot vs Bot** from the main menu
+2. Choose difficulty for the White bot (Easy, Medium, or Hard)
+3. Choose difficulty for the Black bot
+4. Select Single Game or Multi-Game mode
+5. Watch the game unfold automatically
+
+**Example Bot vs Bot display:**
+```
+TermChess - Bot vs Bot
+
+Easy Bot (White) vs Hard Bot (Black)
+Game 1/1 | 15 moves
+
+8 ♜ · ♝ · ♚ ♝ · ♜
+7 ♟ ♟ ♟ · · ♟ ♟ ♟
+6 · · ♞ ♟ · ♞ · ·
+5 · · · · ♟ · · ·
+4 · · ♗ · ♙ · · ·
+3 · · · · · ♘ · ·
+2 ♙ ♙ ♙ ♙ · ♙ ♙ ♙
+1 ♖ ♘ ♗ ♕ ♔ · · ♖
+  a b c d e f g h
+
+White to move | Speed: Normal
+
+Space: pause | 1-4: speed | Tab: view | ESC: abort
+```
+
+**Controls during Bot vs Bot games:**
+- **Space** — Pause/resume the game
+- **1-4** — Change playback speed (1=Instant, 2=Fast, 3=Normal, 4=Slow)
+- **Tab** — Toggle between single board and grid view (multi-game)
+- **←/→** — Navigate between games (multi-game mode)
+- **f** — Show current position FEN
+- **ESC** — Abort and return to menu
+
+**Multi-Game Mode:**
+Run multiple games simultaneously and view them in a grid layout. After all games complete, see detailed statistics including win rates, average game length, and individual game results.
+
 ### Configuration
 
 Settings are saved to `~/.termchess/config.toml` and include:
@@ -90,6 +160,7 @@ Settings are saved to `~/.termchess/config.toml` and include:
 - **Use Colors** — Color pieces for better visibility
 - **Show Move History** — Display move list during gameplay
 - **Show Help Text** — Display navigation hints on each screen
+- **Bot Move Delay** — Adjust speed of bot moves in Bot vs Bot mode
 
 ## Development
 
@@ -127,6 +198,14 @@ termchess/
 │   │   ├── attacks.go        # Attack calculations
 │   │   ├── zobrist.go        # Position hashing
 │   │   └── *_test.go         # Comprehensive test suite
+│   ├── bot/                  # Bot engine implementations
+│   │   ├── engine.go         # Engine interface
+│   │   ├── random.go         # Easy bot (random moves)
+│   │   ├── minimax.go        # Medium/Hard bot (minimax + alpha-beta)
+│   │   └── eval.go           # Position evaluation
+│   ├── bvb/                   # Bot vs Bot game management
+│   │   ├── session.go        # Game session controller
+│   │   └── session_test.go
 │   ├── ui/                   # Terminal UI (Bubbletea)
 │   │   ├── model.go          # Application state
 │   │   ├── view.go           # Screen rendering
@@ -165,6 +244,7 @@ termchess/
 - [x] Move history display
 - [x] Draw offers and resignation
 - [x] Bot opponents (easy/medium/hard)
+- [x] Bot vs Bot spectator mode
 
 ### In Progress / Planned 🚧
 - [ ] RL-trained agent
