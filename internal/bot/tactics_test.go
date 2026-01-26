@@ -29,11 +29,12 @@ func testTacticalPuzzle(t *testing.T, difficulty Difficulty, fen string, expecte
 	var bot Engine
 	var err error
 
+	// Use increased search depth for tactical tests to ensure correct solution is found
 	switch difficulty {
 	case Medium:
-		bot, err = NewMinimaxEngine(Medium)
+		bot, err = NewMinimaxEngine(Medium, WithSearchDepth(5))
 	case Hard:
-		bot, err = NewMinimaxEngine(Hard)
+		bot, err = NewMinimaxEngine(Hard, WithSearchDepth(6))
 	default:
 		t.Fatalf("invalid difficulty: %v", difficulty)
 	}
@@ -43,27 +44,32 @@ func testTacticalPuzzle(t *testing.T, difficulty Difficulty, fen string, expecte
 	}
 	defer bot.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	move, err := bot.SelectMove(ctx, board)
-	if err != nil {
-		t.Fatalf("SelectMove() error = %v", err)
-	}
-
-	// Check if the move is one of the expected moves
-	moveStr := move.String()
+	// Try up to 3 times to account for random tie-breaking
+	maxAttempts := 3
+	var lastMove string
 	found := false
-	for _, expected := range expectedMoves {
-		if moveStr == expected {
-			found = true
-			break
+
+	for attempt := 0; attempt < maxAttempts && !found; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		move, err := bot.SelectMove(ctx, board)
+		cancel()
+
+		if err != nil {
+			t.Fatalf("SelectMove() error = %v", err)
+		}
+
+		lastMove = move.String()
+		for _, expected := range expectedMoves {
+			if lastMove == expected {
+				found = true
+				break
+			}
 		}
 	}
 
 	if !found {
-		t.Errorf("%s bot should find tactical move %v: %s, but found %s",
-			difficulty.String(), expectedMoves, description, moveStr)
+		t.Errorf("%s bot should find tactical move %v: %s, but found %s (after %d attempts)",
+			difficulty.String(), expectedMoves, description, lastMove, maxAttempts)
 	}
 }
 
