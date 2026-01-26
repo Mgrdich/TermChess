@@ -150,7 +150,7 @@ Space: pause | 1-4: speed | Tab: view | ESC: abort
 - **ESC** — Abort and return to menu
 
 **Multi-Game Mode:**
-Run multiple games simultaneously and view them in a grid layout. After all games complete, see detailed statistics including win rates, average game length, and individual game results.
+Run multiple games and view them in a grid layout. Games are queued and executed 25 at a time to maintain UI responsiveness. The status bar shows completed, running, and queued game counts. After all games complete, see detailed statistics including win rates, average game length, and individual game results.
 
 ### Bot Difficulty Levels
 

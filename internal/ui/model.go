@@ -172,6 +172,8 @@ type Model struct {
 	bvbPageIndex int
 	// bvbStatsSelection tracks the selected option on the stats screen (0=New Session, 1=Return to Menu)
 	bvbStatsSelection int
+	// bvbStatsResultsPage tracks the current page of individual results on the stats screen
+	bvbStatsResultsPage int
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.

@@ -1581,6 +1581,7 @@ func (m Model) handleBvBTick() (tea.Model, tea.Cmd) {
 	if m.bvbManager.AllFinished() {
 		m.screen = ScreenBvBStats
 		m.bvbStatsSelection = 0
+		m.bvbStatsResultsPage = 0
 		m.menuOptions = []string{"New Session", "Return to Menu"}
 		return m, nil
 	}
@@ -1599,6 +1600,22 @@ func (m Model) handleBvBStatsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		if m.bvbStatsSelection < len(m.menuOptions)-1 {
 			m.bvbStatsSelection++
+		}
+	case "left", "h":
+		// Previous page of individual results
+		if m.bvbStatsResultsPage > 0 {
+			m.bvbStatsResultsPage--
+		}
+	case "right", "l":
+		// Next page of individual results
+		if m.bvbManager != nil {
+			stats := m.bvbManager.Stats()
+			if stats != nil && stats.TotalGames > 1 {
+				totalPages := (len(stats.IndividualResults) + 14) / 15 // resultsPerPage = 15
+				if m.bvbStatsResultsPage < totalPages-1 {
+					m.bvbStatsResultsPage++
+				}
+			}
 		}
 	case "enter":
 		return m.handleBvBStatsSelection()

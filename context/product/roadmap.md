@@ -71,6 +71,9 @@ _Enhanced user interaction and visual experience._
   - [ ] **Enhanced Typography:** Improve text rendering with better fonts and spacing for readability.
   - [ ] **Visual Polish:** Refine borders, shadows, and spacing to create a polished, professional appearance.
   - [ ] **Accessibility Features:** Ensure color contrast ratios meet standards and add screen reader support.
+  - [ ] **Make better pagination for Bot vs bot** it should give the user power to navigate to any game 
+  - [ ] **Go over all the paginated pages** it should give the user power to navigate to any game
+  - [ ] **add more navigations** add more intuitive navigations 
 
 ---
 

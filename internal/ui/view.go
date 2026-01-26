@@ -1070,9 +1070,11 @@ func (m Model) renderBvBGridView() string {
 			finished++
 		}
 	}
-	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black) | Games: %d/%d completed",
+	running := m.bvbManager.RunningCount()
+	queued := m.bvbManager.QueuedCount()
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black) | Completed: %d/%d | Running: %d | Queued: %d",
 		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff),
-		finished, len(sessions))
+		finished, len(sessions), running, queued)
 	b.WriteString(infoStyle.Render(matchup))
 	b.WriteString("\n\n")
 
@@ -1358,10 +1360,27 @@ func (m Model) renderBvBStats() string {
 			stats.LongestGame.GameNumber, stats.LongestGame.MoveCount)))
 		b.WriteString("\n\n")
 
-		// Individual results
-		b.WriteString(dimStyle.Render("Individual Results:"))
+		// Individual results (paginated, 15 per page)
+		resultsPerPage := 15
+		totalResults := len(stats.IndividualResults)
+		totalPages := (totalResults + resultsPerPage - 1) / resultsPerPage
+		currentPage := m.bvbStatsResultsPage
+		if currentPage >= totalPages {
+			currentPage = totalPages - 1
+		}
+		if currentPage < 0 {
+			currentPage = 0
+		}
+
+		startIdx := currentPage * resultsPerPage
+		endIdx := startIdx + resultsPerPage
+		if endIdx > totalResults {
+			endIdx = totalResults
+		}
+
+		b.WriteString(dimStyle.Render(fmt.Sprintf("Individual Results (Page %d/%d):", currentPage+1, totalPages)))
 		b.WriteString("\n")
-		for _, r := range stats.IndividualResults {
+		for _, r := range stats.IndividualResults[startIdx:endIdx] {
 			var resultText string
 			if r.Winner == "Draw" {
 				resultText = fmt.Sprintf("  Game %d: Draw (%s) — %d moves", r.GameNumber, r.EndReason, r.MoveCount)
@@ -1387,7 +1406,15 @@ func (m Model) renderBvBStats() string {
 		b.WriteString("\n")
 	}
 
-	helpText := renderHelpText("↑/↓: navigate | Enter: select | ESC: menu", m.config)
+	// Build help text, including pagination controls if multiple pages
+	helpStr := "↑/↓: navigate | Enter: select | ESC: menu"
+	if stats.TotalGames > 1 {
+		totalPages := (len(stats.IndividualResults) + 14) / 15 // resultsPerPage = 15
+		if totalPages > 1 {
+			helpStr = "↑/↓: navigate | ←/→: page | Enter: select | ESC: menu"
+		}
+	}
+	helpText := renderHelpText(helpStr, m.config)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1434,8 +1461,15 @@ func (m Model) renderBvBSingleView() string {
 			finished++
 		}
 	}
-	gameInfo := fmt.Sprintf("Game %d of %d | Completed: %d/%d",
-		selectedIdx+1, len(sessions), finished, len(sessions))
+	running := m.bvbManager.RunningCount()
+	queued := m.bvbManager.QueuedCount()
+	var gameInfo string
+	if len(sessions) > 1 {
+		gameInfo = fmt.Sprintf("Game %d of %d | Completed: %d | Running: %d | Queued: %d",
+			selectedIdx+1, len(sessions), finished, running, queued)
+	} else {
+		gameInfo = fmt.Sprintf("Game %d of %d", selectedIdx+1, len(sessions))
+	}
 	b.WriteString(infoStyle.Render(gameInfo))
 	b.WriteString("\n\n")
 
