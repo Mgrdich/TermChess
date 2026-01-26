@@ -75,6 +75,7 @@ _Enhanced user interaction and visual experience._
   - [ ] **Go over all the paginated pages** it should give the user power to navigate to any game
   - [ ] **add more navigations** add more intuitive navigations 
   - [ ] **UI optimization during BOT VS BOT** make the UI navigation more smooth to avoid lags 
+  - [ ] **BOT vs BOT statistics** add statistics page to games while games are still running
 
 ---
 
