@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
@@ -12,12 +13,13 @@ import (
 
 // minimaxEngine implements Medium and Hard bots using minimax with alpha-beta pruning.
 type minimaxEngine struct {
-	name        string
-	difficulty  Difficulty
-	maxDepth    int
-	timeLimit   time.Duration
-	evalWeights evalWeights
-	closed      bool
+	name          string
+	difficulty    Difficulty
+	maxDepth      int
+	timeLimit     time.Duration
+	evalWeights   evalWeights
+	deterministic bool // If true, disables random tie-breaking
+	closed        bool
 }
 
 // evalWeights holds the weights for different evaluation components.
@@ -194,6 +196,7 @@ func (e *minimaxEngine) searchDepth(ctx context.Context, board *engine.Board, de
 
 	var bestMove engine.Move
 	bestScore := math.Inf(-1)
+	bestCount := 0 // count of moves sharing the best score (for random tie-breaking)
 
 	// Search each move
 	for _, move := range moves {
@@ -216,10 +219,17 @@ func (e *minimaxEngine) searchDepth(ctx context.Context, board *engine.Board, de
 		// Pass ply=1 since we're one move from the root
 		score := -e.alphaBeta(ctx, boardCopy, depth-1, -beta, -alpha, 1)
 
-		// Update best move
+		// Update best move (random tie-breaking among equal scores)
 		if score > bestScore {
 			bestScore = score
 			bestMove = move
+			bestCount = 1
+		} else if score == bestScore && !e.deterministic {
+			// Random tie-breaking among equal scores (disabled in deterministic mode)
+			bestCount++
+			if rand.Intn(bestCount) == 0 {
+				bestMove = move
+			}
 		}
 
 		// Update alpha

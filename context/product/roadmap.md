@@ -65,11 +65,18 @@ _Enhanced user interaction and visual experience._
   - [ ] **Click-to-Select Pieces:** Allow users to click on a piece to select it for moving.
   - [ ] **Click-to-Move:** Allow users to click on a destination square to complete a move.
   - [ ] **Visual Feedback:** Highlight selected pieces and valid move destinations on hover/click.
-  - [ ] **Beautiful Board Themes:** Offer multiple color schemes and board styles (classic, modern, minimalist, etc.).
+  - [ ] **Make the Menu more intuitive** make sure the menu on the buttom is more intuitive.
+  - [ ] **Beautiful Board Themes:** Offer multiple color schemes and board styles and make sure the text of the user and the color match for the piece (classic, modern, minimalist, etc.).
   - [ ] **Smooth Animations:** Add subtle animations for piece movement and board transitions.
   - [ ] **Enhanced Typography:** Improve text rendering with better fonts and spacing for readability.
   - [ ] **Visual Polish:** Refine borders, shadows, and spacing to create a polished, professional appearance.
   - [ ] **Accessibility Features:** Ensure color contrast ratios meet standards and add screen reader support.
+  - [ ] **Make better pagination for Bot vs bot** it should give the user power to navigate to any game 
+  - [ ] **Go over all the paginated pages** it should give the user power to navigate to any game
+  - [ ] **add more navigations** add more intuitive navigations 
+  - [ ] **UI optimization during BOT VS BOT** make the UI navigation more smooth to avoid lags 
+  - [ ] **BOT vs BOT statistics** add statistics page to games while games are still running
+  - [ ] **BOT vs BOT** speed should only have 2 options normal vs instant 
 
 ---
 

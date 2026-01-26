@@ -335,8 +335,8 @@ func TestNewMinimaxEngine(t *testing.T) {
 		if minimaxEng.difficulty != Hard {
 			t.Errorf("difficulty = %v, want Hard", minimaxEng.difficulty)
 		}
-		if minimaxEng.maxDepth != 6 {
-			t.Errorf("maxDepth = %d, want 6", minimaxEng.maxDepth)
+		if minimaxEng.maxDepth != 7 {
+			t.Errorf("maxDepth = %d, want 7", minimaxEng.maxDepth)
 		}
 		if minimaxEng.timeLimit != 8*time.Second {
 			t.Errorf("timeLimit = %v, want 8s", minimaxEng.timeLimit)
@@ -520,7 +520,7 @@ func TestEngineConfigDefaults(t *testing.T) {
 
 		// Simulate what NewMinimaxEngine does
 		cfg.timeLimit = 8 * time.Second
-		cfg.searchDepth = 6
+		cfg.searchDepth = 7
 
 		if cfg.difficulty != Hard {
 			t.Errorf("difficulty = %v, want Hard", cfg.difficulty)
@@ -528,8 +528,8 @@ func TestEngineConfigDefaults(t *testing.T) {
 		if cfg.timeLimit != 8*time.Second {
 			t.Errorf("timeLimit = %v, want 8s", cfg.timeLimit)
 		}
-		if cfg.searchDepth != 6 {
-			t.Errorf("searchDepth = %d, want 6", cfg.searchDepth)
+		if cfg.searchDepth != 7 {
+			t.Errorf("searchDepth = %d, want 7", cfg.searchDepth)
 		}
 	})
 }

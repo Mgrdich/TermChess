@@ -387,8 +387,8 @@ func TestEvaluatePiecePositions(t *testing.T) {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
 
-	scoreCentral := evaluatePiecePositions(boardCentral)
-	scoreCorner := evaluatePiecePositions(boardCorner)
+	scoreCentral := evaluatePiecePositions(boardCentral, 0.5)
+	scoreCorner := evaluatePiecePositions(boardCorner, 0.5)
 
 	if scoreCentral <= scoreCorner {
 		t.Errorf("Central knight should score higher than corner knight: central=%v, corner=%v",
@@ -408,8 +408,8 @@ func TestEvaluatePiecePositions(t *testing.T) {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
 
-	scoreAdvanced := evaluatePiecePositions(boardAdvanced)
-	scoreStarting := evaluatePiecePositions(boardStarting)
+	scoreAdvanced := evaluatePiecePositions(boardAdvanced, 0.5)
+	scoreStarting := evaluatePiecePositions(boardStarting, 0.5)
 
 	if scoreAdvanced <= scoreStarting {
 		t.Errorf("Advanced pawn (rank 7) should score higher than starting pawn (rank 2): advanced=%v, starting=%v",
@@ -430,8 +430,8 @@ func TestEvaluatePiecePositions(t *testing.T) {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
 
-	scoreWhiteKnight := evaluatePiecePositions(boardWhite)
-	scoreBlackKnight := evaluatePiecePositions(boardBlack)
+	scoreWhiteKnight := evaluatePiecePositions(boardWhite, 0.5)
+	scoreBlackKnight := evaluatePiecePositions(boardBlack, 0.5)
 
 	// Scores should be opposite (White positive, Black negative)
 	if math.Abs(scoreWhiteKnight+scoreBlackKnight) > 0.01 {
@@ -520,10 +520,12 @@ func TestEvaluate_DifficultyLevels(t *testing.T) {
 			scoreMedium, scoreEasy)
 	}
 
-	// Medium and Hard should be equal (both use same evaluation components)
-	if scoreMedium != scoreHard {
-		t.Errorf("Medium and Hard should evaluate the same: Medium=%v, Hard=%v",
-			scoreMedium, scoreHard)
+	// Hard may differ from Medium due to king safety and mop-up evaluation
+	// In this position (pure endgame with material advantage), Hard uses mop-up eval
+	// which adds bonuses for driving enemy king to corner
+	if scoreHard < scoreMedium {
+		t.Errorf("Hard should score >= Medium due to king safety and mop-up bonuses: Hard=%v, Medium=%v",
+			scoreHard, scoreMedium)
 	}
 
 	// Test with starting position - should be close to balanced for all
@@ -588,7 +590,7 @@ func TestEvaluatePiecePositions_AllPieces(t *testing.T) {
 				t.Fatalf("Failed to parse FEN: %v", err)
 			}
 
-			score := evaluatePiecePositions(board)
+			score := evaluatePiecePositions(board, 0.5)
 			if score < tt.minScore || score > tt.maxScore {
 				t.Errorf("%s: evaluatePiecePositions() = %v, want between %v and %v",
 					tt.name, score, tt.minScore, tt.maxScore)
@@ -858,6 +860,167 @@ func TestEvaluate_KingSafetyOnlyHard(t *testing.T) {
 	}
 }
 
+func TestComputeGamePhase_StartingPosition(t *testing.T) {
+	// Starting position has full material (63.0), should return 1.0
+	board := engine.NewBoard()
+	phase := computeGamePhase(board)
+
+	if math.Abs(phase-1.0) > 0.01 {
+		t.Errorf("Starting position: computeGamePhase() = %v, want 1.0", phase)
+	}
+}
+
+func TestComputeGamePhase_BareKings(t *testing.T) {
+	// Only kings on the board - should return 0.0
+	fen := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+	if phase != 0.0 {
+		t.Errorf("Bare kings: computeGamePhase() = %v, want 0.0", phase)
+	}
+}
+
+func TestComputeGamePhase_KingsAndPawns(t *testing.T) {
+	// Kings and pawns only - no non-pawn material, should return 0.0
+	fen := "4k3/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+	if phase != 0.0 {
+		t.Errorf("Kings and pawns: computeGamePhase() = %v, want 0.0", phase)
+	}
+}
+
+func TestComputeGamePhase_MinorPieceAboveThreshold(t *testing.T) {
+	// Material just above threshold: 16 + 3 = 19 (threshold material + one knight)
+	// Use 2 rooks (10) + 2 bishops (6.5) = 16.5 which is at threshold,
+	// then add a knight (3) = 19.5 total non-pawn material.
+	// phase = (19.5 - 16) / (63 - 16) = 3.5 / 47 ~ 0.0745
+	// Position: White has Rook, Bishop, Knight; Black has Rook, Bishop
+	// White: R(5) + B(3.25) + N(3) = 11.25; Black: R(5) + B(3.25) = 8.25; Total = 19.5
+	fen := "1rb1k3/8/8/8/8/8/8/1RB1KN2 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+
+	// Expected: (19.5 - 16) / (63 - 16) = 3.5/47 ~ 0.0745
+	expectedPhase := (19.5 - endgameThreshold) / (totalStartingMaterial - endgameThreshold)
+	if math.Abs(phase-expectedPhase) > 0.01 {
+		t.Errorf("Minor piece above threshold: computeGamePhase() = %v, want ~%v", phase, expectedPhase)
+	}
+
+	// Should be a small positive value
+	if phase <= 0.0 {
+		t.Errorf("Phase should be positive above threshold, got %v", phase)
+	}
+}
+
+func TestComputeGamePhase_HalfMaterial(t *testing.T) {
+	// Approximately half material to get phase ~0.5
+	// Need material = endgameThreshold + (totalStartingMaterial - endgameThreshold) * 0.5
+	// = 16 + 47 * 0.5 = 39.5
+	// White: Q(9) + 2R(10) + B(3.25) = 22.25; Black: Q(9) + R(5) + B(3.25) = 17.25
+	// Total = 39.5
+	fen := "1r1qkb2/8/8/8/8/8/8/1RRQKB2 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	phase := computeGamePhase(board)
+
+	// Expected: (39.5 - 16) / (63 - 16) = 23.5/47 = 0.5
+	if math.Abs(phase-0.5) > 0.01 {
+		t.Errorf("Half material: computeGamePhase() = %v, want ~0.5", phase)
+	}
+}
+
+func TestCountNonPawnMaterial(t *testing.T) {
+	tests := []struct {
+		name     string
+		fen      string
+		expected float64
+	}{
+		{
+			name:     "StartingPosition",
+			fen:      "", // Use NewBoard
+			expected: 63.0,
+		},
+		{
+			name:     "BareKings",
+			fen:      "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+			expected: 0.0,
+		},
+		{
+			name:     "KingsAndPawns",
+			fen:      "4k3/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1",
+			expected: 0.0,
+		},
+		{
+			name:     "OneWhiteQueen",
+			fen:      "4k3/8/8/8/8/8/8/3QK3 w - - 0 1",
+			expected: 9.0,
+		},
+		{
+			name:     "OneBlackRook",
+			fen:      "r3k3/8/8/8/8/8/8/4K3 w - - 0 1",
+			expected: 5.0,
+		},
+		{
+			name:     "MixedPieces",
+			fen:      "rnb1k3/8/8/8/8/8/8/RNB1K3 w - - 0 1",
+			// White: R(5) + N(3) + B(3.25) = 11.25
+			// Black: R(5) + N(3) + B(3.25) = 11.25
+			// Total = 22.5
+			expected: 22.5,
+		},
+		{
+			name:     "PawnsDoNotCount",
+			fen:      "4k3/pppppppp/8/8/8/8/PPPPPPPP/4K3 w - - 0 1",
+			expected: 0.0,
+		},
+		{
+			name:     "AllQueensAndRooks",
+			fen:      "r2qk2r/8/8/8/8/8/8/R2QK2R w - - 0 1",
+			// White: R(5) + Q(9) + R(5) = 19
+			// Black: R(5) + Q(9) + R(5) = 19
+			// Total = 38
+			expected: 38.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var board *engine.Board
+			if tt.fen == "" {
+				board = engine.NewBoard()
+			} else {
+				var err error
+				board, err = engine.FromFEN(tt.fen)
+				if err != nil {
+					t.Fatalf("Failed to parse FEN: %v", err)
+				}
+			}
+
+			material := countNonPawnMaterial(board)
+			if math.Abs(material-tt.expected) > 0.01 {
+				t.Errorf("%s: countNonPawnMaterial() = %v, want %v",
+					tt.name, material, tt.expected)
+			}
+		})
+	}
+}
+
 func TestEvaluateKingSafety_Symmetry(t *testing.T) {
 	// Test that king safety evaluation is symmetric for both colors
 
@@ -887,5 +1050,460 @@ func TestEvaluateKingSafety_Symmetry(t *testing.T) {
 	// Both kings should have similar safety, so net should be ~0
 	if math.Abs(safetyGoodShields) > 0.1 {
 		t.Errorf("Symmetric position with shields should have ~0 king safety score, got %v", safetyGoodShields)
+	}
+}
+
+func TestKingPhaseInterpolation_EndgameCenter(t *testing.T) {
+	// King in center (e4) should score higher when phase=0.0 (endgame)
+	// than when phase=1.0 (middlegame), because the endgame table rewards
+	// centralization while the middlegame table penalizes exposed kings.
+	// White King on e4 = square 28
+	// kingEndgameTable[28] = 0.2 (rewards center)
+	// kingMiddlegameTable[28] = -0.4 (penalizes center)
+	fen := "8/8/8/8/4K3/8/8/8 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreEndgame := evaluatePiecePositions(board, 0.0)   // Pure endgame
+	scoreMiddlegame := evaluatePiecePositions(board, 1.0) // Pure middlegame
+
+	// In endgame, center king gets positive bonus (+0.2 from endgame table)
+	// In middlegame, center king gets penalty (-0.4 from middlegame table)
+	if scoreEndgame <= scoreMiddlegame {
+		t.Errorf("King in center should score higher in endgame than middlegame: endgame=%v, middlegame=%v",
+			scoreEndgame, scoreMiddlegame)
+	}
+}
+
+func TestKingPhaseInterpolation_MiddlegameCastled(t *testing.T) {
+	// King on g1 (castled position) should score higher when phase=1.0 (middlegame)
+	// than when phase=0.0 (endgame), because the middlegame table rewards castled
+	// positions while the endgame table penalizes edge squares.
+	// White King on g1 = square 6
+	// kingMiddlegameTable[6] = 0.3 (rewards castled position)
+	// kingEndgameTable[6] = -0.4 (penalizes edge in endgame)
+	fen := "8/8/8/8/8/8/8/6K1 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreMiddlegame := evaluatePiecePositions(board, 1.0) // Pure middlegame
+	scoreEndgame := evaluatePiecePositions(board, 0.0)    // Pure endgame
+
+	// In middlegame, castled king gets bonus (+0.3 from middlegame table)
+	// In endgame, edge king gets penalty (-0.4 from endgame table)
+	if scoreMiddlegame <= scoreEndgame {
+		t.Errorf("Castled king should score higher in middlegame than endgame: middlegame=%v, endgame=%v",
+			scoreMiddlegame, scoreEndgame)
+	}
+}
+
+func TestKingPhaseInterpolation_HalfPhase(t *testing.T) {
+	// At phase=0.5, the king bonus should be the average of the middlegame
+	// and endgame table values.
+	// White King on g1 = square 6
+	// kingMiddlegameTable[6] = 0.3
+	// kingEndgameTable[6] = -0.4
+	// Expected at phase=0.5: 0.5*0.3 + 0.5*(-0.4) = 0.15 - 0.2 = -0.05
+	fen := "8/8/8/8/8/8/8/6K1 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreHalf := evaluatePiecePositions(board, 0.5)
+
+	mgBonus := kingMiddlegameTable[6]  // 0.3
+	egBonus := kingEndgameTable[6]     // -0.4
+	expectedBonus := 0.5*mgBonus + 0.5*egBonus // -0.05
+
+	if math.Abs(scoreHalf-expectedBonus) > 0.001 {
+		t.Errorf("At phase=0.5, king bonus should be average of mg and eg tables: got %v, want %v (mg=%v, eg=%v)",
+			scoreHalf, expectedBonus, mgBonus, egBonus)
+	}
+}
+
+// Passed pawn tests
+
+func TestIsPassedPawn_IsolatedPassed(t *testing.T) {
+	// White pawn on e5 with no Black pawns on d, e, f files -> is passed
+	// FEN: White King on a1, Black King on h8, White Pawn on e5
+	fen := "7k/8/8/4P3/8/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e5 = rank 4 (0-indexed), file 4 = 4*8 + 4 = 36
+	sq := 36
+	if !isPassedPawn(board, sq, engine.White) {
+		t.Errorf("White pawn on e5 with no blocking pawns should be passed")
+	}
+}
+
+func TestIsPassedPawn_BlockedSameFile(t *testing.T) {
+	// White pawn on e4 with Black pawn on e6 -> NOT passed
+	// FEN: White King on a1, Black King on h8, White Pawn on e4, Black Pawn on e6
+	fen := "7k/8/4p3/8/4P3/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e4 = rank 3, file 4 = 3*8 + 4 = 28
+	sq := 28
+	if isPassedPawn(board, sq, engine.White) {
+		t.Errorf("White pawn on e4 with Black pawn on e6 should NOT be passed")
+	}
+}
+
+func TestIsPassedPawn_BlockedAdjacentFile(t *testing.T) {
+	// White pawn on e4 with Black pawn on d5 -> NOT passed
+	// FEN: White King on a1, Black King on h8, White Pawn on e4, Black Pawn on d5
+	fen := "7k/8/8/3p4/4P3/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e4 = rank 3, file 4 = 3*8 + 4 = 28
+	sq := 28
+	if isPassedPawn(board, sq, engine.White) {
+		t.Errorf("White pawn on e4 with Black pawn on d5 should NOT be passed")
+	}
+}
+
+func TestIsPassedPawn_BlackPawn(t *testing.T) {
+	// Black pawn on d4 with no White pawns blocking -> is passed
+	// FEN: White King on a1, Black King on h8, Black Pawn on d4
+	fen := "7k/8/8/8/3p4/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// d4 = rank 3, file 3 = 3*8 + 3 = 27
+	sq := 27
+	if !isPassedPawn(board, sq, engine.Black) {
+		t.Errorf("Black pawn on d4 with no blocking pawns should be passed")
+	}
+}
+
+func TestEvaluatePassedPawns_SingleWhite(t *testing.T) {
+	// Single White passed pawn on e6 -> positive bonus
+	// FEN: White King on a1, Black King on h8, White Pawn on e6
+	fen := "7k/8/4P3/8/8/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// Phase 1.0 (opening) means phaseMultiplier = 1.0
+	score := evaluatePassedPawns(board, 1.0)
+	if score <= 0 {
+		t.Errorf("Single White passed pawn should give positive score, got %v", score)
+	}
+
+	// e6 is rank 5 (0-indexed), so bonus should be passedPawnBonus[5] = 1.0
+	expectedBonus := passedPawnBonus[5] * 1.0 // 1.0 * 1.0 = 1.0
+	if math.Abs(score-expectedBonus) > 0.01 {
+		t.Errorf("White passed pawn on e6: expected %v, got %v", expectedBonus, score)
+	}
+}
+
+func TestEvaluatePassedPawns_SingleBlack(t *testing.T) {
+	// Single Black passed pawn on d3 -> negative score (from White's perspective)
+	// FEN: White King on a1, Black King on h8, Black Pawn on d3
+	fen := "7k/8/8/8/8/3p4/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// Phase 1.0 (opening) means phaseMultiplier = 1.0
+	score := evaluatePassedPawns(board, 1.0)
+	if score >= 0 {
+		t.Errorf("Single Black passed pawn should give negative score, got %v", score)
+	}
+
+	// d3 is rank 2, flipped rank = 7-2 = 5, so bonus = passedPawnBonus[5] = 1.0
+	expectedBonus := -passedPawnBonus[5] * 1.0 // -1.0 * 1.0 = -1.0
+	if math.Abs(score-expectedBonus) > 0.01 {
+		t.Errorf("Black passed pawn on d3: expected %v, got %v", expectedBonus, score)
+	}
+}
+
+func TestEvaluatePassedPawns_RankBonus(t *testing.T) {
+	// Advanced pawn (rank 6) gets higher bonus than rank 3
+	// e7 = rank 6 (0-indexed)
+	fenAdvanced := "7k/4P3/8/8/8/8/8/K7 w - - 0 1"
+	boardAdvanced, err := engine.FromFEN(fenAdvanced)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// e4 = rank 3 (0-indexed)
+	fenEarly := "7k/8/8/8/4P3/8/8/K7 w - - 0 1"
+	boardEarly, err := engine.FromFEN(fenEarly)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreAdvanced := evaluatePassedPawns(boardAdvanced, 1.0)
+	scoreEarly := evaluatePassedPawns(boardEarly, 1.0)
+
+	if scoreAdvanced <= scoreEarly {
+		t.Errorf("Advanced pawn (e7, rank 6) should score higher than early pawn (e4, rank 3): advanced=%v, early=%v",
+			scoreAdvanced, scoreEarly)
+	}
+
+	// Verify specific values: e7=rank6 -> bonus=1.5, e4=rank3 -> bonus=0.2
+	expectedAdvanced := passedPawnBonus[6] * 1.0 // 1.5
+	expectedEarly := passedPawnBonus[3] * 1.0    // 0.2
+	if math.Abs(scoreAdvanced-expectedAdvanced) > 0.01 {
+		t.Errorf("Advanced pawn bonus: expected %v, got %v", expectedAdvanced, scoreAdvanced)
+	}
+	if math.Abs(scoreEarly-expectedEarly) > 0.01 {
+		t.Errorf("Early pawn bonus: expected %v, got %v", expectedEarly, scoreEarly)
+	}
+}
+
+func TestEvaluatePassedPawns_EndgameAmplification(t *testing.T) {
+	// Same pawn scores higher with phase=0.0 (endgame) than phase=1.0 (opening)
+	// FEN: White King on a1, Black King on h8, White Pawn on e6
+	fen := "7k/8/4P3/8/8/8/8/K7 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreOpening := evaluatePassedPawns(board, 1.0) // phaseMultiplier = 1.0
+	scoreEndgame := evaluatePassedPawns(board, 0.0) // phaseMultiplier = 2.0
+
+	if scoreEndgame <= scoreOpening {
+		t.Errorf("Passed pawn should score higher in endgame than opening: endgame=%v, opening=%v",
+			scoreEndgame, scoreOpening)
+	}
+
+	// Verify the endgame bonus is exactly double the opening bonus
+	if math.Abs(scoreEndgame-2*scoreOpening) > 0.01 {
+		t.Errorf("Endgame score should be 2x opening score: endgame=%v, opening=%v", scoreEndgame, scoreOpening)
+	}
+}
+
+// Mop-up evaluation tests
+
+func TestCenterDistance(t *testing.T) {
+	tests := []struct {
+		name     string
+		sq       int
+		expected float64
+	}{
+		// Center squares should have low distance (~1)
+		{name: "d4", sq: 27, expected: 1.0}, // d4 = rank 3, file 3 -> |3-3.5| + |3-3.5| = 1.0
+		{name: "e4", sq: 28, expected: 1.0}, // e4 = rank 3, file 4 -> |4-3.5| + |3-3.5| = 1.0
+		{name: "d5", sq: 35, expected: 1.0}, // d5 = rank 4, file 3 -> |3-3.5| + |4-3.5| = 1.0
+		{name: "e5", sq: 36, expected: 1.0}, // e5 = rank 4, file 4 -> |4-3.5| + |4-3.5| = 1.0
+		// Corner squares should have distance 7 (max manhattan distance from center)
+		{name: "a1", sq: 0, expected: 7.0},  // a1 = rank 0, file 0 -> |0-3.5| + |0-3.5| = 7.0
+		{name: "h1", sq: 7, expected: 7.0},  // h1 = rank 0, file 7 -> |7-3.5| + |0-3.5| = 7.0
+		{name: "a8", sq: 56, expected: 7.0}, // a8 = rank 7, file 0 -> |0-3.5| + |7-3.5| = 7.0
+		{name: "h8", sq: 63, expected: 7.0}, // h8 = rank 7, file 7 -> |7-3.5| + |7-3.5| = 7.0
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dist := centerDistance(tt.sq)
+			if math.Abs(dist-tt.expected) > 0.01 {
+				t.Errorf("centerDistance(%d) = %v, want %v", tt.sq, dist, tt.expected)
+			}
+		})
+	}
+}
+
+func TestKingDistance(t *testing.T) {
+	tests := []struct {
+		name     string
+		sq1      int
+		sq2      int
+		expected float64
+	}{
+		{name: "same_square", sq1: 28, sq2: 28, expected: 0.0},       // e4 to e4
+		{name: "adjacent_file", sq1: 28, sq2: 29, expected: 1.0},    // e4 to f4
+		{name: "adjacent_rank", sq1: 28, sq2: 36, expected: 1.0},    // e4 to e5
+		{name: "diagonal", sq1: 28, sq2: 37, expected: 1.0},         // e4 to f5
+		{name: "opposite_corners", sq1: 0, sq2: 63, expected: 7.0},  // a1 to h8
+		{name: "same_rank_far", sq1: 0, sq2: 7, expected: 7.0},      // a1 to h1
+		{name: "same_file_far", sq1: 0, sq2: 56, expected: 7.0},     // a1 to a8
+		{name: "two_squares_away", sq1: 28, sq2: 30, expected: 2.0}, // e4 to g4
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dist := kingDistance(tt.sq1, tt.sq2)
+			if math.Abs(dist-tt.expected) > 0.01 {
+				t.Errorf("kingDistance(%d, %d) = %v, want %v", tt.sq1, tt.sq2, dist, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEvaluateMopUp_InactiveMiddlegame(t *testing.T) {
+	// Middlegame position (phase >= 0.5) should return 0.0
+	// White is ahead by 5 pawns (rook) but still in middlegame
+	fen := "4k3/8/8/8/8/8/8/R3K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.8 (middlegame)
+	score := evaluateMopUp(board, 0.8, 5.0)
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 in middlegame (phase=0.8), got %v", score)
+	}
+
+	// phase = 0.5 (boundary) should also return 0.0
+	score = evaluateMopUp(board, 0.5, 5.0)
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 at phase=0.5 boundary, got %v", score)
+	}
+}
+
+func TestEvaluateMopUp_InactiveEvenMaterial(t *testing.T) {
+	// Even material should return 0.0 even in endgame
+	fen := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 0 (even)
+	score := evaluateMopUp(board, 0.0, 0.0)
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 with even material, got %v", score)
+	}
+
+	// Small material imbalance below threshold
+	score = evaluateMopUp(board, 0.0, 2.0) // 2 pawns ahead, below threshold of 3
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 when material advantage < threshold, got %v", score)
+	}
+}
+
+func TestEvaluateMopUp_ActiveWhiteWinning(t *testing.T) {
+	// White is ahead by 4+ pawns in endgame -> should return positive value
+	// White King on e4, Black King on e8
+	fen := "4k3/8/8/8/4K3/8/8/8 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 4.0 (White ahead by 4 pawns)
+	score := evaluateMopUp(board, 0.0, 4.0)
+	if score <= 0.0 {
+		t.Errorf("evaluateMopUp should return positive when White is winning in endgame, got %v", score)
+	}
+}
+
+func TestEvaluateMopUp_EnemyKingCornerBonus(t *testing.T) {
+	// Enemy king in corner should score higher than enemy king in center
+	// White is winning
+
+	// Black king in corner (a8)
+	fenCorner := "k7/8/8/8/4K3/8/8/8 w - - 0 1"
+	boardCorner, err := engine.FromFEN(fenCorner)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// Black king in center (e5)
+	fenCenter := "8/8/8/4k3/4K3/8/8/8 w - - 0 1"
+	boardCenter, err := engine.FromFEN(fenCenter)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 5.0 (White ahead by a rook)
+	scoreCorner := evaluateMopUp(boardCorner, 0.0, 5.0)
+	scoreCenter := evaluateMopUp(boardCenter, 0.0, 5.0)
+
+	if scoreCorner <= scoreCenter {
+		t.Errorf("Enemy king in corner should score higher than center: corner=%v, center=%v",
+			scoreCorner, scoreCenter)
+	}
+}
+
+func TestEvaluateMopUp_KingProximityBonus(t *testing.T) {
+	// Own king close to enemy king should score higher than far away
+	// White is winning
+	// Keep enemy king in same position to isolate the proximity effect
+
+	// White king close to Black king (e4 vs e5 = distance 1)
+	// Black king on e5 has centerDistance ~1
+	fenClose := "8/8/8/4k3/4K3/8/8/8 w - - 0 1"
+	boardClose, err := engine.FromFEN(fenClose)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// White king far from Black king (a1 vs e5 = distance 4)
+	// Black king still on e5 (same centerDistance)
+	fenFar := "8/8/8/4k3/8/8/8/K7 w - - 0 1"
+	boardFar, err := engine.FromFEN(fenFar)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 5.0 (White ahead by a rook)
+	scoreClose := evaluateMopUp(boardClose, 0.0, 5.0)
+	scoreFar := evaluateMopUp(boardFar, 0.0, 5.0)
+
+	if scoreClose <= scoreFar {
+		t.Errorf("King close to enemy should score higher than far: close=%v, far=%v",
+			scoreClose, scoreFar)
+	}
+}
+
+func TestEvaluateMopUp_BlackWinning(t *testing.T) {
+	// When Black is winning, score should be negative
+	// Black King on e4 (central, good for attacking), White King on e8
+	fen := "4K3/8/8/8/4k3/8/8/8 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = -4.0 (Black ahead by 4 pawns)
+	score := evaluateMopUp(board, 0.0, -4.0)
+	if score >= 0.0 {
+		t.Errorf("evaluateMopUp should return negative when Black is winning, got %v", score)
+	}
+
+	// For a proper symmetry test, use a mirrored position
+	// Black King on e5, White King on e4 (symmetric equivalent)
+	fenSymmetric := "8/8/8/4k3/4K3/8/8/8 w - - 0 1"
+	boardSymmetric, err := engine.FromFEN(fenSymmetric)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreBlackWinning := evaluateMopUp(boardSymmetric, 0.0, -5.0)
+	scoreWhiteWinning := evaluateMopUp(boardSymmetric, 0.0, 5.0)
+
+	// Magnitudes should be similar but signs opposite
+	if scoreBlackWinning >= 0.0 {
+		t.Errorf("Black winning should give negative score, got %v", scoreBlackWinning)
+	}
+	if scoreWhiteWinning <= 0.0 {
+		t.Errorf("White winning should give positive score, got %v", scoreWhiteWinning)
+	}
+	if math.Abs(math.Abs(scoreBlackWinning)-math.Abs(scoreWhiteWinning)) > 0.01 {
+		t.Errorf("Magnitude should be similar for symmetric position: black=%v, white=%v",
+			scoreBlackWinning, scoreWhiteWinning)
 	}
 }

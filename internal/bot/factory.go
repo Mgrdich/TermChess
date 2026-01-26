@@ -11,10 +11,11 @@ type EngineOption func(*engineConfig) error
 
 // engineConfig holds configuration options for engine creation.
 type engineConfig struct {
-	difficulty  Difficulty
-	timeLimit   time.Duration
-	searchDepth int
-	options     map[string]any
+	difficulty    Difficulty
+	timeLimit     time.Duration
+	searchDepth   int
+	deterministic bool
+	options       map[string]any
 }
 
 // WithTimeLimit sets a custom time limit for move selection.
@@ -43,6 +44,15 @@ func WithSearchDepth(depth int) EngineOption {
 func WithOptions(opts map[string]any) EngineOption {
 	return func(c *engineConfig) error {
 		c.options = opts
+		return nil
+	}
+}
+
+// WithDeterministic disables random tie-breaking for reproducible results.
+// Use this in tests to avoid flaky behavior from randomness.
+func WithDeterministic(deterministic bool) EngineOption {
+	return func(c *engineConfig) error {
+		c.deterministic = deterministic
 		return nil
 	}
 }
@@ -79,7 +89,7 @@ func NewMinimaxEngine(difficulty Difficulty, opts ...EngineOption) (Engine, erro
 		cfg.searchDepth = 4
 	case Hard:
 		cfg.timeLimit = 8 * time.Second
-		cfg.searchDepth = 6
+		cfg.searchDepth = 7
 	default:
 		return nil, fmt.Errorf("invalid difficulty for minimax: %d (expected Medium or Hard)", difficulty)
 	}
@@ -95,11 +105,12 @@ func NewMinimaxEngine(difficulty Difficulty, opts ...EngineOption) (Engine, erro
 	name := fmt.Sprintf("%s Bot", difficulty.String())
 
 	return &minimaxEngine{
-		name:        name,
-		difficulty:  cfg.difficulty,
-		maxDepth:    cfg.searchDepth,
-		timeLimit:   cfg.timeLimit,
-		evalWeights: getDefaultWeights(cfg.difficulty),
-		closed:      false,
+		name:          name,
+		difficulty:    cfg.difficulty,
+		maxDepth:      cfg.searchDepth,
+		timeLimit:     cfg.timeLimit,
+		evalWeights:   getDefaultWeights(cfg.difficulty),
+		deterministic: cfg.deterministic,
+		closed:        false,
 	}, nil
 }

@@ -1,8 +1,21 @@
 package bot
 
 import (
+	"math"
+
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
+
+// totalStartingMaterial is the sum of non-pawn, non-king piece values at game start.
+// 2*Queen(9) + 4*Rook(5) + 4*Bishop(3.25) + 4*Knight(3) = 18 + 20 + 13 + 12 = 63
+const totalStartingMaterial = 63.0
+
+// endgameThreshold is the material level below which the position is considered a pure endgame.
+const endgameThreshold = 16.0
+
+// mopUpMaterialThreshold is the material advantage required to activate mop-up evaluation.
+// ~3 pawns advantage is needed to activate endgame mop-up.
+const mopUpMaterialThreshold = 3.0
 
 // pieceValues defines standard chess piece values in pawns.
 var pieceValues = map[engine.PieceType]float64{
@@ -98,6 +111,22 @@ var rookTable = [64]float64{
 	0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 }
 
+// kingMiddlegameTable rewards castled king positions and penalizes exposed kings.
+// Used during the opening/middlegame phase for king safety via piece-square evaluation.
+var kingMiddlegameTable = [64]float64{
+	// Rank 1 - castled king positions are best
+	0.2, 0.3, 0.1, 0.0, 0.0, 0.1, 0.3, 0.2,
+	// Rank 2 - behind pawns is OK
+	0.2, 0.2, 0.0, 0.0, 0.0, 0.0, 0.2, 0.2,
+	// Rank 3-8 - penalize exposed king progressively
+	-0.1, -0.2, -0.2, -0.3, -0.3, -0.2, -0.2, -0.1,
+	-0.2, -0.3, -0.3, -0.4, -0.4, -0.3, -0.3, -0.2,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+}
+
 // kingEndgameTable encourages king centralization in the endgame.
 // In opening/middlegame, the king should stay protected (corners).
 var kingEndgameTable = [64]float64{
@@ -117,6 +146,19 @@ var kingEndgameTable = [64]float64{
 	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
 	// Rank 8
 	-0.3, -0.4, -0.4, -0.5, -0.5, -0.4, -0.4, -0.3,
+}
+
+// passedPawnBonus gives bonuses for passed pawns by rank (index = rank 0-7).
+// Higher ranks = closer to promotion = bigger bonus.
+var passedPawnBonus = [8]float64{
+	0.0,  // rank 0 (impossible for pawns)
+	0.0,  // rank 1 (White starting rank, Black promotion)
+	0.1,  // rank 2
+	0.2,  // rank 3
+	0.35, // rank 4
+	0.6,  // rank 5
+	1.0,  // rank 6
+	1.5,  // rank 7 (White promotion rank, Black starting)
 }
 
 // evaluate returns a score for the position from White's perspective.
@@ -139,24 +181,23 @@ func evaluate(board *engine.Board, difficulty Difficulty) float64 {
 		return 0.0
 	}
 
-	score := 0.0
-
 	// 2. Material count (all difficulties)
-	score += countMaterial(board)
+	material := countMaterial(board)
+	score := material
 
-	// 3. Piece-square tables (Medium+)
+	// 3. Piece-square tables, passed pawns, and mobility (Medium+)
+	var phase float64
 	if difficulty >= Medium {
-		score += evaluatePiecePositions(board)
-	}
-
-	// 4. Mobility (Medium+)
-	if difficulty >= Medium {
+		phase = computeGamePhase(board)
+		score += evaluatePiecePositions(board, phase)
+		score += evaluatePassedPawns(board, phase)
 		score += evaluateMobility(board) * 0.1 // Weight mobility at 10%
 	}
 
-	// 5. King safety (Hard only)
+	// 4. King safety and mop-up evaluation (Hard only)
 	if difficulty >= Hard {
 		score += evaluateKingSafety(board)
+		score += evaluateMopUp(board, phase, material)
 	}
 
 	return score
@@ -190,8 +231,10 @@ func countMaterial(board *engine.Board) float64 {
 }
 
 // evaluatePiecePositions calculates positional bonuses using piece-square tables.
+// The phase parameter (0.0=endgame to 1.0=opening) is used to interpolate
+// between middlegame and endgame king piece-square tables.
 // Returns score from White's perspective.
-func evaluatePiecePositions(board *engine.Board) float64 {
+func evaluatePiecePositions(board *engine.Board, phase float64) float64 {
 	score := 0.0
 
 	for sq := 0; sq < 64; sq++ {
@@ -224,7 +267,9 @@ func evaluatePiecePositions(board *engine.Board) float64 {
 		case engine.Rook:
 			bonus = rookTable[squareIndex]
 		case engine.King:
-			bonus = kingEndgameTable[squareIndex]
+			mgBonus := kingMiddlegameTable[squareIndex]
+			egBonus := kingEndgameTable[squareIndex]
+			bonus = phase*mgBonus + (1.0-phase)*egBonus
 		case engine.Queen:
 			// Queens don't have a specific table, use 0
 			bonus = 0.0
@@ -288,6 +333,58 @@ func findKing(board *engine.Board, color engine.Color) int {
 		}
 	}
 	return -1
+}
+
+// centerDistance returns manhattan distance from board center (0-6 range).
+// Center squares (d4,d5,e4,e5) have distance ~1, corners have distance 6.
+func centerDistance(sq int) float64 {
+	file := sq % 8
+	rank := sq / 8
+	fileDist := math.Abs(float64(file) - 3.5)
+	rankDist := math.Abs(float64(rank) - 3.5)
+	return fileDist + rankDist
+}
+
+// kingDistance returns the Chebyshev distance (max of file/rank diff) between two squares.
+func kingDistance(sq1, sq2 int) float64 {
+	file1, rank1 := sq1%8, sq1/8
+	file2, rank2 := sq2%8, sq2/8
+	fileDiff := math.Abs(float64(file1 - file2))
+	rankDiff := math.Abs(float64(rank1 - rank2))
+	return math.Max(fileDiff, rankDiff)
+}
+
+// evaluateMopUp returns a bonus for the winning side to push enemy king to corner.
+// Only active when phase < 0.5 AND abs(materialBalance) >= mopUpMaterialThreshold.
+func evaluateMopUp(board *engine.Board, phase float64, materialBalance float64) float64 {
+	// Only active in endgame with significant material advantage
+	if phase >= 0.5 || math.Abs(materialBalance) < mopUpMaterialThreshold {
+		return 0.0
+	}
+
+	whiteKingSq := findKing(board, engine.White)
+	blackKingSq := findKing(board, engine.Black)
+	if whiteKingSq == -1 || blackKingSq == -1 {
+		return 0.0
+	}
+
+	// Phase scaling: stronger in pure endgame
+	phaseScale := 1.0 - phase // 0.5 to 1.0 range when active
+
+	var score float64
+	if materialBalance > 0 {
+		// White is winning: reward Black king far from center, White king close to Black king
+		enemyCornerBonus := centerDistance(blackKingSq) * 0.1
+		kingProximityBonus := (7.0 - kingDistance(whiteKingSq, blackKingSq)) * 0.05
+		score = (enemyCornerBonus + kingProximityBonus) * phaseScale
+	} else {
+		// Black is winning: reward White king far from center, Black king close to White king
+		enemyCornerBonus := centerDistance(whiteKingSq) * 0.1
+		kingProximityBonus := (7.0 - kingDistance(blackKingSq, whiteKingSq)) * 0.05
+		score = -(enemyCornerBonus + kingProximityBonus) * phaseScale
+	}
+
+	return score
 }
 
 // evaluateKingSafetyForColor evaluates king safety for a specific color.
@@ -420,4 +517,101 @@ func evaluateAttackersInKingZone(board *engine.Board, kingSq int, color engine.C
 	penalty := float64(attackerCount) * 0.1 // 0.1 penalty per attacked square
 
 	return penalty
+}
+
+// computeGamePhase returns a value between 0.0 (endgame) and 1.0 (opening)
+// based on remaining non-pawn material on the board.
+// Phase is 1.0 at the starting position and 0.0 when only kings/pawns remain.
+func computeGamePhase(board *engine.Board) float64 {
+	material := countNonPawnMaterial(board)
+	if material <= endgameThreshold {
+		return 0.0
+	}
+	if material >= totalStartingMaterial {
+		return 1.0
+	}
+	return (material - endgameThreshold) / (totalStartingMaterial - endgameThreshold)
+}
+
+// countNonPawnMaterial sums the piece values for all non-pawn, non-king pieces
+// on the board (both colors combined).
+func countNonPawnMaterial(board *engine.Board) float64 {
+	material := 0.0
+	for sq := 0; sq < 64; sq++ {
+		piece := board.PieceAt(engine.Square(sq))
+		if piece.IsEmpty() {
+			continue
+		}
+		pieceType := piece.Type()
+		if pieceType == engine.Pawn || pieceType == engine.King {
+			continue
+		}
+		material += pieceValues[pieceType]
+	}
+	return material
+}
+
+// isPassedPawn checks if a pawn at the given square is a passed pawn.
+// A passed pawn is a pawn with no enemy pawns on the same file or adjacent
+// files that can block or capture it.
+func isPassedPawn(board *engine.Board, sq int, color engine.Color) bool {
+	file := sq % 8
+	rank := sq / 8
+
+	// Check files: current file and adjacent files
+	for f := max(0, file-1); f <= min(7, file+1); f++ {
+		// Check ranks ahead of this pawn
+		if color == engine.White {
+			// White pawns move up (higher ranks)
+			for r := rank + 1; r <= 7; r++ {
+				checkSq := r*8 + f
+				piece := board.PieceAt(engine.Square(checkSq))
+				if !piece.IsEmpty() && piece.Type() == engine.Pawn && piece.Color() == engine.Black {
+					return false // Blocked by enemy pawn
+				}
+			}
+		} else {
+			// Black pawns move down (lower ranks)
+			for r := rank - 1; r >= 0; r-- {
+				checkSq := r*8 + f
+				piece := board.PieceAt(engine.Square(checkSq))
+				if !piece.IsEmpty() && piece.Type() == engine.Pawn && piece.Color() == engine.White {
+					return false // Blocked by enemy pawn
+				}
+			}
+		}
+	}
+	return true
+}
+
+// evaluatePassedPawns scores passed pawns from White's perspective.
+// Bonus is scaled by (1.0 + (1.0 - phase)) to double in pure endgame.
+func evaluatePassedPawns(board *engine.Board, phase float64) float64 {
+	score := 0.0
+	phaseMultiplier := 1.0 + (1.0 - phase) // 1.0 in opening, 2.0 in endgame
+
+	for sq := 0; sq < 64; sq++ {
+		piece := board.PieceAt(engine.Square(sq))
+		if piece.IsEmpty() || piece.Type() != engine.Pawn {
+			continue
+		}
+
+		color := piece.Color()
+		if !isPassedPawn(board, sq, color) {
+			continue
+		}
+
+		rank := sq / 8
+		var bonus float64
+		if color == engine.White {
+			bonus = passedPawnBonus[rank] * phaseMultiplier
+			score += bonus
+		} else {
+			// For Black, flip the rank (rank 1 for Black = rank 6 equivalent)
+			flippedRank := 7 - rank
+			bonus = passedPawnBonus[flippedRank] * phaseMultiplier
+			score -= bonus
+		}
+	}
+	return score
 }

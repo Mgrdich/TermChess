@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/Mgrdich/TermChess/internal/bot"
+	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -34,6 +35,16 @@ const (
 	ScreenResumePrompt
 	// ScreenDrawPrompt is displayed when one player offers a draw
 	ScreenDrawPrompt
+	// ScreenBvBBotSelect allows the user to choose bot difficulties for Bot vs Bot mode
+	ScreenBvBBotSelect
+	// ScreenBvBGameMode allows the user to choose single game or multi-game mode
+	ScreenBvBGameMode
+	// ScreenBvBGridConfig allows the user to select grid layout for viewing games
+	ScreenBvBGridConfig
+	// ScreenBvBGamePlay is the main screen for watching Bot vs Bot games
+	ScreenBvBGamePlay
+	// ScreenBvBStats is displayed after all Bot vs Bot games finish
+	ScreenBvBStats
 )
 
 // GameType represents the type of chess game being played.
@@ -44,6 +55,8 @@ const (
 	GameTypePvP GameType = iota
 	// GameTypePvBot is a player vs bot game (for future bot support)
 	GameTypePvBot
+	// GameTypeBvB is a bot vs bot game
+	GameTypeBvB
 )
 
 // BotDifficulty represents the difficulty level of the chess bot.
@@ -73,6 +86,10 @@ type Model struct {
 	screen Screen
 	// config holds display configuration options
 	config Config
+	// termWidth holds the current terminal width in characters
+	termWidth int
+	// termHeight holds the current terminal height in lines
+	termHeight int
 
 	// Input state
 	// input holds the current user input text
@@ -119,7 +136,55 @@ type Model struct {
 	drawOfferedByBlack bool
 	// drawByAgreement indicates if the game ended by draw agreement
 	drawByAgreement bool
+
+	// Bot vs Bot fields
+	// bvbWhiteDiff stores the selected bot difficulty for White in BvB mode
+	bvbWhiteDiff BotDifficulty
+	// bvbBlackDiff stores the selected bot difficulty for Black in BvB mode
+	bvbBlackDiff BotDifficulty
+	// bvbSelectingWhite indicates whether we're selecting the White bot (true) or Black bot (false)
+	bvbSelectingWhite bool
+	// bvbGameCount stores the number of games to play in multi-game mode
+	bvbGameCount int
+	// bvbCountInput holds the text input for game count entry
+	bvbCountInput string
+	// bvbInputtingCount indicates whether we're in text input mode for game count
+	bvbInputtingCount bool
+	// bvbGridRows stores the number of rows in the grid layout
+	bvbGridRows int
+	// bvbGridCols stores the number of columns in the grid layout
+	bvbGridCols int
+	// bvbCustomGridInput holds the text input for custom grid dimensions
+	bvbCustomGridInput string
+	// bvbInputtingGrid indicates whether we're in text input mode for custom grid
+	bvbInputtingGrid bool
+	// bvbManager holds the session manager for the current BvB session
+	bvbManager *bvb.SessionManager
+	// bvbSpeed stores the current playback speed
+	bvbSpeed bvb.PlaybackSpeed
+	// bvbSelectedGame tracks which game is focused in single view (0-indexed)
+	bvbSelectedGame int
+	// bvbViewMode tracks whether we're in grid or single-board view
+	bvbViewMode BvBViewMode
+	// bvbPaused tracks whether games are paused
+	bvbPaused bool
+	// bvbPageIndex tracks the current page in grid view
+	bvbPageIndex int
+	// bvbStatsSelection tracks the selected option on the stats screen (0=New Session, 1=Return to Menu)
+	bvbStatsSelection int
+	// bvbStatsResultsPage tracks the current page of individual results on the stats screen
+	bvbStatsResultsPage int
 }
+
+// BvBViewMode represents the display mode for BvB gameplay.
+type BvBViewMode int
+
+const (
+	// BvBGridView shows multiple boards in a grid
+	BvBGridView BvBViewMode = iota
+	// BvBSingleView shows a single board with full details
+	BvBSingleView
+)
 
 // NewModel creates and initializes a new Model with the provided configuration.
 // The model always starts at the main menu screen.

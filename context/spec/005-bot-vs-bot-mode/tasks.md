@@ -1,0 +1,520 @@
+# Task List: Bot vs Bot Mode
+
+**Spec Directory:** `context/spec/005-bot-vs-bot-mode/`
+**Status:** Ready for Implementation
+**Strategy:** Vertical slicing - each task produces a runnable, testable increment
+
+---
+
+## Overview
+
+This task list breaks down the Bot vs Bot Mode feature into small, incremental vertical slices. After completing each main task, the application should remain in a working state with visible progress toward the complete feature.
+
+---
+
+## Task Breakdown
+
+### Phase 1: Core BvB Package & Single Game
+
+#### Task 1: Create BvB Types and GameSession (Single Game, No UI)
+**Goal:** Establish the `internal/bvb/` package with types and a working single-game session that runs to completion.
+
+- [x] Create `internal/bvb/` package directory
+- [x] Create `internal/bvb/types.go`:
+  - [x] Define `PlaybackSpeed` enum (Instant, Fast, Normal, Slow) with `Duration()` method
+  - [x] Define `SessionState` enum (Running, Paused, Finished)
+  - [x] Define `GameResult` struct (GameNumber, Winner, WinnerColor, EndReason, MoveCount, Duration, FinalFEN, MoveHistory)
+- [x] Create `internal/bvb/session.go`:
+  - [x] Define `GameSession` struct with board, engines, state, mutex, channels
+  - [x] Implement `NewGameSession(gameNumber, whiteEngine, blackEngine, whiteName, blackName, speed *PlaybackSpeed) *GameSession`
+  - [x] Implement `Run()` goroutine: loop computing moves, applying them, checking game over
+  - [x] Implement `CurrentBoard()` thread-safe board snapshot
+  - [x] Implement `CurrentMoveHistory()` thread-safe history copy
+  - [x] Implement `IsFinished() bool`
+  - [x] Implement `Result() *GameResult`
+  - [x] Implement max move limit (500 moves → forced draw)
+- [x] Create `internal/bvb/session_test.go`:
+  - [x] Test single Easy vs Easy game runs to completion
+  - [x] Test game result is populated correctly
+  - [x] Test max move limit triggers forced draw
+  - [x] Test thread-safe accessors work during active game
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Single game session runs in a goroutine and completes
+
+**Deliverable:** BvB package exists with working single-game execution. Foundation for manager.
+
+---
+
+#### Task 2: Add Pause/Resume/Abort to GameSession
+**Goal:** GameSession supports pause, resume, and abort via channel signals.
+
+- [x] Update `internal/bvb/session.go`:
+  - [x] Implement pause handling in `Run()` loop (block on resumeCh when paused)
+  - [x] Implement `Pause()` method
+  - [x] Implement `Resume()` method
+  - [x] Implement `Abort()` method (signals stopCh, closes engines)
+  - [x] Ensure engines are closed on any exit path (finish, abort)
+- [x] Update `internal/bvb/session_test.go`:
+  - [x] Test pause blocks game progress
+  - [x] Test resume continues game after pause
+  - [x] Test abort stops game mid-play, engines closed
+  - [x] Test abort during pause works correctly
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Sessions can be controlled externally
+
+**Deliverable:** GameSession fully controllable (pause/resume/abort).
+
+---
+
+#### Task 3: Add Speed Control to GameSession
+**Goal:** GameSession respects playback speed and speed changes mid-game.
+
+- [x] Update `internal/bvb/session.go`:
+  - [x] Add speed-based sleep between moves in `Run()` loop
+  - [x] For Instant: no sleep (compute as fast as possible)
+  - [x] For Fast/Normal/Slow: sleep for configured duration
+  - [x] Speed changes picked up on next iteration (shared pointer)
+- [x] Update `internal/bvb/session_test.go`:
+  - [x] Test Instant speed completes game quickly (< 5s for Easy vs Easy)
+  - [x] Test Normal speed has measurable delays between moves
+  - [x] Test speed change mid-game takes effect
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Speed control works correctly
+
+**Deliverable:** Sessions pace themselves according to configured speed.
+
+---
+
+#### Task 4: Create SessionManager for Multi-Game Orchestration
+**Goal:** SessionManager creates and manages N parallel game sessions.
+
+- [x] Create `internal/bvb/manager.go`:
+  - [x] Define `SessionManager` struct (sessions, state, speed, difficulties, names)
+  - [x] Implement `NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, gameCount) *SessionManager`
+  - [x] Implement `Start()` - creates engine instances and launches all sessions as goroutines
+  - [x] Implement `Pause()` - pauses all sessions
+  - [x] Implement `Resume()` - resumes all sessions
+  - [x] Implement `SetSpeed(speed)` - updates speed for all sessions
+  - [x] Implement `Abort()` - stops all sessions, cleans up
+  - [x] Implement `Sessions() []*GameSession` - returns sessions slice
+  - [x] Implement `AllFinished() bool`
+  - [x] Implement `State() SessionState`
+- [x] Create `internal/bvb/manager_test.go`:
+  - [x] Test creating manager with N games
+  - [x] Test Start() launches all sessions
+  - [x] Test all sessions complete (Easy vs Easy, 3 games)
+  - [x] Test Pause/Resume affects all sessions
+  - [x] Test SetSpeed propagates to all sessions
+  - [x] Test Abort stops all sessions and cleans up (no goroutine leaks)
+  - [x] Test AllFinished() returns true only when all done
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Manager orchestrates parallel games correctly
+
+**Deliverable:** Multi-game parallel execution working. Core BvB logic complete.
+
+---
+
+#### Task 5: Implement Statistics Collection
+**Goal:** Compute aggregate statistics from completed game results.
+
+- [x] Create `internal/bvb/stats.go`:
+  - [x] Define `AggregateStats` struct (TotalGames, WhiteBotName, BlackBotName, WhiteWins, BlackWins, Draws, WhiteWinPct, BlackWinPct, AvgMoveCount, AvgDuration, ShortestGame, LongestGame, IndividualResults)
+  - [x] Implement `ComputeStats(results []GameResult, whiteName, blackName string) *AggregateStats`
+  - [x] Implement `(m *SessionManager) Stats() *AggregateStats` - collects results from finished sessions
+- [x] Create `internal/bvb/stats_test.go`:
+  - [x] Test with known results: correct win counts, percentages
+  - [x] Test draws counted correctly
+  - [x] Test average move count and duration
+  - [x] Test shortest/longest game identified correctly
+  - [x] Test with single game (stats still work)
+  - [x] Test with all draws
+- [x] Run tests: `go test ./internal/bvb/`
+- [x] Verify: Statistics computed accurately
+
+**Deliverable:** Statistics collection complete. Ready for UI integration.
+
+---
+
+### Phase 2: UI Configuration Screens
+
+#### Task 6: Add "Bot vs Bot" Menu Option and BvB Bot Selection Screen
+**Goal:** User can select "Bot vs Bot" from game type menu and choose bot difficulties.
+
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `GameTypeBvB` to GameType enum
+  - [x] Add `ScreenBvBBotSelect` screen state
+  - [x] Add BvB-related fields to Model (bvbWhiteDiff, bvbBlackDiff, bvbSelectingWhite)
+- [x] Update `internal/ui/update.go`:
+  - [x] Add "Bot vs Bot" option to GameTypeSelect screen handler
+  - [x] Handle transition: GameTypeSelect → ScreenBvBBotSelect
+  - [x] Implement `handleBvBBotSelectKeys()`: navigate difficulties, select White then Black bot
+  - [x] ESC returns to GameTypeSelect (from White) or back to White selection (from Black)
+  - [x] Enter on second selection advances to next screen
+- [x] Update `internal/ui/view.go`:
+  - [x] Add rendering for ScreenBvBBotSelect (show difficulty options, indicate White/Black selection)
+  - [x] Show previously selected White difficulty when selecting Black
+  - [x] Add help text for BvB bot select screen
+- [x] Test: Navigate to Bot vs Bot, select difficulties, ESC goes back
+- [x] Verify: Menu flow works, selections stored in model
+
+**Deliverable:** User can navigate to BvB mode and select bot difficulties.
+
+---
+
+#### Task 7: Add Game Mode Selection Screen (Single/Multi-Game)
+**Goal:** User can choose single game or enter number of games for multi-game mode.
+
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `ScreenBvBGameMode` screen state
+  - [x] Add fields: bvbGameCount, bvbCountInput, bvbInputtingCount
+- [x] Update `internal/ui/update.go`:
+  - [x] Implement `handleBvBGameModeKeys()`:
+    - [x] Navigate between "Single Game" and "Multi-Game" options
+    - [x] If Multi-Game selected, show text input for game count
+    - [x] Validate input (positive integer, only digits allowed)
+    - [x] Enter advances to next screen
+    - [x] ESC returns to BvB bot select (Black selection)
+  - [x] Implement `handleBvBCountInput()` for text input mode
+  - [x] Implement `parsePositiveInt()` helper
+- [x] Update `internal/ui/view.go`:
+  - [x] Add rendering for ScreenBvBGameMode
+  - [x] Show game mode options and input field for count
+  - [x] Show matchup info (bot difficulties)
+  - [x] Add help text
+- [x] Test: Select single game, select multi-game with count input, validate error on invalid input
+- [x] Verify: Game mode and count stored correctly
+
+**Deliverable:** User can choose single or multi-game mode with count.
+
+---
+
+#### Task 8: Add Grid Configuration Screen
+**Goal:** User can select grid layout (presets or custom) before starting games.
+
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `ScreenBvBGridConfig` and `ScreenBvBGamePlay` screen states
+  - [x] Add fields: bvbGridRows, bvbGridCols, bvbCustomGridInput, bvbInputtingGrid
+  - [x] Add bvbManager field (*bvb.SessionManager)
+- [x] Update `internal/ui/update.go`:
+  - [x] Implement `handleBvBGridConfigKeys()`:
+    - [x] Show preset options: 1x1, 2x2, 2x3, 2x4
+    - [x] Show "Custom" option with row/col input (format: RxC)
+    - [x] Validate max 8 boards total (rows * cols <= 8)
+    - [x] Enter starts the BvB session
+    - [x] ESC returns to game mode screen
+  - [x] Implement `startBvBSession()`: create SessionManager, call Start(), transition to ScreenBvBGamePlay
+  - [x] Implement minimal `handleBvBGamePlayKeys()` (ESC to abort)
+  - [x] Implement `parseGridDimensions()` helper
+- [x] Update `internal/ui/view.go`:
+  - [x] Add rendering for ScreenBvBGridConfig (presets and custom input)
+  - [x] Add minimal rendering for ScreenBvBGamePlay (status display)
+  - [x] Add help text
+- [x] Test: Select grid presets, enter custom dimensions, validate max 8
+- [x] Verify: Grid config stored, session started on confirm
+
+**Deliverable:** Full BvB configuration flow complete. Games start after grid selection.
+
+---
+
+### Phase 3: BvB Gameplay Display
+
+#### Task 9: Implement Single-Board BvB View (1x1 Grid)
+**Goal:** User can watch a single bot vs bot game with move history and status.
+
+- [x] Update `internal/ui/model.go`:
+  - [x] Add fields: bvbSpeed, bvbSelectedGame, bvbViewMode, bvbPaused
+  - [x] Add `BvBViewMode` type (BvBGridView, BvBSingleView)
+- [x] Update `internal/ui/view.go`:
+  - [x] Implement `renderBvBGamePlay()` with view mode routing
+  - [x] Implement `renderBvBSingleView()`: full board, move history, bot names, move count, status, speed indicator
+  - [x] Show game result when finished, active color when running
+  - [x] Show help text with controls
+- [x] Update `internal/ui/update.go`:
+  - [x] Add `BvBTickMsg` message type
+  - [x] Implement `bvbTickCmd()` function (schedule ticks based on speed)
+  - [x] Handle BvBTickMsg: check AllFinished → stop ticking; otherwise re-render
+  - [x] Start ticking when entering ScreenBvBGamePlay (from startBvBSession)
+  - [x] Implement full `handleBvBGamePlayKeys()`:
+    - [x] Space: pause/resume
+    - [x] 1-4: change speed (Instant/Fast/Normal/Slow)
+    - [x] Tab: toggle grid/single view
+    - [x] Left/Right (h/l): navigate between games in single view
+    - [x] ESC: abort and return to menu
+- [x] Test: Speed change, pause/resume, game navigation, view toggle, tick scheduling, render
+- [x] Verify: Board updates, moves display, controls work
+
+**Deliverable:** First playable BvB experience. Single game watchable end-to-end.
+
+---
+
+#### Task 10: Implement Grid View for Multi-Game Display
+**Goal:** User can watch multiple games simultaneously in a grid layout.
+
+- [x] Update `internal/ui/view.go`:
+  - [x] Implement `renderBvBGridView()` function:
+    - [x] Render compact boards using lipgloss JoinHorizontal/JoinVertical
+    - [x] Each board shows: position, game number, move count, status
+    - [x] Completed games visually distinguished (dimmed style)
+  - [x] Implement `renderCompactBoardCell()` compact board renderer
+  - [x] Calculate grid layout based on bvbGridRows/bvbGridCols
+- [x] Update `internal/ui/view.go`:
+  - [x] Route to grid view or single view based on bvbViewMode
+  - [x] In grid view, show page indicator if games > grid slots
+- [x] Update `internal/ui/update.go`:
+  - [x] Tab key: toggle between GridView and SingleView
+  - [x] In grid view: ←/→ navigate pages (no wrap)
+  - [x] In single view: ←/→ navigate between games (with wrap)
+- [x] Test: Grid view renders with multiple games
+- [x] Test: Page navigation in grid view
+- [x] Verify: Grid renders correctly, page navigation works, page indicator shows/hides
+
+**Deliverable:** Multi-game grid display working. Full viewing experience.
+
+---
+
+#### Task 11: Implement Page Navigation and Game Selection
+**Goal:** User can navigate pages in grid view and select specific games in single view.
+
+- [x] Update `internal/ui/model.go`:
+  - [x] Add field: bvbPageIndex (implemented in Task 10)
+- [x] Update `internal/ui/update.go`:
+  - [x] Grid view: ←/→ changes bvbPageIndex (clamped, no wrap) (Task 10)
+  - [x] Single view: ←/→ changes bvbSelectedGame (with wrap) (Task 9)
+  - [x] Show current page/game indicator
+- [x] Update `internal/ui/view.go`:
+  - [x] Grid view: display correct subset of games based on page index (Task 10)
+  - [x] Single view: display selected game's full details (board, move history, bot names) (Task 9)
+  - [x] Page indicator: "Page 1/3" in grid view, "Game X of Y" in single view
+- [x] Test: Navigate between pages, navigate between games in single view
+- [x] Test: Page clamp works (can't go past last page)
+- [x] Verify: Navigation smooth, correct games displayed
+
+**Deliverable:** Full navigation between pages and games working.
+
+---
+
+### Phase 4: Statistics & Polish
+
+#### Task 12: Implement Statistics Screen
+**Goal:** After all games finish, user sees comprehensive statistics.
+
+- [x] Update `internal/ui/model.go`:
+  - [x] Add `ScreenBvBStats` screen state
+  - [x] Add `bvbStatsSelection` field
+- [x] Update `internal/ui/update.go`:
+  - [x] When BvBTickMsg fires and AllFinished(): transition to ScreenBvBStats
+  - [x] Implement `handleBvBStatsKeys()` with up/down/enter/esc
+  - [x] Implement `handleBvBStatsSelection()` for New Session / Return to Menu
+- [x] Update `internal/ui/view.go`:
+  - [x] Implement `renderBvBStats()` function:
+    - [x] Single game: winner/draw, total moves, duration
+    - [x] Multi-game: wins per bot (with name), draws, win percentages
+    - [x] Average move count, average duration
+    - [x] Shortest/longest game (with game number)
+    - [x] Individual game results list
+  - [x] Show options: "New Session" / "Return to Menu"
+- [x] Test: Transition to stats when all games finish
+- [x] Test: Single game shows single-game stats
+- [x] Test: Multi-game shows aggregate stats
+- [x] Test: Navigation options work correctly (up/down/enter/esc)
+- [x] Verify: All statistics display correctly
+
+**Deliverable:** Complete statistics display. Full BvB flow end-to-end.
+
+---
+
+#### Task 13: Add FEN Export During BvB Gameplay
+**Goal:** User can export FEN of the currently focused game to clipboard.
+
+- [x] Update `internal/ui/update.go`:
+  - [x] On 'f' key press during ScreenBvBGamePlay:
+    - [x] Get focused game (bvbSelectedGame in single view, first visible in grid view)
+    - [x] Get current board from session via `CurrentBoard()`
+    - [x] Call `board.ToFEN()` to get FEN string
+    - [x] Copy to clipboard using existing clipboard utility
+    - [x] Show status message "FEN copied to clipboard"
+  - [x] Updated help text in both views to show 'f: FEN'
+- [x] Test: Press 'f' during game in single view
+- [x] Test: Press 'f' during game in grid view
+- [x] Test: Press 'f' with no manager (no crash)
+- [x] Verify: Correct game's FEN is exported
+
+**Deliverable:** FEN export working during BvB gameplay.
+
+---
+
+#### Task 14: Handle Edge Cases and Error Conditions
+**Goal:** Graceful handling of terminal size issues, engine errors, and cleanup.
+
+- [x] Update `internal/ui/view.go`:
+  - [x] Check terminal size before rendering grid
+  - [x] If terminal too small: show warning message suggesting Tab to switch
+- [x] Update `internal/bvb/session.go`:
+  - [x] Engine.SelectMove() errors already handled via finishWithError()
+  - [x] Added 30-second context timeout per move (prevent infinite computation)
+- [x] Update `internal/ui/update.go`:
+  - [x] ESC during ScreenBvBGamePlay: abort manager, clean up (already done)
+  - [x] Ctrl+C: abort bvbManager before quitting
+  - [x] 'q' key: abort bvbManager before quitting
+  - [x] Handle tea.WindowSizeMsg to track terminal dimensions
+- [x] Add integration tests:
+  - [x] Test Ctrl+C cleans up BvB manager
+  - [x] Test 'q' cleans up BvB manager
+  - [x] Test terminal size too small shows warning
+  - [x] Test terminal size large enough shows grid
+  - [x] Test WindowSizeMsg updates dimensions
+- [x] Run all tests: `go test ./internal/bvb/ ./internal/ui/`
+- [x] Verify: No panics, no leaks, graceful degradation
+
+**Deliverable:** Robust error handling. Production-ready quality.
+
+---
+
+#### Task 15: Final Integration Testing and Polish
+**Goal:** End-to-end validation of the complete BvB feature.
+
+- [x] Run complete flow: menu → bot select → game mode → grid → watch → stats → menu
+- [x] Test difficulty combinations (Easy/Easy in integration test)
+- [x] Test single game mode with 1x1 grid (integration test)
+- [x] Test multi-game mode (4 games) with 2x2 grid
+- [x] Test all speed settings (covered in TestBvBGamePlay_SpeedChange)
+- [x] Test speed change mid-game (covered in TestBvBGamePlay_SpeedChange)
+- [x] Test pause/resume during active games (TestBvBGamePlay_PauseResume)
+- [x] Test abort during active games (TestBvBGamePlay_EscAbortsSession)
+- [x] Test FEN export at various game states (TestBvBGamePlay_FENExport*)
+- [x] Test page navigation with more games than grid slots (TestBvBGamePlay_GridPageNavigation)
+- [x] Test single-board view navigation (TestBvBGamePlay_GameNavigation)
+- [x] Test view toggle (Tab) between grid and single (TestBvBGamePlay_ViewToggle*)
+- [x] Verify statistics accuracy (TestBvBStats_RenderMultiGame)
+- [x] Verify help text displays correctly (TestBvB_HelpTextConfig)
+- [x] Run `go vet ./...` — no issues
+- [x] Run all tests: `go test ./...` — all pass
+- [x] Verify: Feature complete, stable, no regressions
+
+**Deliverable:** Bot vs Bot Mode fully implemented and tested.
+
+---
+
+### Phase 5: Bot Evaluation Improvement
+
+#### Task 16: Add Game Phase Detection
+
+**Goal:** Compute a game phase value (0.0 = endgame, 1.0 = opening) based on remaining non-pawn material.
+
+- [x] Add `computeGamePhase(board) float64` function to `internal/bot/eval.go`
+- [x] Add `countNonPawnMaterial(board) float64` helper function
+- [x] Define constants: `totalStartingMaterial` (63.0), `endgameThreshold` (16.0)
+- [x] Phase = 1.0 at starting position, 0.0 when only kings/pawns remain
+- [x] Add unit tests in `internal/bot/eval_test.go`:
+  - [x] Starting position returns ~1.0
+  - [x] Bare kings return 0.0
+  - [x] Kings + pawns only return 0.0
+  - [x] One minor piece above threshold returns small positive phase
+  - [x] Half material returns ~0.5
+- [x] Run tests: `go test ./internal/bot/ -run TestComputeGamePhase`
+- [x] Verify: Phase detection works correctly
+
+**Deliverable:** Game phase detection function ready for use by other evaluation terms.
+
+---
+
+#### Task 17: Phase-Interpolated King Piece-Square Tables
+
+**Goal:** King evaluation uses middlegame table (safety) vs endgame table (centralization) based on game phase.
+
+- [x] Add `kingMiddlegameTable` to `internal/bot/eval.go` (rewards castled positions, penalizes exposed king)
+- [x] Update `evaluatePiecePositions` signature to accept `phase float64` parameter
+- [x] Interpolate king bonus: `phase*mgBonus + (1.0-phase)*egBonus`
+- [x] Update `evaluate()` to pass phase to `evaluatePiecePositions`
+- [x] Add unit tests:
+  - [x] King in center scores higher in endgame (phase=0) than middlegame (phase=1)
+  - [x] King on g1 (castled) scores higher in middlegame than endgame
+  - [x] Interpolation produces intermediate values at phase=0.5
+- [x] Run tests: `go test ./internal/bot/ -run "TestKing|TestEvaluate"`
+- [x] Verify: Existing tests still pass with phase-aware king eval
+
+**Deliverable:** King evaluation is phase-appropriate — safe early, centralized late.
+
+---
+
+#### Task 18: Passed Pawn Detection and Bonus
+
+**Goal:** Detect passed pawns and assign rank-scaled bonuses that increase in the endgame.
+
+- [x] Add `passedPawnBonus` table (rank-indexed bonuses, higher for advanced pawns)
+- [x] Add `isPassedPawn(board, sq, color) bool` helper function
+  - [x] Check same file and adjacent files for enemy pawns ahead
+- [x] Add `evaluatePassedPawns(board, phase) float64` function
+  - [x] For each pawn, check if passed
+  - [x] Apply rank-based bonus scaled by `(1.0 + (1.0 - phase))` (doubles in endgame)
+  - [x] Score from White's perspective
+- [x] Wire into `evaluate()` for Medium+ difficulty
+- [x] Add unit tests:
+  - [x] Isolated passed pawn on e5 detected correctly
+  - [x] Pawn blocked by enemy pawn on same file is NOT passed
+  - [x] Pawn blocked by enemy pawn on adjacent file is NOT passed
+  - [x] Advanced passed pawn (rank 6-7) gets higher bonus than rank 3-4
+  - [x] Endgame phase amplifies passed pawn bonus
+  - [x] Both White and Black passed pawns scored correctly
+- [x] Run tests: `go test ./internal/bot/ -run TestPassedPawn`
+- [x] Verify: Passed pawn evaluation correct
+
+**Deliverable:** Bots recognize and push passed pawns, especially in endgames.
+
+---
+
+#### Task 19: Mop-Up Evaluation (Winning Endgame)
+
+**Goal:** When ahead in material in the endgame, reward driving the enemy king to the corner.
+
+- [x] Add `centerDistance(sq) float64` helper (manhattan distance from center, 0-6 range)
+- [x] Add `evaluateMopUp(board, phase, materialBalance) float64` function
+  - [x] Only active when `phase < 0.5` AND `abs(materialBalance) >= 3.0`
+  - [x] Find both kings
+  - [x] Reward enemy king far from center (higher center distance)
+  - [x] Reward own king close to enemy king (king proximity)
+  - [x] Scale by `(1.0 - phase)` for endgame strength
+  - [x] Return positive for White advantage, negative for Black advantage
+- [x] Wire into `evaluate()` for Hard difficulty only
+- [x] Add unit tests:
+  - [x] Mop-up inactive in middlegame (phase=0.8)
+  - [x] Mop-up inactive when material is even
+  - [x] Mop-up active with +4 material advantage in endgame
+  - [x] Enemy king in corner scores higher than enemy king in center
+  - [x] Own king close to enemy king scores higher than far away
+  - [x] Works for both White and Black advantages (sign flips)
+- [x] Run tests: `go test ./internal/bot/ -run TestMopUp`
+- [x] Verify: Winning side actively pursues checkmate in endgames
+
+**Deliverable:** Hard bot can convert material advantages to checkmate.
+
+---
+
+#### Task 20: Integration Testing and Validation
+
+**Goal:** Verify the complete evaluation improvement works end-to-end with reduced draw rates.
+
+- [x] Run all existing eval tests: `go test ./internal/bot/ -run TestEvaluate`
+- [x] Run all existing minimax tests: `go test ./internal/bot/ -run TestMinimax`
+- [x] Run `go vet ./...`
+- [x] Verify no performance regression (minimax tests complete in similar time)
+- [ ] Run a BvB session manually: Medium vs Hard, 5 games at Instant speed
+- [ ] Verify: Fewer draws than before, Hard bot wins more consistently
+- [ ] Run a BvB session: Easy vs Medium, verify Medium dominates
+- [x] All tests pass: `go test ./internal/bot/ ./internal/bvb/ ./internal/ui/` (excluding pre-existing timeout in TestDifficulty_HardVsMedium)
+
+**Deliverable:** Evaluation improvement validated. More decisive games.
+
+---
+
+## Summary
+
+**Total Tasks:** 20 tasks organized in 5 phases
+**Strategy:** Vertical slicing with incremental, runnable deliverables
+
+### Key Milestones:
+1. **Phase 1 (Tasks 1-5):** Core BvB logic package complete (sessions, manager, stats)
+2. **Phase 2 (Tasks 6-8):** UI configuration flow complete (menu → bot select → game mode → grid)
+3. **Phase 3 (Tasks 9-11):** BvB gameplay display working (single view, grid view, navigation)
+4. **Phase 4 (Tasks 12-15):** Statistics, polish, edge cases, final testing
+5. **Phase 5 (Tasks 16-20):** Bot evaluation improvement (game phase, passed pawns, mop-up)
