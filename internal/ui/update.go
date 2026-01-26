@@ -1395,7 +1395,13 @@ func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
 	blackName := botDifficultyName(m.bvbBlackDiff) + " Bot"
 
 	manager := bvb.NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, m.bvbGameCount)
-	manager.Start()
+	if err := manager.Start(); err != nil {
+		// Engine creation failed - stay on game mode screen and show error
+		m.errorMsg = "Failed to start bot session: " + err.Error()
+		m.screen = ScreenBvBGameMode
+		m.bvbInputtingCount = false
+		return m, nil
+	}
 
 	m.bvbManager = manager
 	m.bvbSpeed = bvb.SpeedNormal
