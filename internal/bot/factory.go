@@ -89,7 +89,7 @@ func NewMinimaxEngine(difficulty Difficulty, opts ...EngineOption) (Engine, erro
 		cfg.searchDepth = 4
 	case Hard:
 		cfg.timeLimit = 8 * time.Second
-		cfg.searchDepth = 6
+		cfg.searchDepth = 7
 	default:
 		return nil, fmt.Errorf("invalid difficulty for minimax: %d (expected Medium or Hard)", difficulty)
 	}

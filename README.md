@@ -152,6 +152,16 @@ Space: pause | 1-4: speed | Tab: view | ESC: abort
 **Multi-Game Mode:**
 Run multiple games simultaneously and view them in a grid layout. After all games complete, see detailed statistics including win rates, average game length, and individual game results.
 
+### Bot Difficulty Levels
+
+| Difficulty | Engine | Search Depth | Time Limit | Description |
+|------------|--------|--------------|------------|-------------|
+| Easy       | Random | N/A          | 2s         | Weighted random moves, beatable by beginners |
+| Medium     | Minimax | 4           | 4s         | Alpha-beta pruning, finds basic tactics |
+| Hard       | Minimax | 7           | 8s         | Deeper search, finds complex tactics |
+
+Hard bot consistently beats Medium in automated testing due to its 3-ply depth advantage.
+
 ### Configuration
 
 Settings are saved to `~/.termchess/config.toml` and include:
