@@ -76,6 +76,7 @@ _Enhanced user interaction and visual experience._
   - [ ] **add more navigations** add more intuitive navigations 
   - [ ] **UI optimization during BOT VS BOT** make the UI navigation more smooth to avoid lags 
   - [ ] **BOT vs BOT statistics** add statistics page to games while games are still running
+  - [ ] **BOT vs BOT** speed should only have 2 options normal vs instant 
 
 ---
 
