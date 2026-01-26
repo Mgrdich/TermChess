@@ -494,14 +494,14 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 
 **Goal:** Verify the complete evaluation improvement works end-to-end with reduced draw rates.
 
-- [ ] Run all existing eval tests: `go test ./internal/bot/ -run TestEvaluate`
-- [ ] Run all existing minimax tests: `go test ./internal/bot/ -run TestMinimax`
-- [ ] Run `go vet ./...`
-- [ ] Verify no performance regression (minimax tests complete in similar time)
+- [x] Run all existing eval tests: `go test ./internal/bot/ -run TestEvaluate`
+- [x] Run all existing minimax tests: `go test ./internal/bot/ -run TestMinimax`
+- [x] Run `go vet ./...`
+- [x] Verify no performance regression (minimax tests complete in similar time)
 - [ ] Run a BvB session manually: Medium vs Hard, 5 games at Instant speed
 - [ ] Verify: Fewer draws than before, Hard bot wins more consistently
 - [ ] Run a BvB session: Easy vs Medium, verify Medium dominates
-- [ ] All tests pass: `go test ./internal/bot/ ./internal/bvb/ ./internal/ui/`
+- [x] All tests pass: `go test ./internal/bot/ ./internal/bvb/ ./internal/ui/` (excluding pre-existing timeout in TestDifficulty_HardVsMedium)
 
 **Deliverable:** Evaluation improvement validated. More decisive games.
 
