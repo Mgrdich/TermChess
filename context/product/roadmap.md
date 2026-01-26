@@ -47,13 +47,13 @@ _Once the foundational features are complete, we will move on to these high-valu
 
 _Automated gameplay for testing, entertainment, and analysis._
 
-- [ ] **Bot vs Bot Mode**
-  - [ ] **Bot Selection:** Allow users to select two bot difficulties to play against each other (e.g., Easy vs Hard, Medium vs Medium).
-  - [ ] **Automated Gameplay:** Bots play a complete game autonomously while the user watches.
-  - [ ] **Playback Speed Control:** Users can adjust move speed (instant, fast, normal, slow) to control pacing.
-  - [ ] **Pause/Resume:** Users can pause the game at any point to examine the position, then resume play.
-  - [ ] **Multi-Game Mode:** Users can run multiple games in sequence (e.g., 10 games) between two bots.
-  - [ ] **Aggregate Statistics:** After multi-game runs, display results summary (wins, losses, draws, average moves, average duration).
+- [x] **Bot vs Bot Mode**
+  - [x] **Bot Selection:** Allow users to select two bot difficulties to play against each other (e.g., Easy vs Hard, Medium vs Medium).
+  - [x] **Automated Gameplay:** Bots play a complete game autonomously while the user watches.
+  - [x] **Playback Speed Control:** Users can adjust move speed (instant, fast, normal, slow) to control pacing.
+  - [x] **Pause/Resume:** Users can pause the game at any point to examine the position, then resume play.
+  - [x] **Multi-Game Mode:** Users can run multiple games in sequence (e.g., 10 games) between two bots.
+  - [x] **Aggregate Statistics:** After multi-game runs, display results summary (wins, losses, draws, average moves, average duration).
 
 ---
 
