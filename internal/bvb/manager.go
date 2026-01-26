@@ -9,7 +9,7 @@ import (
 
 // maxConcurrentGames limits how many games run simultaneously.
 // This prevents excessive CPU usage when running many games.
-const maxConcurrentGames = 25
+const maxConcurrentGames = 50
 
 // MaxConcurrentGames returns the maximum number of concurrent games.
 // Exported for UI display purposes.
