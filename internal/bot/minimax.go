@@ -13,12 +13,13 @@ import (
 
 // minimaxEngine implements Medium and Hard bots using minimax with alpha-beta pruning.
 type minimaxEngine struct {
-	name        string
-	difficulty  Difficulty
-	maxDepth    int
-	timeLimit   time.Duration
-	evalWeights evalWeights
-	closed      bool
+	name          string
+	difficulty    Difficulty
+	maxDepth      int
+	timeLimit     time.Duration
+	evalWeights   evalWeights
+	deterministic bool // If true, disables random tie-breaking
+	closed        bool
 }
 
 // evalWeights holds the weights for different evaluation components.
@@ -223,7 +224,8 @@ func (e *minimaxEngine) searchDepth(ctx context.Context, board *engine.Board, de
 			bestScore = score
 			bestMove = move
 			bestCount = 1
-		} else if score == bestScore {
+		} else if score == bestScore && !e.deterministic {
+			// Random tie-breaking among equal scores (disabled in deterministic mode)
 			bestCount++
 			if rand.Intn(bestCount) == 0 {
 				bestMove = move

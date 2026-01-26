@@ -29,12 +29,13 @@ func testTacticalPuzzle(t *testing.T, difficulty Difficulty, fen string, expecte
 	var bot Engine
 	var err error
 
-	// Use increased search depth for tactical tests to ensure correct solution is found
+	// Use deterministic mode for reliable test results (no random tie-breaking)
+	// and increased search depth for tactical tests to ensure correct solution is found
 	switch difficulty {
 	case Medium:
-		bot, err = NewMinimaxEngine(Medium, WithSearchDepth(5))
+		bot, err = NewMinimaxEngine(Medium, WithSearchDepth(5), WithDeterministic(true))
 	case Hard:
-		bot, err = NewMinimaxEngine(Hard, WithSearchDepth(6))
+		bot, err = NewMinimaxEngine(Hard, WithSearchDepth(6), WithDeterministic(true))
 	default:
 		t.Fatalf("invalid difficulty: %v", difficulty)
 	}
@@ -44,32 +45,26 @@ func testTacticalPuzzle(t *testing.T, difficulty Difficulty, fen string, expecte
 	}
 	defer bot.Close()
 
-	// Try up to 3 times to account for random tie-breaking
-	maxAttempts := 3
-	var lastMove string
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	move, err := bot.SelectMove(ctx, board)
+	if err != nil {
+		t.Fatalf("SelectMove() error = %v", err)
+	}
+
+	moveStr := move.String()
 	found := false
-
-	for attempt := 0; attempt < maxAttempts && !found; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		move, err := bot.SelectMove(ctx, board)
-		cancel()
-
-		if err != nil {
-			t.Fatalf("SelectMove() error = %v", err)
-		}
-
-		lastMove = move.String()
-		for _, expected := range expectedMoves {
-			if lastMove == expected {
-				found = true
-				break
-			}
+	for _, expected := range expectedMoves {
+		if moveStr == expected {
+			found = true
+			break
 		}
 	}
 
 	if !found {
-		t.Errorf("%s bot should find tactical move %v: %s, but found %s (after %d attempts)",
-			difficulty.String(), expectedMoves, description, lastMove, maxAttempts)
+		t.Errorf("%s bot should find tactical move %v: %s, but found %s",
+			difficulty.String(), expectedMoves, description, moveStr)
 	}
 }
 
@@ -82,11 +77,12 @@ func testMateDelivery(t *testing.T, difficulty Difficulty, fen string, descripti
 	var bot Engine
 	var err error
 
+	// Use deterministic mode for reliable test results
 	switch difficulty {
 	case Medium:
-		bot, err = NewMinimaxEngine(Medium)
+		bot, err = NewMinimaxEngine(Medium, WithDeterministic(true))
 	case Hard:
-		bot, err = NewMinimaxEngine(Hard)
+		bot, err = NewMinimaxEngine(Hard, WithDeterministic(true))
 	default:
 		t.Fatalf("invalid difficulty: %v", difficulty)
 	}
@@ -393,11 +389,12 @@ func TestTactical_DontHangQueen(t *testing.T) {
 			var bot Engine
 			var err error
 
+			// Use deterministic mode for reliable test results
 			switch difficulty {
 			case Medium:
-				bot, err = NewMinimaxEngine(Medium)
+				bot, err = NewMinimaxEngine(Medium, WithDeterministic(true))
 			case Hard:
-				bot, err = NewMinimaxEngine(Hard)
+				bot, err = NewMinimaxEngine(Hard, WithDeterministic(true))
 			}
 
 			if err != nil {
@@ -440,11 +437,12 @@ func TestTactical_DontHangRook(t *testing.T) {
 			var bot Engine
 			var err error
 
+			// Use deterministic mode for reliable test results
 			switch difficulty {
 			case Medium:
-				bot, err = NewMinimaxEngine(Medium)
+				bot, err = NewMinimaxEngine(Medium, WithDeterministic(true))
 			case Hard:
-				bot, err = NewMinimaxEngine(Hard)
+				bot, err = NewMinimaxEngine(Hard, WithDeterministic(true))
 			}
 
 			if err != nil {
@@ -482,11 +480,12 @@ func TestTactical_DontAllowBackRankMate(t *testing.T) {
 			var bot Engine
 			var err error
 
+			// Use deterministic mode for reliable test results
 			switch difficulty {
 			case Medium:
-				bot, err = NewMinimaxEngine(Medium)
+				bot, err = NewMinimaxEngine(Medium, WithDeterministic(true))
 			case Hard:
-				bot, err = NewMinimaxEngine(Hard)
+				bot, err = NewMinimaxEngine(Hard, WithDeterministic(true))
 			}
 
 			if err != nil {
