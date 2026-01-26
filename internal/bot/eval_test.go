@@ -520,10 +520,12 @@ func TestEvaluate_DifficultyLevels(t *testing.T) {
 			scoreMedium, scoreEasy)
 	}
 
-	// Medium and Hard should be equal (both use same evaluation components)
-	if scoreMedium != scoreHard {
-		t.Errorf("Medium and Hard should evaluate the same: Medium=%v, Hard=%v",
-			scoreMedium, scoreHard)
+	// Hard may differ from Medium due to king safety and mop-up evaluation
+	// In this position (pure endgame with material advantage), Hard uses mop-up eval
+	// which adds bonuses for driving enemy king to corner
+	if scoreHard < scoreMedium {
+		t.Errorf("Hard should score >= Medium due to king safety and mop-up bonuses: Hard=%v, Medium=%v",
+			scoreHard, scoreMedium)
 	}
 
 	// Test with starting position - should be close to balanced for all
@@ -1289,5 +1291,219 @@ func TestEvaluatePassedPawns_EndgameAmplification(t *testing.T) {
 	// Verify the endgame bonus is exactly double the opening bonus
 	if math.Abs(scoreEndgame-2*scoreOpening) > 0.01 {
 		t.Errorf("Endgame score should be 2x opening score: endgame=%v, opening=%v", scoreEndgame, scoreOpening)
+	}
+}
+
+// Mop-up evaluation tests
+
+func TestCenterDistance(t *testing.T) {
+	tests := []struct {
+		name     string
+		sq       int
+		expected float64
+	}{
+		// Center squares should have low distance (~1)
+		{name: "d4", sq: 27, expected: 1.0}, // d4 = rank 3, file 3 -> |3-3.5| + |3-3.5| = 1.0
+		{name: "e4", sq: 28, expected: 1.0}, // e4 = rank 3, file 4 -> |4-3.5| + |3-3.5| = 1.0
+		{name: "d5", sq: 35, expected: 1.0}, // d5 = rank 4, file 3 -> |3-3.5| + |4-3.5| = 1.0
+		{name: "e5", sq: 36, expected: 1.0}, // e5 = rank 4, file 4 -> |4-3.5| + |4-3.5| = 1.0
+		// Corner squares should have distance 7 (max manhattan distance from center)
+		{name: "a1", sq: 0, expected: 7.0},  // a1 = rank 0, file 0 -> |0-3.5| + |0-3.5| = 7.0
+		{name: "h1", sq: 7, expected: 7.0},  // h1 = rank 0, file 7 -> |7-3.5| + |0-3.5| = 7.0
+		{name: "a8", sq: 56, expected: 7.0}, // a8 = rank 7, file 0 -> |0-3.5| + |7-3.5| = 7.0
+		{name: "h8", sq: 63, expected: 7.0}, // h8 = rank 7, file 7 -> |7-3.5| + |7-3.5| = 7.0
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dist := centerDistance(tt.sq)
+			if math.Abs(dist-tt.expected) > 0.01 {
+				t.Errorf("centerDistance(%d) = %v, want %v", tt.sq, dist, tt.expected)
+			}
+		})
+	}
+}
+
+func TestKingDistance(t *testing.T) {
+	tests := []struct {
+		name     string
+		sq1      int
+		sq2      int
+		expected float64
+	}{
+		{name: "same_square", sq1: 28, sq2: 28, expected: 0.0},       // e4 to e4
+		{name: "adjacent_file", sq1: 28, sq2: 29, expected: 1.0},    // e4 to f4
+		{name: "adjacent_rank", sq1: 28, sq2: 36, expected: 1.0},    // e4 to e5
+		{name: "diagonal", sq1: 28, sq2: 37, expected: 1.0},         // e4 to f5
+		{name: "opposite_corners", sq1: 0, sq2: 63, expected: 7.0},  // a1 to h8
+		{name: "same_rank_far", sq1: 0, sq2: 7, expected: 7.0},      // a1 to h1
+		{name: "same_file_far", sq1: 0, sq2: 56, expected: 7.0},     // a1 to a8
+		{name: "two_squares_away", sq1: 28, sq2: 30, expected: 2.0}, // e4 to g4
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dist := kingDistance(tt.sq1, tt.sq2)
+			if math.Abs(dist-tt.expected) > 0.01 {
+				t.Errorf("kingDistance(%d, %d) = %v, want %v", tt.sq1, tt.sq2, dist, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEvaluateMopUp_InactiveMiddlegame(t *testing.T) {
+	// Middlegame position (phase >= 0.5) should return 0.0
+	// White is ahead by 5 pawns (rook) but still in middlegame
+	fen := "4k3/8/8/8/8/8/8/R3K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.8 (middlegame)
+	score := evaluateMopUp(board, 0.8, 5.0)
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 in middlegame (phase=0.8), got %v", score)
+	}
+
+	// phase = 0.5 (boundary) should also return 0.0
+	score = evaluateMopUp(board, 0.5, 5.0)
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 at phase=0.5 boundary, got %v", score)
+	}
+}
+
+func TestEvaluateMopUp_InactiveEvenMaterial(t *testing.T) {
+	// Even material should return 0.0 even in endgame
+	fen := "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 0 (even)
+	score := evaluateMopUp(board, 0.0, 0.0)
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 with even material, got %v", score)
+	}
+
+	// Small material imbalance below threshold
+	score = evaluateMopUp(board, 0.0, 2.0) // 2 pawns ahead, below threshold of 3
+	if score != 0.0 {
+		t.Errorf("evaluateMopUp should return 0.0 when material advantage < threshold, got %v", score)
+	}
+}
+
+func TestEvaluateMopUp_ActiveWhiteWinning(t *testing.T) {
+	// White is ahead by 4+ pawns in endgame -> should return positive value
+	// White King on e4, Black King on e8
+	fen := "4k3/8/8/8/4K3/8/8/8 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 4.0 (White ahead by 4 pawns)
+	score := evaluateMopUp(board, 0.0, 4.0)
+	if score <= 0.0 {
+		t.Errorf("evaluateMopUp should return positive when White is winning in endgame, got %v", score)
+	}
+}
+
+func TestEvaluateMopUp_EnemyKingCornerBonus(t *testing.T) {
+	// Enemy king in corner should score higher than enemy king in center
+	// White is winning
+
+	// Black king in corner (a8)
+	fenCorner := "k7/8/8/8/4K3/8/8/8 w - - 0 1"
+	boardCorner, err := engine.FromFEN(fenCorner)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// Black king in center (e5)
+	fenCenter := "8/8/8/4k3/4K3/8/8/8 w - - 0 1"
+	boardCenter, err := engine.FromFEN(fenCenter)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 5.0 (White ahead by a rook)
+	scoreCorner := evaluateMopUp(boardCorner, 0.0, 5.0)
+	scoreCenter := evaluateMopUp(boardCenter, 0.0, 5.0)
+
+	if scoreCorner <= scoreCenter {
+		t.Errorf("Enemy king in corner should score higher than center: corner=%v, center=%v",
+			scoreCorner, scoreCenter)
+	}
+}
+
+func TestEvaluateMopUp_KingProximityBonus(t *testing.T) {
+	// Own king close to enemy king should score higher than far away
+	// White is winning
+	// Keep enemy king in same position to isolate the proximity effect
+
+	// White king close to Black king (e4 vs e5 = distance 1)
+	// Black king on e5 has centerDistance ~1
+	fenClose := "8/8/8/4k3/4K3/8/8/8 w - - 0 1"
+	boardClose, err := engine.FromFEN(fenClose)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// White king far from Black king (a1 vs e5 = distance 4)
+	// Black king still on e5 (same centerDistance)
+	fenFar := "8/8/8/4k3/8/8/8/K7 w - - 0 1"
+	boardFar, err := engine.FromFEN(fenFar)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = 5.0 (White ahead by a rook)
+	scoreClose := evaluateMopUp(boardClose, 0.0, 5.0)
+	scoreFar := evaluateMopUp(boardFar, 0.0, 5.0)
+
+	if scoreClose <= scoreFar {
+		t.Errorf("King close to enemy should score higher than far: close=%v, far=%v",
+			scoreClose, scoreFar)
+	}
+}
+
+func TestEvaluateMopUp_BlackWinning(t *testing.T) {
+	// When Black is winning, score should be negative
+	// Black King on e4 (central, good for attacking), White King on e8
+	fen := "4K3/8/8/8/4k3/8/8/8 w - - 0 1"
+	board, err := engine.FromFEN(fen)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	// phase = 0.0 (pure endgame), material = -4.0 (Black ahead by 4 pawns)
+	score := evaluateMopUp(board, 0.0, -4.0)
+	if score >= 0.0 {
+		t.Errorf("evaluateMopUp should return negative when Black is winning, got %v", score)
+	}
+
+	// For a proper symmetry test, use a mirrored position
+	// Black King on e5, White King on e4 (symmetric equivalent)
+	fenSymmetric := "8/8/8/4k3/4K3/8/8/8 w - - 0 1"
+	boardSymmetric, err := engine.FromFEN(fenSymmetric)
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	scoreBlackWinning := evaluateMopUp(boardSymmetric, 0.0, -5.0)
+	scoreWhiteWinning := evaluateMopUp(boardSymmetric, 0.0, 5.0)
+
+	// Magnitudes should be similar but signs opposite
+	if scoreBlackWinning >= 0.0 {
+		t.Errorf("Black winning should give negative score, got %v", scoreBlackWinning)
+	}
+	if scoreWhiteWinning <= 0.0 {
+		t.Errorf("White winning should give positive score, got %v", scoreWhiteWinning)
+	}
+	if math.Abs(math.Abs(scoreBlackWinning)-math.Abs(scoreWhiteWinning)) > 0.01 {
+		t.Errorf("Magnitude should be similar for symmetric position: black=%v, white=%v",
+			scoreBlackWinning, scoreWhiteWinning)
 	}
 }

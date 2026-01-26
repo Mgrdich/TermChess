@@ -1,6 +1,8 @@
 package bot
 
 import (
+	"math"
+
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
@@ -10,6 +12,10 @@ const totalStartingMaterial = 63.0
 
 // endgameThreshold is the material level below which the position is considered a pure endgame.
 const endgameThreshold = 16.0
+
+// mopUpMaterialThreshold is the material advantage required to activate mop-up evaluation.
+// ~3 pawns advantage is needed to activate endgame mop-up.
+const mopUpMaterialThreshold = 3.0
 
 // pieceValues defines standard chess piece values in pawns.
 var pieceValues = map[engine.PieceType]float64{
@@ -175,22 +181,23 @@ func evaluate(board *engine.Board, difficulty Difficulty) float64 {
 		return 0.0
 	}
 
-	score := 0.0
-
 	// 2. Material count (all difficulties)
-	score += countMaterial(board)
+	material := countMaterial(board)
+	score := material
 
 	// 3. Piece-square tables, passed pawns, and mobility (Medium+)
+	var phase float64
 	if difficulty >= Medium {
-		phase := computeGamePhase(board)
+		phase = computeGamePhase(board)
 		score += evaluatePiecePositions(board, phase)
 		score += evaluatePassedPawns(board, phase)
 		score += evaluateMobility(board) * 0.1 // Weight mobility at 10%
 	}
 
-	// 4. King safety (Hard only)
+	// 4. King safety and mop-up evaluation (Hard only)
 	if difficulty >= Hard {
 		score += evaluateKingSafety(board)
+		score += evaluateMopUp(board, phase, material)
 	}
 
 	return score
@@ -326,6 +333,58 @@ func findKing(board *engine.Board, color engine.Color) int {
 		}
 	}
 	return -1
+}
+
+// centerDistance returns manhattan distance from board center (0-6 range).
+// Center squares (d4,d5,e4,e5) have distance ~1, corners have distance 6.
+func centerDistance(sq int) float64 {
+	file := sq % 8
+	rank := sq / 8
+	fileDist := math.Abs(float64(file) - 3.5)
+	rankDist := math.Abs(float64(rank) - 3.5)
+	return fileDist + rankDist
+}
+
+// kingDistance returns the Chebyshev distance (max of file/rank diff) between two squares.
+func kingDistance(sq1, sq2 int) float64 {
+	file1, rank1 := sq1%8, sq1/8
+	file2, rank2 := sq2%8, sq2/8
+	fileDiff := math.Abs(float64(file1 - file2))
+	rankDiff := math.Abs(float64(rank1 - rank2))
+	return math.Max(fileDiff, rankDiff)
+}
+
+// evaluateMopUp returns a bonus for the winning side to push enemy king to corner.
+// Only active when phase < 0.5 AND abs(materialBalance) >= mopUpMaterialThreshold.
+func evaluateMopUp(board *engine.Board, phase float64, materialBalance float64) float64 {
+	// Only active in endgame with significant material advantage
+	if phase >= 0.5 || math.Abs(materialBalance) < mopUpMaterialThreshold {
+		return 0.0
+	}
+
+	whiteKingSq := findKing(board, engine.White)
+	blackKingSq := findKing(board, engine.Black)
+	if whiteKingSq == -1 || blackKingSq == -1 {
+		return 0.0
+	}
+
+	// Phase scaling: stronger in pure endgame
+	phaseScale := 1.0 - phase // 0.5 to 1.0 range when active
+
+	var score float64
+	if materialBalance > 0 {
+		// White is winning: reward Black king far from center, White king close to Black king
+		enemyCornerBonus := centerDistance(blackKingSq) * 0.1
+		kingProximityBonus := (7.0 - kingDistance(whiteKingSq, blackKingSq)) * 0.05
+		score = (enemyCornerBonus + kingProximityBonus) * phaseScale
+	} else {
+		// Black is winning: reward White king far from center, Black king close to White king
+		enemyCornerBonus := centerDistance(whiteKingSq) * 0.1
+		kingProximityBonus := (7.0 - kingDistance(blackKingSq, whiteKingSq)) * 0.05
+		score = -(enemyCornerBonus + kingProximityBonus) * phaseScale
+	}
+
+	return score
 }
 
 // evaluateKingSafetyForColor evaluates king safety for a specific color.

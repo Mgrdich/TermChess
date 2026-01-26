@@ -467,24 +467,24 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 
 **Goal:** When ahead in material in the endgame, reward driving the enemy king to the corner.
 
-- [ ] Add `centerDistance(sq) float64` helper (manhattan distance from center, 0-6 range)
-- [ ] Add `evaluateMopUp(board, phase, materialBalance) float64` function
-  - [ ] Only active when `phase < 0.5` AND `abs(materialBalance) >= 3.0`
-  - [ ] Find both kings
-  - [ ] Reward enemy king far from center (higher center distance)
-  - [ ] Reward own king close to enemy king (king proximity)
-  - [ ] Scale by `(1.0 - phase)` for endgame strength
-  - [ ] Return positive for White advantage, negative for Black advantage
-- [ ] Wire into `evaluate()` for Hard difficulty only
-- [ ] Add unit tests:
-  - [ ] Mop-up inactive in middlegame (phase=0.8)
-  - [ ] Mop-up inactive when material is even
-  - [ ] Mop-up active with +4 material advantage in endgame
-  - [ ] Enemy king in corner scores higher than enemy king in center
-  - [ ] Own king close to enemy king scores higher than far away
-  - [ ] Works for both White and Black advantages (sign flips)
-- [ ] Run tests: `go test ./internal/bot/ -run TestMopUp`
-- [ ] Verify: Winning side actively pursues checkmate in endgames
+- [x] Add `centerDistance(sq) float64` helper (manhattan distance from center, 0-6 range)
+- [x] Add `evaluateMopUp(board, phase, materialBalance) float64` function
+  - [x] Only active when `phase < 0.5` AND `abs(materialBalance) >= 3.0`
+  - [x] Find both kings
+  - [x] Reward enemy king far from center (higher center distance)
+  - [x] Reward own king close to enemy king (king proximity)
+  - [x] Scale by `(1.0 - phase)` for endgame strength
+  - [x] Return positive for White advantage, negative for Black advantage
+- [x] Wire into `evaluate()` for Hard difficulty only
+- [x] Add unit tests:
+  - [x] Mop-up inactive in middlegame (phase=0.8)
+  - [x] Mop-up inactive when material is even
+  - [x] Mop-up active with +4 material advantage in endgame
+  - [x] Enemy king in corner scores higher than enemy king in center
+  - [x] Own king close to enemy king scores higher than far away
+  - [x] Works for both White and Black advantages (sign flips)
+- [x] Run tests: `go test ./internal/bot/ -run TestMopUp`
+- [x] Verify: Winning side actively pursues checkmate in endgames
 
 **Deliverable:** Hard bot can convert material advantages to checkmate.
 
