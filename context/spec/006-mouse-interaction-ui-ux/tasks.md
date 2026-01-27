@@ -1,0 +1,204 @@
+# Tasks: Mouse Interaction & UI/UX Enhancements
+
+## Slice 1: Theme System Foundation
+*Establish the theme infrastructure with Classic theme only - app remains runnable with new theme system*
+
+- [ ] **Slice 1: Implement Theme System with Classic Theme**
+  - [ ] Create `internal/ui/theme.go` with `Theme` struct containing all color fields
+  - [ ] Define `ClassicTheme` variable with WCAG AA compliant colors
+  - [ ] Implement `GetTheme(name string) Theme` function (returns Classic for now)
+  - [ ] Add `Theme string` field to `DisplayConfig` in `internal/config/config.go` with default `"classic"`
+  - [ ] Update `configFileToConfig()` and `configToConfigFile()` conversion functions
+  - [ ] Add `theme Theme` field to UI Model and load theme on initialization
+  - [ ] Replace hardcoded lipgloss styles in `view.go` with theme-based style getters
+  - [ ] Verify app runs with new theme system (visual appearance unchanged)
+
+## Slice 2: Additional Themes
+*Add Modern and Minimalist themes with settings selection*
+
+- [ ] **Slice 2: Add Modern and Minimalist Themes with Settings Selection**
+  - [ ] Define `ModernTheme` variable with distinct WCAG AA compliant colors
+  - [ ] Define `MinimalistTheme` variable with distinct WCAG AA compliant colors
+  - [ ] Update `GetTheme()` to return correct theme by name
+  - [ ] Add theme selection option to Settings screen
+  - [ ] Theme selection updates config and persists to file
+  - [ ] Verify all three themes render correctly and persist across restarts
+
+## Slice 3: Turn Indicator Text Styling
+*Add turn-colored text using theme system*
+
+- [ ] **Slice 3: Turn-Colored Text Indicators**
+  - [ ] Add `WhiteTurnText` and `BlackTurnText` colors to Theme struct
+  - [ ] Update all three themes with appropriate turn colors
+  - [ ] Modify move input prompt to use turn-based color
+  - [ ] Modify turn status text to use turn-based color
+  - [ ] Verify turn indicator is clearly visible in all themes
+
+## Slice 4: Navigation Stack and Breadcrumbs
+*Add back navigation and location indicator*
+
+- [ ] **Slice 4: Navigation Stack with Breadcrumbs**
+  - [ ] Add `navStack []Screen` field to Model
+  - [ ] Implement `pushScreen(screen Screen)` method
+  - [ ] Implement `popScreen()` method
+  - [ ] Implement `breadcrumb() string` method
+  - [ ] Update all screen transitions to use `pushScreen()` instead of direct assignment
+  - [ ] Handle `Esc` key globally to call `popScreen()` (with appropriate exceptions)
+  - [ ] Render breadcrumb in UI header area
+  - [ ] Verify back navigation works from all screens
+
+## Slice 5: Keyboard Shortcuts Help Overlay
+*Add ? shortcut to show help modal*
+
+- [ ] **Slice 5: Keyboard Shortcuts Overlay**
+  - [ ] Add `showShortcutsOverlay bool` field to Model
+  - [ ] Handle `?` key globally to toggle overlay
+  - [ ] Create `renderShortcutsOverlay()` function with all shortcuts organized by context
+  - [ ] Render overlay as full-screen modal over current view
+  - [ ] Dismiss overlay on any key press
+  - [ ] Verify overlay displays correctly and dismisses properly
+
+## Slice 6: Global Keyboard Shortcuts
+*Implement remaining global shortcuts (n, q, s)*
+
+- [ ] **Slice 6: Global Keyboard Shortcuts**
+  - [ ] Handle `n` key globally for new game (navigate to game type selection)
+  - [ ] Handle `q` key globally for quit (with confirmation if game in progress)
+  - [ ] Handle `s` key globally for settings
+  - [ ] Ensure shortcuts are disabled during text input modes
+  - [ ] Update shortcuts overlay with all implemented shortcuts
+  - [ ] Verify all shortcuts work from appropriate screens
+
+## Slice 7: Menu Visual Hierarchy
+*Reorganize menus for better clarity*
+
+- [ ] **Slice 7: Menu Reorganization and Visual Hierarchy**
+  - [ ] Identify less-common menu options to group
+  - [ ] Add visual separators between option groups using theme colors
+  - [ ] Style primary actions more prominently than secondary actions
+  - [ ] Ensure focus indicators are visible when navigating with keyboard
+  - [ ] Verify menus are clearer and easier to navigate
+
+## Slice 8: Mouse Selection (No Highlighting Yet)
+*Basic click-to-select without visual feedback*
+
+- [ ] **Slice 8: Basic Mouse Piece Selection**
+  - [ ] Add `selectedSquare *engine.Square` field to Model
+  - [ ] Add `tea.MouseMsg` case to `Update()` function
+  - [ ] Implement `squareFromMouse(x, y int) *engine.Square` helper with fixed board position
+  - [ ] Implement `handleMouseEvent(msg tea.MouseMsg)` method
+  - [ ] Only process mouse in PvP and Player vs Bot modes (not Bot vs Bot)
+  - [ ] Click on own piece sets `selectedSquare`
+  - [ ] Click on different own piece changes selection
+  - [ ] Write unit tests for `squareFromMouse()` with various positions
+  - [ ] Verify piece selection works (no visual feedback yet, but state changes)
+
+## Slice 9: Mouse Move Execution
+*Complete moves by clicking destination*
+
+- [ ] **Slice 9: Mouse Move Execution**
+  - [ ] Add `validMoves []engine.Square` field to Model
+  - [ ] When piece selected, compute and store valid moves using `engine.Board.LegalMoves()`
+  - [ ] Click on valid destination executes the move
+  - [ ] Click on invalid destination keeps piece selected
+  - [ ] Clear selection after successful move
+  - [ ] Verify complete mouse-based moves work in PvP and vs Bot modes
+
+## Slice 10: Selection Blinking Effect
+*Add visual feedback for selected piece and valid moves*
+
+- [ ] **Slice 10: Blinking Highlight Effect**
+  - [ ] Add `blinkOn bool` field to Model
+  - [ ] Create `BlinkTickMsg` message type
+  - [ ] Start tick command (500ms interval) when piece is selected
+  - [ ] Stop tick when selection is cleared
+  - [ ] Toggle `blinkOn` on each tick
+  - [ ] Add `SelectedHighlight` and `ValidMoveHighlight` colors to all themes
+  - [ ] Update `BoardRenderer.Render()` to accept selection state parameters
+  - [ ] Apply blinking highlight style to selected square when `blinkOn` is true
+  - [ ] Apply blinking highlight style to valid move squares when `blinkOn` is true
+  - [ ] Verify blinking effect displays correctly at ~500ms intervals
+
+## Slice 11: Bot vs Bot Speed Simplification
+*Reduce speed options to Normal and Instant*
+
+- [ ] **Slice 11: Simplify Bot vs Bot Speed Options**
+  - [ ] Remove `SpeedFast` and `SpeedSlow` constants from `internal/bvb/types.go`
+  - [ ] Update `SpeedNormal` to 1 second delay
+  - [ ] Keep `SpeedInstant` as 0 delay
+  - [ ] Update UI to show only two speed options
+  - [ ] Update speed toggle controls (remove `1-4` keys, use simpler toggle)
+  - [ ] Verify speed changes work correctly during Bot vs Bot
+
+## Slice 12: Bot vs Bot Concurrency Config
+*Add configurable concurrency with auto-detection*
+
+- [ ] **Slice 12: Bot vs Bot Concurrency Control**
+  - [ ] Add `BvBConcurrency int` to `GameConfig` in `config.go`
+  - [ ] Implement `calculateDefaultConcurrency()` with tiered formula
+  - [ ] Modify `SessionManager` constructor to accept concurrency parameter
+  - [ ] If concurrency is 0, use auto-detected value
+  - [ ] Cap concurrency at `maxConcurrentGames`
+  - [ ] Display current concurrency setting when starting multi-game session
+  - [ ] Add concurrency setting to Settings screen or Bot vs Bot config screen
+  - [ ] Write unit tests for `calculateDefaultConcurrency()` formula
+  - [ ] Verify concurrency setting affects actual game parallelism
+
+## Slice 13: Bot vs Bot Engine Cleanup
+*Prevent memory leaks by destroying engines after games*
+
+- [ ] **Slice 13: Engine Lifecycle Management**
+  - [ ] Add `cleanup()` method to `GameSession` struct
+  - [ ] Implement engine destruction logic (check for `io.Closer`, set to nil)
+  - [ ] Call `cleanup()` via defer in `GameSession.Run()`
+  - [ ] Update `SessionManager.Stop()` to cleanup all sessions
+  - [ ] Ensure abort channel properly signals goroutines to exit
+  - [ ] Run memory profiling to verify no leaks after session completion
+  - [ ] Verify Bot vs Bot sessions cleanup properly when user exits
+
+## Slice 14: Bot vs Bot Game Jump Navigation
+*Add ability to jump to specific game number*
+
+- [ ] **Slice 14: Jump to Game Number**
+  - [ ] Add `bvbJumpInput string` and `bvbShowJumpPrompt bool` to Model
+  - [ ] Handle `g` key in Bot vs Bot to show jump prompt
+  - [ ] Implement text input for game number
+  - [ ] Parse input and validate (numeric, within range)
+  - [ ] Navigate to specified game on valid input
+  - [ ] Show error message for invalid input
+  - [ ] Display "Game X of Y" indicator prominently
+  - [ ] Verify jump navigation works correctly
+
+## Slice 15: Bot vs Bot Basic Live Statistics
+*Show score and progress during games*
+
+- [ ] **Slice 15: Basic Live Statistics Panel**
+  - [ ] Create `renderBvBStats()` function in `view.go`
+  - [ ] Display during `ScreenBvBGamePlay`
+  - [ ] Show current score: White Wins / Black Wins / Draws
+  - [ ] Show progress: Games Completed / Total
+  - [ ] Update stats on each `BvBTickMsg`
+  - [ ] Verify basic stats display and update correctly
+
+## Slice 16: Bot vs Bot Detailed Statistics
+*Add comprehensive statistics panel*
+
+- [ ] **Slice 16: Comprehensive Live Statistics**
+  - [ ] Add average move count per completed game
+  - [ ] Add current game duration timer
+  - [ ] Add longest game (by moves) tracking
+  - [ ] Add shortest game (by moves) tracking
+  - [ ] Add move history summary for current game (last 10 moves)
+  - [ ] Add captured pieces display for current game
+  - [ ] Verify all statistics display and update in real-time
+
+## Slice 17: Final Polish and Accessibility Verification
+*Ensure WCAG compliance and keyboard accessibility*
+
+- [ ] **Slice 17: Accessibility and Final Polish**
+  - [ ] Verify all three themes meet WCAG AA contrast standards using contrast checker
+  - [ ] Verify every interactive element is reachable via keyboard
+  - [ ] Verify focus indicators are visible throughout the app
+  - [ ] Verify mouse interaction has keyboard equivalents (algebraic notation still works)
+  - [ ] Run full manual test suite across all features
+  - [ ] Fix any remaining visual or interaction issues
