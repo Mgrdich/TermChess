@@ -151,6 +151,17 @@ func TestClassicTheme_AllFieldsSet(t *testing.T) {
 		t.Error("Expected StatusText to be set")
 	}
 
+	// Menu hierarchy colors
+	if theme.MenuPrimary == "" {
+		t.Error("Expected MenuPrimary to be set")
+	}
+	if theme.MenuSecondary == "" {
+		t.Error("Expected MenuSecondary to be set")
+	}
+	if theme.MenuSeparator == "" {
+		t.Error("Expected MenuSeparator to be set")
+	}
+
 	// Turn indicator colors
 	if theme.WhiteTurnText == "" {
 		t.Error("Expected WhiteTurnText to be set")
@@ -332,6 +343,17 @@ func TestModernTheme_AllFieldsSet(t *testing.T) {
 		t.Error("Expected StatusText to be set")
 	}
 
+	// Menu hierarchy colors
+	if theme.MenuPrimary == "" {
+		t.Error("Expected MenuPrimary to be set")
+	}
+	if theme.MenuSecondary == "" {
+		t.Error("Expected MenuSecondary to be set")
+	}
+	if theme.MenuSeparator == "" {
+		t.Error("Expected MenuSeparator to be set")
+	}
+
 	// Turn indicator colors
 	if theme.WhiteTurnText == "" {
 		t.Error("Expected WhiteTurnText to be set")
@@ -388,6 +410,17 @@ func TestMinimalistTheme_AllFieldsSet(t *testing.T) {
 	}
 	if theme.StatusText == "" {
 		t.Error("Expected StatusText to be set")
+	}
+
+	// Menu hierarchy colors
+	if theme.MenuPrimary == "" {
+		t.Error("Expected MenuPrimary to be set")
+	}
+	if theme.MenuSecondary == "" {
+		t.Error("Expected MenuSecondary to be set")
+	}
+	if theme.MenuSeparator == "" {
+		t.Error("Expected MenuSeparator to be set")
 	}
 
 	// Turn indicator colors
@@ -541,5 +574,128 @@ func TestSettingsThemeRendering(t *testing.T) {
 				t.Errorf("Expected settings output to contain %q", tt.expectedText)
 			}
 		})
+	}
+}
+
+// TestMenuHierarchyStyleMethods tests that menu hierarchy style methods work correctly.
+func TestMenuHierarchyStyleMethods(t *testing.T) {
+	config := Config{
+		Theme: ThemeNameClassic,
+	}
+	m := NewModel(config)
+
+	// Test that style methods don't panic and return non-nil styles
+	_ = m.menuPrimaryStyle()
+	_ = m.menuSecondaryStyle()
+	_ = m.selectedPrimaryStyle()
+	_ = m.selectedSecondaryStyle()
+	_ = m.menuSeparatorStyle()
+
+	// Test rendering with these styles
+	_ = m.menuPrimaryStyle().Render("New Game")
+	_ = m.menuSecondaryStyle().Render("Settings")
+	_ = m.selectedPrimaryStyle().Render("New Game")
+	_ = m.selectedSecondaryStyle().Render("Settings")
+	_ = m.renderMenuSeparator()
+
+	// If we get here without panics, the test passes
+}
+
+// TestIsPrimaryAction tests the isPrimaryAction helper function.
+func TestIsPrimaryAction(t *testing.T) {
+	tests := []struct {
+		option   string
+		expected bool
+	}{
+		{"New Game", true},
+		{"Resume Game", true},
+		{"Start", true},
+		{"Play Again", true},
+		{"New Session", true},
+		{"Settings", false},
+		{"Exit", false},
+		{"Load Game", false},
+		{"Return to Menu", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.option, func(t *testing.T) {
+			got := isPrimaryAction(tt.option)
+			if got != tt.expected {
+				t.Errorf("isPrimaryAction(%q) = %v, want %v", tt.option, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestMainMenuRendersSeparator tests that the main menu renders a separator.
+func TestMainMenuRendersSeparator(t *testing.T) {
+	config := Config{
+		Theme:        ThemeNameClassic,
+		ShowHelpText: true,
+	}
+	m := NewModel(config)
+	m.screen = ScreenMainMenu
+	m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+
+	output := m.renderMainMenu()
+
+	// Should contain the separator line
+	if !containsString(output, "────") {
+		t.Error("Expected main menu to contain separator line")
+	}
+}
+
+// TestSettingsRendersSeparators tests that the settings screen renders separators.
+func TestSettingsRendersSeparators(t *testing.T) {
+	config := Config{
+		Theme:        ThemeNameClassic,
+		ShowHelpText: true,
+	}
+	m := NewModel(config)
+	m.screen = ScreenSettings
+
+	output := m.renderSettings()
+
+	// Should contain separator lines
+	if !containsString(output, "────") {
+		t.Error("Expected settings screen to contain separator lines")
+	}
+}
+
+// TestFocusIndicatorInMainMenu tests that focus indicator (>>) is visible in main menu.
+func TestFocusIndicatorInMainMenu(t *testing.T) {
+	config := Config{
+		Theme:        ThemeNameClassic,
+		ShowHelpText: true,
+	}
+	m := NewModel(config)
+	m.screen = ScreenMainMenu
+	m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+	m.menuSelection = 0
+
+	output := m.renderMainMenu()
+
+	// Should contain the focus indicator
+	if !containsString(output, ">>") {
+		t.Error("Expected main menu to contain focus indicator '>>'")
+	}
+}
+
+// TestFocusIndicatorInSettings tests that focus indicator (>>) is visible in settings.
+func TestFocusIndicatorInSettings(t *testing.T) {
+	config := Config{
+		Theme:        ThemeNameClassic,
+		ShowHelpText: true,
+	}
+	m := NewModel(config)
+	m.screen = ScreenSettings
+	m.settingsSelection = 0
+
+	output := m.renderSettings()
+
+	// Should contain the focus indicator
+	if !containsString(output, ">>") {
+		t.Error("Expected settings screen to contain focus indicator '>>'")
 	}
 }

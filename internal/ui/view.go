@@ -95,6 +95,59 @@ func (m Model) breadcrumbStyle() lipgloss.Style {
 		Italic(true)
 }
 
+// menuPrimaryStyle returns the style for primary menu items (New Game, Start, Resume).
+func (m Model) menuPrimaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuPrimary).
+		Bold(true).
+		Padding(0, 2)
+}
+
+// menuSecondaryStyle returns the style for secondary menu items (Settings, Load Game, Exit).
+func (m Model) menuSecondaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSecondary).
+		Padding(0, 2)
+}
+
+// selectedPrimaryStyle returns the style for selected primary menu items.
+func (m Model) selectedPrimaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true).
+		Padding(0, 2)
+}
+
+// selectedSecondaryStyle returns the style for selected secondary menu items.
+func (m Model) selectedSecondaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Padding(0, 2)
+}
+
+// menuSeparatorStyle returns the style for menu separators.
+func (m Model) menuSeparatorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSeparator)
+}
+
+// renderMenuSeparator returns a styled horizontal separator line for menus.
+func (m Model) renderMenuSeparator() string {
+	separator := "  ────────────────"
+	return m.menuSeparatorStyle().Render(separator)
+}
+
+// isPrimaryAction returns true if the menu option is a primary action.
+// Primary actions: New Game, Resume Game, Start, Play Again, New Session
+func isPrimaryAction(option string) bool {
+	switch option {
+	case "New Game", "Resume Game", "Start", "Play Again", "New Session":
+		return true
+	default:
+		return false
+	}
+}
+
 // renderBreadcrumb renders the navigation breadcrumb if present.
 // Returns an empty string if there's no breadcrumb to display.
 func (m Model) renderBreadcrumb() string {
@@ -164,6 +217,8 @@ func (m Model) View() string {
 // renderMainMenu renders the main menu screen with title, menu options,
 // cursor indicator, help text, and any error or status messages.
 // The "Resume Game" option (if present) is visually distinct with a special indicator and color.
+// Menu is organized with visual separators between primary actions (game-related) and
+// secondary actions (settings/exit).
 func (m Model) renderMainMenu() string {
 	var b strings.Builder
 
@@ -172,27 +227,45 @@ func (m Model) renderMainMenu() string {
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
+	// Track when separator has been inserted
+	// Main menu structure: [Resume Game], New Game, Load Game | Settings, Exit
+	// Primary: Resume Game, New Game
+	// Secondary: Load Game, Settings, Exit
+	separatorInserted := false
+
 	// Render menu options with cursor indicator for selected item
 	for i, option := range m.menuOptions {
+		// Check if we need to insert a separator before this item
+		// Insert separator before "Settings" to separate game actions from app actions
+		if option == "Settings" && !separatorInserted {
+			b.WriteString(m.renderMenuSeparator())
+			b.WriteString("\n")
+			separatorInserted = true
+		}
+
 		cursor := "  " // Two spaces for non-selected items
 		optionText := option
 
 		// Check if this is the "Resume Game" option
 		isResumeGame := option == "Resume Game"
+		isPrimary := isPrimaryAction(option)
 
 		if i == m.menuSelection {
-			// Highlight the selected item
+			// Highlight the selected item with focus indicator
 			if isResumeGame {
 				// Special styling for selected Resume Game option
-				cursor = m.cursorStyle().Render("▶ ")
+				cursor = m.cursorStyle().Render(">> ")
 				resumeStyle := lipgloss.NewStyle().
 					Foreground(m.theme.StatusText).
 					Bold(true).
 					Padding(0, 2)
 				optionText = resumeStyle.Render(option)
+			} else if isPrimary {
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(option)
 			} else {
-				cursor = m.cursorStyle().Render("> ")
-				optionText = m.selectedItemStyle().Render(option)
+				cursor = m.cursorStyle().Render(" > ")
+				optionText = m.selectedSecondaryStyle().Render(option)
 			}
 		} else {
 			// Regular menu item styling
@@ -201,10 +274,11 @@ func (m Model) renderMainMenu() string {
 				resumeStyle := lipgloss.NewStyle().
 					Foreground(m.theme.StatusText).
 					Padding(0, 2)
-				optionText = resumeStyle.Render("▶ " + option)
-				cursor = "" // No cursor needed, indicator is part of the text
+				optionText = resumeStyle.Render(option)
+			} else if isPrimary {
+				optionText = m.menuPrimaryStyle().Render(option)
 			} else {
-				optionText = m.menuItemStyle().Render(option)
+				optionText = m.menuSecondaryStyle().Render(option)
 			}
 		}
 
@@ -237,6 +311,7 @@ func (m Model) renderMainMenu() string {
 
 // renderGameTypeSelect renders the GameTypeSelect screen with title, game type options,
 // cursor indicator, help text, and any error or status messages.
+// Game type options are styled with visual hierarchy - game modes are primary actions.
 func (m Model) renderGameTypeSelect() string {
 	var b strings.Builder
 
@@ -258,17 +333,18 @@ func (m Model) renderGameTypeSelect() string {
 	b.WriteString("\n")
 
 	// Render menu options with cursor indicator for selected item
+	// All game type options are primary actions
 	for i, option := range m.menuOptions {
 		cursor := "  " // Two spaces for non-selected items
 		optionText := option
 
 		if i == m.menuSelection {
-			// Highlight the selected item
-			cursor = m.cursorStyle().Render("> ")
-			optionText = m.selectedItemStyle().Render(option)
+			// Highlight the selected item with prominent focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = m.menuItemStyle().Render(option)
+			// Primary styling for all game type options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -326,12 +402,12 @@ func (m Model) renderBotSelect() string {
 		optionText := option
 
 		if i == m.menuSelection {
-			// Highlight the selected item
-			cursor = m.cursorStyle().Render("> ")
-			optionText = m.selectedItemStyle().Render(option)
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = m.menuItemStyle().Render(option)
+			// Primary styling for difficulty options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -389,12 +465,12 @@ func (m Model) renderColorSelect() string {
 		optionText := option
 
 		if i == m.menuSelection {
-			// Highlight the selected item
-			cursor = m.cursorStyle().Render("> ")
-			optionText = m.selectedItemStyle().Render(option)
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = m.menuItemStyle().Render(option)
+			// Primary styling for color options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -614,6 +690,7 @@ func (m Model) renderGameOver() string {
 
 // renderSettings renders the Settings screen showing display configuration options.
 // Each option displays its current value and can be toggled by the user.
+// Settings are grouped with visual separators between display options and appearance options.
 func (m Model) renderSettings() string {
 	var b strings.Builder
 
@@ -636,19 +713,31 @@ func (m Model) renderSettings() string {
 
 	// Define toggle settings options with their current values
 	// The order here determines the settingsSelection index (0-4 for toggles)
+	// Group 1 (Display): Use Unicode, Show Coordinates, Use Colors
+	// Group 2 (Info): Show Move History, Show Help Text
 	toggleOptions := []struct {
 		label   string
 		enabled bool
+		group   int // 1 = display, 2 = info
 	}{
-		{"Use Unicode Pieces", m.config.UseUnicode},
-		{"Show Coordinates", m.config.ShowCoords},
-		{"Use Colors", m.config.UseColors},
-		{"Show Move History", m.config.ShowMoveHistory},
-		{"Show Help Text", m.config.ShowHelpText},
+		{"Use Unicode Pieces", m.config.UseUnicode, 1},
+		{"Show Coordinates", m.config.ShowCoords, 1},
+		{"Use Colors", m.config.UseColors, 1},
+		{"Show Move History", m.config.ShowMoveHistory, 2},
+		{"Show Help Text", m.config.ShowHelpText, 2},
 	}
+
+	currentGroup := 0
 
 	// Render each toggle option with its current state
 	for i, option := range toggleOptions {
+		// Insert separator when changing groups
+		if option.group != currentGroup && currentGroup != 0 {
+			b.WriteString(m.renderMenuSeparator())
+			b.WriteString("\n")
+		}
+		currentGroup = option.group
+
 		cursor := "  " // Two spaces for non-selected items
 
 		// Determine checkbox state
@@ -661,8 +750,8 @@ func (m Model) renderSettings() string {
 		optionText := fmt.Sprintf("%s %s", option.label, checkbox)
 
 		if i == m.settingsSelection {
-			// Highlight the selected item
-			cursor = m.cursorStyle().Render("> ")
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
 			optionText = m.selectedItemStyle().Render(optionText)
 		} else {
 			// Regular menu item styling
@@ -672,6 +761,10 @@ func (m Model) renderSettings() string {
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
+	// Add separator before theme option
+	b.WriteString(m.renderMenuSeparator())
+	b.WriteString("\n")
+
 	// Render the Theme option (index 5)
 	// Get theme display name with proper capitalization
 	themeDisplayName := getThemeDisplayName(m.config.Theme)
@@ -679,7 +772,7 @@ func (m Model) renderSettings() string {
 	themeText := fmt.Sprintf("Theme: %s", themeDisplayName)
 
 	if m.settingsSelection == 5 {
-		themeCursor = m.cursorStyle().Render("> ")
+		themeCursor = m.cursorStyle().Render(">> ")
 		themeText = m.selectedItemStyle().Render(themeText)
 	} else {
 		themeText = m.menuItemStyle().Render(themeText)
@@ -901,12 +994,12 @@ func (m Model) renderDrawPrompt() string {
 		optionText := option
 
 		if i == m.drawPromptSelection {
-			// Highlight the selected item
-			cursor = m.cursorStyle().Render("> ")
-			optionText = m.selectedItemStyle().Render(option)
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = m.menuItemStyle().Render(option)
+			// Primary styling for options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -964,10 +1057,10 @@ func (m Model) renderBvBBotSelect() string {
 		optionText := option
 
 		if i == m.menuSelection {
-			cursor = m.cursorStyle().Render("> ")
-			optionText = m.selectedItemStyle().Render(option)
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			optionText = m.menuItemStyle().Render(option)
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -1051,7 +1144,7 @@ func (m Model) renderBvBGameMode() string {
 		if inputDisplay == "" {
 			inputDisplay = "_"
 		}
-		b.WriteString(inputStyle.Render("> " + inputDisplay))
+		b.WriteString(inputStyle.Render(">> " + inputDisplay))
 		b.WriteString("\n")
 
 		helpText := m.renderHelpText("ESC: back | enter: confirm | type number")
@@ -1066,10 +1159,10 @@ func (m Model) renderBvBGameMode() string {
 			optionText := option
 
 			if i == m.menuSelection {
-				cursor = m.cursorStyle().Render("> ")
-				optionText = m.selectedItemStyle().Render(option)
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(option)
 			} else {
-				optionText = m.menuItemStyle().Render(option)
+				optionText = m.menuPrimaryStyle().Render(option)
 			}
 
 			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -1321,7 +1414,7 @@ func (m Model) renderBvBGridConfig() string {
 		if inputDisplay == "" {
 			inputDisplay = "_"
 		}
-		b.WriteString(inputStyle.Render("> " + inputDisplay))
+		b.WriteString(inputStyle.Render(">> " + inputDisplay))
 		b.WriteString("\n")
 
 		helpText := m.renderHelpText("ESC: back | enter: confirm | e.g. 2x3")
@@ -1335,10 +1428,10 @@ func (m Model) renderBvBGridConfig() string {
 			optionText := option
 
 			if i == m.menuSelection {
-				cursor = m.cursorStyle().Render("> ")
-				optionText = m.selectedItemStyle().Render(option)
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(option)
 			} else {
-				optionText = m.menuItemStyle().Render(option)
+				optionText = m.menuPrimaryStyle().Render(option)
 			}
 
 			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -1476,13 +1569,25 @@ func (m Model) renderBvBStats() string {
 
 	b.WriteString("\n")
 
-	// Menu options
+	// Menu options with visual hierarchy
 	for i, opt := range m.menuOptions {
 		cursor := "  "
-		optionText := m.menuItemStyle().Render(opt)
+		var optionText string
+		isPrimary := isPrimaryAction(opt)
+
 		if i == m.bvbStatsSelection {
-			cursor = m.cursorStyle().Render("> ")
-			optionText = m.selectedItemStyle().Render(opt)
+			cursor = m.cursorStyle().Render(">> ")
+			if isPrimary {
+				optionText = m.selectedPrimaryStyle().Render(opt)
+			} else {
+				optionText = m.selectedSecondaryStyle().Render(opt)
+			}
+		} else {
+			if isPrimary {
+				optionText = m.menuPrimaryStyle().Render(opt)
+			} else {
+				optionText = m.menuSecondaryStyle().Render(opt)
+			}
 		}
 		b.WriteString(cursor + optionText)
 		b.WriteString("\n")

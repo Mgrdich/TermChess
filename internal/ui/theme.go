@@ -71,6 +71,11 @@ type Theme struct {
 	ErrorText    lipgloss.Color
 	StatusText   lipgloss.Color
 
+	// Menu hierarchy colors for visual distinction
+	MenuPrimary   lipgloss.Color // For primary actions (New Game, Start, Resume)
+	MenuSecondary lipgloss.Color // For secondary actions (Settings, Load Game, Exit)
+	MenuSeparator lipgloss.Color // For visual separators between menu groups
+
 	// Turn indicator colors (for future use)
 	WhiteTurnText lipgloss.Color
 	BlackTurnText lipgloss.Color
@@ -101,6 +106,11 @@ var themes = map[ThemeName]Theme{
 		ErrorText:    lipgloss.Color("#FF5555"), // Red
 		StatusText:   lipgloss.Color("#50FA7B"), // Green
 
+		// Menu hierarchy colors
+		MenuPrimary:   lipgloss.Color("#FAFAFA"), // Bright white for primary actions
+		MenuSecondary: lipgloss.Color("#A0A0A0"), // Dimmer for secondary actions
+		MenuSeparator: lipgloss.Color("#444444"), // Dark gray for separators
+
 		// Turn indicator colors (for future use)
 		WhiteTurnText: lipgloss.Color("#FAFAFA"), // White
 		BlackTurnText: lipgloss.Color("#626262"), // Gray
@@ -127,6 +137,11 @@ var themes = map[ThemeName]Theme{
 		ErrorText:    lipgloss.Color("#E74C3C"), // Modern red
 		StatusText:   lipgloss.Color("#4ECDC4"), // Light teal
 
+		// Menu hierarchy colors
+		MenuPrimary:   lipgloss.Color("#E0E0E0"), // Bright for primary actions
+		MenuSecondary: lipgloss.Color("#8899A6"), // Muted for secondary actions
+		MenuSeparator: lipgloss.Color("#3D4F5F"), // Dark steel for separators
+
 		// Turn indicator colors
 		WhiteTurnText: lipgloss.Color("#E0E0E0"), // Light gray
 		BlackTurnText: lipgloss.Color("#8899A6"), // Muted blue-gray
@@ -152,6 +167,11 @@ var themes = map[ThemeName]Theme{
 		HelpText:     lipgloss.Color("#707070"), // Medium gray
 		ErrorText:    lipgloss.Color("#CC6666"), // Muted red
 		StatusText:   lipgloss.Color("#88AA88"), // Muted green
+
+		// Menu hierarchy colors
+		MenuPrimary:   lipgloss.Color("#C0C0C0"), // Bright for primary actions
+		MenuSecondary: lipgloss.Color("#888888"), // Dimmer for secondary actions
+		MenuSeparator: lipgloss.Color("#505050"), // Dark gray for separators
 
 		// Turn indicator colors
 		WhiteTurnText: lipgloss.Color("#C0C0C0"), // Light gray

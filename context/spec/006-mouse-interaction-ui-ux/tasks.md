@@ -72,12 +72,12 @@
 ## Slice 7: Menu Visual Hierarchy
 *Reorganize menus for better clarity*
 
-- [ ] **Slice 7: Menu Reorganization and Visual Hierarchy**
-  - [ ] Identify less-common menu options to group
-  - [ ] Add visual separators between option groups using theme colors
-  - [ ] Style primary actions more prominently than secondary actions
-  - [ ] Ensure focus indicators are visible when navigating with keyboard
-  - [ ] Verify menus are clearer and easier to navigate
+- [x] **Slice 7: Menu Reorganization and Visual Hierarchy**
+  - [x] Identify less-common menu options to group
+  - [x] Add visual separators between option groups using theme colors
+  - [x] Style primary actions more prominently than secondary actions
+  - [x] Ensure focus indicators are visible when navigating with keyboard
+  - [x] Verify menus are clearer and easier to navigate
 
 ## Slice 8: Mouse Selection (No Highlighting Yet)
 *Basic click-to-select without visual feedback*
