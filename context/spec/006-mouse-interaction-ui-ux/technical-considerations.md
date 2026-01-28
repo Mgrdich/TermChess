@@ -441,6 +441,68 @@ type GameConfig struct {
 }
 ```
 
+**Grid Layout Stability** (`internal/ui/view.go`):
+
+The grid view for Bot vs Bot multi-game sessions must maintain stable board positions. When games complete at different times and result text is added, boards should not shift vertically.
+
+**Problem**: Currently, when a game ends, result text (e.g., "White wins by checkmate") is appended below the board, causing that cell to grow and pushing other content down.
+
+**Solution - Fixed Cell Heights**:
+```go
+const (
+    // Board is 8 rows + 2 for coordinates = 10 lines
+    // Plus 1 line for game number header
+    // Plus 2 lines for status/result text (always reserved)
+    // Plus 1 line for spacing
+    bvbCellHeight = 14
+)
+
+func (m Model) renderBvBGridCell(gameIndex int) string {
+    var lines []string
+
+    // Add game header (1 line)
+    lines = append(lines, fmt.Sprintf("Game %d", gameIndex+1))
+
+    // Add board (10 lines with coordinates)
+    boardLines := strings.Split(boardStr, "\n")
+    lines = append(lines, boardLines...)
+
+    // Add status line (always 1 line, even if empty)
+    lines = append(lines, statusText)
+
+    // Add result line (always 1 line, even if game in progress)
+    if game.IsOver() {
+        lines = append(lines, resultText)
+    } else {
+        lines = append(lines, "") // Empty placeholder
+    }
+
+    // Pad to fixed height if needed
+    for len(lines) < bvbCellHeight {
+        lines = append(lines, "")
+    }
+
+    return strings.Join(lines[:bvbCellHeight], "\n")
+}
+```
+
+**Key Implementation Points**:
+- Define a constant `bvbCellHeight` that accounts for all possible content
+- Always reserve space for result text, even when game is in progress (use empty line)
+- Truncate or pad each cell to exactly `bvbCellHeight` lines
+- Use `lipgloss.Height()` to verify consistent cell heights
+- Apply same fixed width per cell using `lipgloss.Width()`
+
+**Grid Assembly**:
+```go
+func (m Model) renderBvBGrid() string {
+    // Render each cell with fixed dimensions
+    // Use lipgloss.JoinHorizontal for rows
+    // Use lipgloss.JoinVertical for the full grid
+    // Each cell is padded/truncated to bvbCellHeight × bvbCellWidth
+}
+```
+
 ### 2.5 Accessibility
 
 **WCAG AA Compliance**:
@@ -494,6 +556,7 @@ type GameConfig struct {
 | `GameSession.cleanup()` | Engines properly nil'd, Close() called if implemented |
 | `BvBViewMode` toggle | Cycling through Grid → Single → Stats Only → Grid |
 | `renderBvBStatsOnly()` | Output contains score, progress, avg moves |
+| `renderBvBGridCell()` | Output has exactly `bvbCellHeight` lines |
 
 ### Integration Tests
 
@@ -517,6 +580,7 @@ type GameConfig struct {
 | Breadcrumb navigation | Back navigation works from all screens |
 | Concurrency testing | Test on 2, 4, 8, 16 core systems with various multipliers |
 | BvB stats-only mode | View toggle works, stats update correctly, no terminal lag at high concurrency |
+| BvB grid layout stability | Boards don't shift when games end, consistent cell heights across all states |
 
 ### Benchmarks
 

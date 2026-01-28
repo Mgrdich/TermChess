@@ -217,10 +217,25 @@
   - [ ] Verify stats-only mode works correctly with high concurrency (50+ games)
   - [ ] Verify view mode can be toggled during active session
 
-## Slice 18: Final Polish and Accessibility Verification
+## Slice 18: Bot vs Bot Grid Layout Stability
+*Fix board position shifting when games end*
+
+- [ ] **Slice 18: Grid Layout Stability**
+  - [ ] Define `bvbCellHeight` constant in `view.go` (board + header + status + result + spacing)
+  - [ ] Define `bvbCellWidth` constant based on board width with padding
+  - [ ] Create `renderBvBGridCell(gameIndex int) string` function with fixed dimensions
+  - [ ] Always reserve space for result text line (empty placeholder when game in progress)
+  - [ ] Pad or truncate each cell to exactly `bvbCellHeight` lines
+  - [ ] Use `lipgloss.Width()` to ensure consistent cell widths
+  - [ ] Update `renderBvBGrid()` to use fixed-dimension cells
+  - [ ] Verify boards don't shift when games complete at different times
+  - [ ] Verify all boards in a row maintain consistent vertical alignment
+  - [ ] Test with various grid configurations (2x2, 3x3, 4x4)
+
+## Slice 19: Final Polish and Accessibility Verification
 *Ensure WCAG compliance and keyboard accessibility*
 
-- [ ] **Slice 18: Accessibility and Final Polish**
+- [ ] **Slice 19: Accessibility and Final Polish**
   - [ ] Verify all three themes meet WCAG AA contrast standards using contrast checker
   - [ ] Verify every interactive element is reachable via keyboard
   - [ ] Verify focus indicators are visible throughout the app

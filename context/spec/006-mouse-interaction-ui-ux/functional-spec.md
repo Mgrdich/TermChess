@@ -156,6 +156,18 @@
 - [ ] Stats Only mode allows running higher concurrency without terminal performance degradation
 - [ ] Session completes successfully and shows final statistics regardless of view mode
 
+### 2.11 Bot vs Bot Grid Layout Stability
+
+**As a** user watching multiple Bot vs Bot games in grid view, **I want** the board positions to remain stable when games end, **so that** the display doesn't jump around and I can easily track all games.
+
+**Acceptance Criteria:**
+- [ ] Each board cell in the grid has a fixed height regardless of game state
+- [ ] When a game ends and result text is displayed, the board position does not shift
+- [ ] Result text (e.g., "White wins", "Draw", "Black wins") fits within the allocated cell space
+- [ ] All boards in a row maintain consistent vertical alignment
+- [ ] The grid layout remains stable throughout the entire session
+- [ ] No visual jumping or flickering when games complete at different times
+
 ---
 
 ## 3. Scope and Boundaries
@@ -174,6 +186,7 @@
 - Bot vs Bot speed simplification (Normal/Instant only)
 - Bot vs Bot concurrency control with auto-detection
 - Bot vs Bot stats-only mode for high-concurrency sessions
+- Bot vs Bot grid layout stability (fixed cell heights)
 - WCAG AA color contrast compliance
 - Full keyboard navigation as mouse alternative
 
