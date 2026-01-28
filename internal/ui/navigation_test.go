@@ -849,3 +849,357 @@ func TestIsInTextInputMode(t *testing.T) {
 func containsText(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
+
+// TestNKeyNavigatesToGameTypeSelect tests that 'n' key navigates to game type selection
+func TestNKeyNavigatesToGameTypeSelect(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenMainMenu
+	m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+
+	// Press 'n' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+	result, _ := m.handleKeyPress(msg)
+	m = result.(Model)
+
+	// Verify navigated to game type selection
+	if m.screen != ScreenGameTypeSelect {
+		t.Errorf("Expected screen to be ScreenGameTypeSelect, got %v", m.screen)
+	}
+
+	// Verify menu options are set for game type selection
+	expectedOptions := []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+	if len(m.menuOptions) != len(expectedOptions) {
+		t.Errorf("Expected %d menu options, got %d", len(expectedOptions), len(m.menuOptions))
+	}
+	for i, opt := range expectedOptions {
+		if m.menuOptions[i] != opt {
+			t.Errorf("Expected menu option %d to be '%s', got '%s'", i, opt, m.menuOptions[i])
+		}
+	}
+
+	// Verify menu selection is reset
+	if m.menuSelection != 0 {
+		t.Errorf("Expected menuSelection to be 0, got %d", m.menuSelection)
+	}
+
+	// Verify nav stack was updated
+	if len(m.navStack) != 1 || m.navStack[0] != ScreenMainMenu {
+		t.Errorf("Expected nav stack to contain MainMenu, got %v", m.navStack)
+	}
+}
+
+// TestNKeyDoesNotWorkInTextInputMode tests that 'n' key does not navigate when in text input mode
+func TestNKeyDoesNotWorkInTextInputMode(t *testing.T) {
+	testCases := []struct {
+		name  string
+		setup func(*Model)
+	}{
+		{
+			name: "FEN input screen",
+			setup: func(m *Model) {
+				m.screen = ScreenFENInput
+			},
+		},
+		{
+			name: "GamePlay screen",
+			setup: func(m *Model) {
+				m.screen = ScreenGamePlay
+				m.board = engine.NewBoard()
+			},
+		},
+		{
+			name: "BvB count input mode",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGameMode
+				m.bvbInputtingCount = true
+			},
+		},
+		{
+			name: "BvB grid input mode",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGridConfig
+				m.bvbInputtingGrid = true
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			tc.setup(&m)
+			originalScreen := m.screen
+
+			// Press 'n' key
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+			result, _ := m.handleKeyPress(msg)
+			m = result.(Model)
+
+			// Screen should NOT change to GameTypeSelect
+			if m.screen == ScreenGameTypeSelect {
+				t.Errorf("Expected 'n' key NOT to navigate to GameTypeSelect in %s", tc.name)
+			}
+
+			// For screens that handle 'n' differently (like GamePlay), just verify it didn't go to GameTypeSelect
+			// For screens that don't handle 'n', verify screen stayed the same
+			if m.screen != ScreenGameTypeSelect && m.screen != originalScreen {
+				// This is fine - the screen handler may have processed 'n' differently
+			}
+		})
+	}
+}
+
+// TestNKeyDoesNotWorkDuringActiveGameplay tests that 'n' key does not work during active games
+func TestNKeyDoesNotWorkDuringActiveGameplay(t *testing.T) {
+	screensToSkip := []Screen{
+		ScreenGameTypeSelect, // Already on game type select
+		ScreenGamePlay,       // Active gameplay
+		ScreenGameOver,       // Game over (has its own 'n' handler)
+		ScreenBvBGamePlay,    // Active BvB gameplay
+		ScreenBvBStats,       // BvB stats (has its own menu)
+	}
+
+	for _, screen := range screensToSkip {
+		t.Run(screenName(screen), func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			m.screen = screen
+
+			// Set up required state for certain screens
+			if screen == ScreenGamePlay || screen == ScreenGameOver {
+				m.board = engine.NewBoard()
+			}
+			if screen == ScreenGameTypeSelect {
+				m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+			}
+
+			originalNavStackLen := len(m.navStack)
+
+			// Press 'n' key
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+			result, _ := m.handleKeyPress(msg)
+			m = result.(Model)
+
+			// Nav stack should not have grown (no push happened from global handler)
+			// Note: screen-specific handlers may have their own 'n' behavior
+			if screen != ScreenGameOver && len(m.navStack) > originalNavStackLen {
+				t.Errorf("Expected nav stack not to grow for screen %v", screen)
+			}
+		})
+	}
+}
+
+// TestSKeyNavigatesToSettings tests that 's' key navigates to settings
+func TestSKeyNavigatesToSettings(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenMainMenu
+	m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+
+	// Press 's' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+	result, _ := m.handleKeyPress(msg)
+	m = result.(Model)
+
+	// Verify navigated to settings
+	if m.screen != ScreenSettings {
+		t.Errorf("Expected screen to be ScreenSettings, got %v", m.screen)
+	}
+
+	// Verify settings selection is reset
+	if m.settingsSelection != 0 {
+		t.Errorf("Expected settingsSelection to be 0, got %d", m.settingsSelection)
+	}
+
+	// Verify nav stack was updated
+	if len(m.navStack) != 1 || m.navStack[0] != ScreenMainMenu {
+		t.Errorf("Expected nav stack to contain MainMenu, got %v", m.navStack)
+	}
+}
+
+// TestSKeyDoesNotWorkInTextInputMode tests that 's' key does not navigate when in text input mode
+func TestSKeyDoesNotWorkInTextInputMode(t *testing.T) {
+	testCases := []struct {
+		name  string
+		setup func(*Model)
+	}{
+		{
+			name: "FEN input screen",
+			setup: func(m *Model) {
+				m.screen = ScreenFENInput
+			},
+		},
+		{
+			name: "GamePlay screen",
+			setup: func(m *Model) {
+				m.screen = ScreenGamePlay
+				m.board = engine.NewBoard()
+			},
+		},
+		{
+			name: "BvB count input mode",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGameMode
+				m.bvbInputtingCount = true
+			},
+		},
+		{
+			name: "BvB grid input mode",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGridConfig
+				m.bvbInputtingGrid = true
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			tc.setup(&m)
+
+			// Press 's' key
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+			result, _ := m.handleKeyPress(msg)
+			m = result.(Model)
+
+			// Screen should NOT change to Settings
+			if m.screen == ScreenSettings {
+				t.Errorf("Expected 's' key NOT to navigate to Settings in %s", tc.name)
+			}
+		})
+	}
+}
+
+// TestSKeyDoesNotWorkIfAlreadyOnSettings tests that 's' key does nothing when already on settings
+func TestSKeyDoesNotWorkIfAlreadyOnSettings(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenSettings
+	m.settingsSelection = 2
+
+	originalNavStackLen := len(m.navStack)
+
+	// Press 's' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+	result, _ := m.handleKeyPress(msg)
+	m = result.(Model)
+
+	// Should still be on settings
+	if m.screen != ScreenSettings {
+		t.Errorf("Expected to remain on ScreenSettings, got %v", m.screen)
+	}
+
+	// Nav stack should not have grown
+	if len(m.navStack) != originalNavStackLen {
+		t.Errorf("Expected nav stack length to remain %d, got %d", originalNavStackLen, len(m.navStack))
+	}
+
+	// Settings selection should not have been reset
+	if m.settingsSelection != 2 {
+		t.Errorf("Expected settingsSelection to remain 2, got %d", m.settingsSelection)
+	}
+}
+
+// TestGlobalShortcutsWorkFromVariousScreens tests that 'n' and 's' work from various non-text-input screens
+func TestGlobalShortcutsWorkFromVariousScreens(t *testing.T) {
+	// Screens where 'n' shortcut should work
+	nKeyScreens := []Screen{
+		ScreenMainMenu,
+		ScreenBotSelect,
+		ScreenColorSelect,
+		ScreenBvBBotSelect,
+		ScreenBvBGameMode,    // when not in count input mode
+		ScreenBvBGridConfig,  // when not in grid input mode
+		ScreenSavePrompt,     // though user should probably cancel first
+		ScreenResumePrompt,   // can start new game
+		ScreenDrawPrompt,     // though user should probably respond first
+	}
+
+	for _, screen := range nKeyScreens {
+		t.Run("n_from_"+screenName(screen), func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			m.screen = screen
+
+			// Set up required state for certain screens
+			if screen == ScreenBotSelect || screen == ScreenColorSelect || screen == ScreenBvBBotSelect {
+				m.menuOptions = []string{"Option 1", "Option 2"}
+			}
+			if screen == ScreenBvBGameMode {
+				m.menuOptions = []string{"Single Game", "Multi-Game"}
+				m.bvbInputtingCount = false
+			}
+			if screen == ScreenBvBGridConfig {
+				m.menuOptions = []string{"1x1", "2x2", "Custom"}
+				m.bvbInputtingGrid = false
+			}
+			if screen == ScreenSavePrompt || screen == ScreenDrawPrompt {
+				m.board = engine.NewBoard()
+			}
+
+			// Press 'n' key
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+			result, _ := m.handleKeyPress(msg)
+			m = result.(Model)
+
+			// Should navigate to GameTypeSelect
+			if m.screen != ScreenGameTypeSelect {
+				t.Errorf("Expected screen to be ScreenGameTypeSelect from %v, got %v", screen, m.screen)
+			}
+		})
+	}
+
+	// Screens where 's' shortcut should work (all non-text-input screens except Settings itself)
+	sKeyScreens := []Screen{
+		ScreenMainMenu,
+		ScreenGameTypeSelect,
+		ScreenBotSelect,
+		ScreenColorSelect,
+		ScreenGameOver,
+		ScreenBvBBotSelect,
+		ScreenBvBGameMode, // when not in count input mode
+	}
+
+	for _, screen := range sKeyScreens {
+		t.Run("s_from_"+screenName(screen), func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			m.screen = screen
+
+			// Set up required state for certain screens
+			if screen == ScreenGameOver {
+				m.board = engine.NewBoard()
+			}
+			if screen == ScreenGameTypeSelect || screen == ScreenBotSelect ||
+				screen == ScreenColorSelect || screen == ScreenBvBBotSelect {
+				m.menuOptions = []string{"Option 1", "Option 2"}
+			}
+			if screen == ScreenBvBGameMode {
+				m.menuOptions = []string{"Single Game", "Multi-Game"}
+				m.bvbInputtingCount = false
+			}
+
+			// Press 's' key
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+			result, _ := m.handleKeyPress(msg)
+			m = result.(Model)
+
+			// Should navigate to Settings
+			if m.screen != ScreenSettings {
+				t.Errorf("Expected screen to be ScreenSettings from %v, got %v", screen, m.screen)
+			}
+		})
+	}
+}
+
+// TestShortcutsOverlayIncludesNewShortcuts tests that the shortcuts overlay includes 'n' and 's' shortcuts
+func TestShortcutsOverlayIncludesNewShortcuts(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.showShortcutsOverlay = true
+
+	view := m.View()
+
+	// Check for 'n' shortcut
+	if !containsText(view, "Start new game") {
+		t.Error("Expected overlay to contain 'Start new game' description for 'n' shortcut")
+	}
+
+	// Check for 's' shortcut
+	if !containsText(view, "Open settings") {
+		t.Error("Expected overlay to contain 'Open settings' description for 's' shortcut")
+	}
+}

@@ -61,13 +61,13 @@
 ## Slice 6: Global Keyboard Shortcuts
 *Implement remaining global shortcuts (n, q, s)*
 
-- [ ] **Slice 6: Global Keyboard Shortcuts**
-  - [ ] Handle `n` key globally for new game (navigate to game type selection)
-  - [ ] Handle `q` key globally for quit (with confirmation if game in progress)
-  - [ ] Handle `s` key globally for settings
-  - [ ] Ensure shortcuts are disabled during text input modes
-  - [ ] Update shortcuts overlay with all implemented shortcuts
-  - [ ] Verify all shortcuts work from appropriate screens
+- [x] **Slice 6: Global Keyboard Shortcuts**
+  - [x] Handle `n` key globally for new game (navigate to game type selection)
+  - [x] Handle `q` key globally for quit (with confirmation if game in progress)
+  - [x] Handle `s` key globally for settings
+  - [x] Ensure shortcuts are disabled during text input modes
+  - [x] Update shortcuts overlay with all implemented shortcuts
+  - [x] Verify all shortcuts work from appropriate screens
 
 ## Slice 7: Menu Visual Hierarchy
 *Reorganize menus for better clarity*

@@ -1753,6 +1753,8 @@ func (m Model) renderShortcutsOverlay() string {
 	b.WriteString(sectionStyle.Render("Global"))
 	b.WriteString("\n")
 	renderShortcut("?", "Show this help overlay")
+	renderShortcut("n", "Start new game")
+	renderShortcut("s", "Open settings")
 	renderShortcut("Ctrl+C", "Quit application")
 	renderShortcut("q", "Quit (or show save prompt in game)")
 	renderShortcut("Esc", "Go back / Cancel")

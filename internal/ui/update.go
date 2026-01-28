@@ -73,6 +73,32 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Handle 'n' key globally for new game (only when not in text input mode)
+	if msg.String() == "n" && !m.isInTextInputMode() {
+		// Don't trigger if already on game type select, in active game, or game over
+		if m.screen != ScreenGameTypeSelect && m.screen != ScreenGamePlay && m.screen != ScreenGameOver &&
+			m.screen != ScreenBvBGamePlay && m.screen != ScreenBvBStats {
+			m.pushScreen(ScreenGameTypeSelect)
+			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+			m.menuSelection = 0
+			m.statusMsg = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+
+	// Handle 's' key globally for settings (only when not in text input mode)
+	if msg.String() == "s" && !m.isInTextInputMode() {
+		// Don't trigger if already on settings
+		if m.screen != ScreenSettings {
+			m.pushScreen(ScreenSettings)
+			m.settingsSelection = 0
+			m.statusMsg = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+
 	// Handle global quit keys (work from any screen except GamePlay where 'q' shows save prompt)
 	switch msg.String() {
 	case "ctrl+c":
