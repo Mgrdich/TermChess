@@ -433,15 +433,15 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleSettingsKeys handles keyboard input for the Settings screen.
-// Supports arrow keys and vi-style navigation (j/k), Space or Enter to toggle,
+// Supports arrow keys and vi-style navigation (j/k), Space or Enter to toggle/cycle,
 // ESC to return to main menu, and wraps around at top and bottom of the settings.
 func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Clear any previous error or status messages when user takes action
 	m.errorMsg = ""
 	m.statusMsg = ""
 
-	// Number of settings options
-	numSettings := 5 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText
+	// Number of settings options (5 toggles + 1 theme selector)
+	numSettings := 6 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText, Theme
 
 	switch msg.String() {
 	case "up", "k":
@@ -479,8 +479,10 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // toggleSelectedSetting toggles the currently selected setting and saves the config.
+// For boolean settings, it toggles between true/false.
+// For the theme setting, it cycles through: Classic -> Modern -> Minimalist -> Classic.
 func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
-	// Toggle the selected setting based on settingsSelection index
+	// Toggle or cycle the selected setting based on settingsSelection index
 	switch m.settingsSelection {
 	case 0: // Use Unicode Pieces
 		m.config.UseUnicode = !m.config.UseUnicode
@@ -492,6 +494,11 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 		m.config.ShowMoveHistory = !m.config.ShowMoveHistory
 	case 4: // Show Help Text
 		m.config.ShowHelpText = !m.config.ShowHelpText
+	case 5: // Theme
+		// Cycle through themes: Classic -> Modern -> Minimalist -> Classic
+		m.config.Theme = cycleTheme(m.config.Theme)
+		// Update the theme in the model immediately for visual feedback
+		m.theme = GetTheme(ParseThemeName(m.config.Theme))
 	}
 
 	// Save the configuration immediately
@@ -503,6 +510,21 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// cycleTheme cycles through theme names: classic -> modern -> minimalist -> classic.
+func cycleTheme(current string) string {
+	switch current {
+	case ThemeNameClassic:
+		return ThemeNameModern
+	case ThemeNameModern:
+		return ThemeNameMinimalist
+	case ThemeNameMinimalist:
+		return ThemeNameClassic
+	default:
+		// Unknown theme, reset to modern (next after classic)
+		return ThemeNameModern
+	}
 }
 
 // handleSavePromptKeys handles keyboard input for the Save Prompt screen.

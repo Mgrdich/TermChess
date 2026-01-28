@@ -582,9 +582,9 @@ func (m Model) renderSettings() string {
 	b.WriteString(header)
 	b.WriteString("\n")
 
-	// Define settings options with their current values
-	// The order here determines the settingsSelection index
-	settingsOptions := []struct {
+	// Define toggle settings options with their current values
+	// The order here determines the settingsSelection index (0-4 for toggles)
+	toggleOptions := []struct {
 		label   string
 		enabled bool
 	}{
@@ -595,8 +595,8 @@ func (m Model) renderSettings() string {
 		{"Show Help Text", m.config.ShowHelpText},
 	}
 
-	// Render each setting option with its current state
-	for i, option := range settingsOptions {
+	// Render each toggle option with its current state
+	for i, option := range toggleOptions {
 		cursor := "  " // Two spaces for non-selected items
 
 		// Determine checkbox state
@@ -620,8 +620,22 @@ func (m Model) renderSettings() string {
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
+	// Render the Theme option (index 5)
+	// Get theme display name with proper capitalization
+	themeDisplayName := getThemeDisplayName(m.config.Theme)
+	themeCursor := "  "
+	themeText := fmt.Sprintf("Theme: %s", themeDisplayName)
+
+	if m.settingsSelection == 5 {
+		themeCursor = m.cursorStyle().Render("> ")
+		themeText = m.selectedItemStyle().Render(themeText)
+	} else {
+		themeText = m.menuItemStyle().Render(themeText)
+	}
+	b.WriteString(fmt.Sprintf("%s%s\n", themeCursor, themeText))
+
 	// Render help text
-	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle")
+	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle/cycle")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1590,10 +1604,10 @@ func (m Model) formatMoveHistory() string {
 
 	var b strings.Builder
 	b.WriteString("Move History: ")
-	
+
 	// We need to replay moves on a board to format them as SAN
 	board := engine.NewBoard()
-	
+
 	for i := 0; i < len(m.moveHistory); i += 2 {
 		moveNum := (i / 2) + 1
 
@@ -1616,6 +1630,21 @@ func (m Model) formatMoveHistory() string {
 			b.WriteString(fmt.Sprintf("%d. %s", moveNum, whiteSAN))
 		}
 	}
-	
+
 	return b.String()
+}
+
+// getThemeDisplayName returns a display-friendly name for a theme.
+// Converts the internal theme name string to a capitalized display name.
+func getThemeDisplayName(themeName string) string {
+	switch themeName {
+	case ThemeNameModern:
+		return "Modern"
+	case ThemeNameMinimalist:
+		return "Minimalist"
+	case ThemeNameClassic:
+		return "Classic"
+	default:
+		return "Classic"
+	}
 }

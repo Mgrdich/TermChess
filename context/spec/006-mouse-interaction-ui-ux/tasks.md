@@ -16,13 +16,13 @@
 ## Slice 2: Additional Themes
 *Add Modern and Minimalist themes with settings selection*
 
-- [ ] **Slice 2: Add Modern and Minimalist Themes with Settings Selection**
-  - [ ] Define `ModernTheme` variable with distinct WCAG AA compliant colors
-  - [ ] Define `MinimalistTheme` variable with distinct WCAG AA compliant colors
-  - [ ] Update `GetTheme()` to return correct theme by name
-  - [ ] Add theme selection option to Settings screen
-  - [ ] Theme selection updates config and persists to file
-  - [ ] Verify all three themes render correctly and persist across restarts
+- [x] **Slice 2: Add Modern and Minimalist Themes with Settings Selection**
+  - [x] Define `ModernTheme` variable with distinct WCAG AA compliant colors
+  - [x] Define `MinimalistTheme` variable with distinct WCAG AA compliant colors
+  - [x] Update `GetTheme()` to return correct theme by name
+  - [x] Add theme selection option to Settings screen
+  - [x] Theme selection updates config and persists to file
+  - [x] Verify all three themes render correctly and persist across restarts
 
 ## Slice 3: Turn Indicator Text Styling
 *Add turn-colored text using theme system*

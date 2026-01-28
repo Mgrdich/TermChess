@@ -86,8 +86,8 @@ func TestGetTheme_AllVariants(t *testing.T) {
 		expectedName string
 	}{
 		{"classic", ThemeClassic, ThemeNameClassic},
-		{"modern returns classic (not yet implemented)", ThemeModern, ThemeNameClassic},
-		{"minimalist returns classic (not yet implemented)", ThemeMinimalist, ThemeNameClassic},
+		{"modern", ThemeModern, ThemeNameModern},
+		{"minimalist", ThemeMinimalist, ThemeNameMinimalist},
 	}
 
 	for _, tt := range tests {
@@ -235,4 +235,268 @@ func containsString(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// TestGetTheme_Modern tests that GetTheme returns the modern theme correctly.
+func TestGetTheme_Modern(t *testing.T) {
+	theme := GetTheme(ThemeModern)
+	if theme.Name != ThemeNameModern {
+		t.Errorf("Expected theme name %q, got %q", ThemeNameModern, theme.Name)
+	}
+
+	// Verify theme has the expected modern colors
+	if theme.TitleText != "#E0E0E0" {
+		t.Errorf("Expected TitleText '#E0E0E0', got %v", theme.TitleText)
+	}
+	if theme.MenuSelected != "#00A0B0" {
+		t.Errorf("Expected MenuSelected '#00A0B0', got %v", theme.MenuSelected)
+	}
+	if theme.LightSquare != "#E8EEF2" {
+		t.Errorf("Expected LightSquare '#E8EEF2', got %v", theme.LightSquare)
+	}
+	if theme.DarkSquare != "#5D8AA8" {
+		t.Errorf("Expected DarkSquare '#5D8AA8', got %v", theme.DarkSquare)
+	}
+}
+
+// TestGetTheme_Minimalist tests that GetTheme returns the minimalist theme correctly.
+func TestGetTheme_Minimalist(t *testing.T) {
+	theme := GetTheme(ThemeMinimalist)
+	if theme.Name != ThemeNameMinimalist {
+		t.Errorf("Expected theme name %q, got %q", ThemeNameMinimalist, theme.Name)
+	}
+
+	// Verify theme has the expected minimalist colors
+	if theme.TitleText != "#C0C0C0" {
+		t.Errorf("Expected TitleText '#C0C0C0', got %v", theme.TitleText)
+	}
+	if theme.MenuSelected != "#A0A0A0" {
+		t.Errorf("Expected MenuSelected '#A0A0A0', got %v", theme.MenuSelected)
+	}
+	if theme.LightSquare != "#D0D0D0" {
+		t.Errorf("Expected LightSquare '#D0D0D0', got %v", theme.LightSquare)
+	}
+	if theme.DarkSquare != "#808080" {
+		t.Errorf("Expected DarkSquare '#808080', got %v", theme.DarkSquare)
+	}
+}
+
+// TestModernTheme_AllFieldsSet tests that the modern theme has all fields set.
+func TestModernTheme_AllFieldsSet(t *testing.T) {
+	theme := GetTheme(ThemeModern)
+
+	// Board colors
+	if theme.LightSquare == "" {
+		t.Error("Expected LightSquare to be set")
+	}
+	if theme.DarkSquare == "" {
+		t.Error("Expected DarkSquare to be set")
+	}
+	if theme.WhitePiece == "" {
+		t.Error("Expected WhitePiece to be set")
+	}
+	if theme.BlackPiece == "" {
+		t.Error("Expected BlackPiece to be set")
+	}
+
+	// Selection colors
+	if theme.SelectedHighlight == "" {
+		t.Error("Expected SelectedHighlight to be set")
+	}
+	if theme.ValidMoveHighlight == "" {
+		t.Error("Expected ValidMoveHighlight to be set")
+	}
+
+	// UI colors
+	if theme.BoardBorder == "" {
+		t.Error("Expected BoardBorder to be set")
+	}
+	if theme.MenuSelected == "" {
+		t.Error("Expected MenuSelected to be set")
+	}
+	if theme.MenuNormal == "" {
+		t.Error("Expected MenuNormal to be set")
+	}
+	if theme.TitleText == "" {
+		t.Error("Expected TitleText to be set")
+	}
+	if theme.HelpText == "" {
+		t.Error("Expected HelpText to be set")
+	}
+	if theme.ErrorText == "" {
+		t.Error("Expected ErrorText to be set")
+	}
+	if theme.StatusText == "" {
+		t.Error("Expected StatusText to be set")
+	}
+
+	// Turn indicator colors
+	if theme.WhiteTurnText == "" {
+		t.Error("Expected WhiteTurnText to be set")
+	}
+	if theme.BlackTurnText == "" {
+		t.Error("Expected BlackTurnText to be set")
+	}
+}
+
+// TestMinimalistTheme_AllFieldsSet tests that the minimalist theme has all fields set.
+func TestMinimalistTheme_AllFieldsSet(t *testing.T) {
+	theme := GetTheme(ThemeMinimalist)
+
+	// Board colors
+	if theme.LightSquare == "" {
+		t.Error("Expected LightSquare to be set")
+	}
+	if theme.DarkSquare == "" {
+		t.Error("Expected DarkSquare to be set")
+	}
+	if theme.WhitePiece == "" {
+		t.Error("Expected WhitePiece to be set")
+	}
+	if theme.BlackPiece == "" {
+		t.Error("Expected BlackPiece to be set")
+	}
+
+	// Selection colors
+	if theme.SelectedHighlight == "" {
+		t.Error("Expected SelectedHighlight to be set")
+	}
+	if theme.ValidMoveHighlight == "" {
+		t.Error("Expected ValidMoveHighlight to be set")
+	}
+
+	// UI colors
+	if theme.BoardBorder == "" {
+		t.Error("Expected BoardBorder to be set")
+	}
+	if theme.MenuSelected == "" {
+		t.Error("Expected MenuSelected to be set")
+	}
+	if theme.MenuNormal == "" {
+		t.Error("Expected MenuNormal to be set")
+	}
+	if theme.TitleText == "" {
+		t.Error("Expected TitleText to be set")
+	}
+	if theme.HelpText == "" {
+		t.Error("Expected HelpText to be set")
+	}
+	if theme.ErrorText == "" {
+		t.Error("Expected ErrorText to be set")
+	}
+	if theme.StatusText == "" {
+		t.Error("Expected StatusText to be set")
+	}
+
+	// Turn indicator colors
+	if theme.WhiteTurnText == "" {
+		t.Error("Expected WhiteTurnText to be set")
+	}
+	if theme.BlackTurnText == "" {
+		t.Error("Expected BlackTurnText to be set")
+	}
+}
+
+// TestCycleTheme tests the theme cycling logic.
+func TestCycleTheme(t *testing.T) {
+	tests := []struct {
+		name     string
+		current  string
+		expected string
+	}{
+		{"classic to modern", ThemeNameClassic, ThemeNameModern},
+		{"modern to minimalist", ThemeNameModern, ThemeNameMinimalist},
+		{"minimalist to classic", ThemeNameMinimalist, ThemeNameClassic},
+		{"empty to modern", "", ThemeNameModern},
+		{"unknown to modern", "unknown", ThemeNameModern},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cycleTheme(tt.current)
+			if got != tt.expected {
+				t.Errorf("cycleTheme(%q) = %q, want %q", tt.current, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestModelThemeInitialization_Modern tests that Model initializes with modern theme from config.
+func TestModelThemeInitialization_Modern(t *testing.T) {
+	config := Config{
+		Theme: ThemeNameModern,
+	}
+
+	m := NewModel(config)
+
+	if m.theme.Name != ThemeNameModern {
+		t.Errorf("Expected model theme to be %q, got %q", ThemeNameModern, m.theme.Name)
+	}
+}
+
+// TestModelThemeInitialization_Minimalist tests that Model initializes with minimalist theme from config.
+func TestModelThemeInitialization_Minimalist(t *testing.T) {
+	config := Config{
+		Theme: ThemeNameMinimalist,
+	}
+
+	m := NewModel(config)
+
+	if m.theme.Name != ThemeNameMinimalist {
+		t.Errorf("Expected model theme to be %q, got %q", ThemeNameMinimalist, m.theme.Name)
+	}
+}
+
+// TestThemeDisplayName tests the getThemeDisplayName helper function.
+func TestThemeDisplayName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"classic", ThemeNameClassic, "Classic"},
+		{"modern", ThemeNameModern, "Modern"},
+		{"minimalist", ThemeNameMinimalist, "Minimalist"},
+		{"empty defaults to Classic", "", "Classic"},
+		{"unknown defaults to Classic", "unknown", "Classic"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getThemeDisplayName(tt.input)
+			if got != tt.expected {
+				t.Errorf("getThemeDisplayName(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestSettingsThemeRendering tests that the settings screen renders the theme option.
+func TestSettingsThemeRendering(t *testing.T) {
+	tests := []struct {
+		name         string
+		theme        string
+		expectedText string
+	}{
+		{"classic theme", ThemeNameClassic, "Theme: Classic"},
+		{"modern theme", ThemeNameModern, "Theme: Modern"},
+		{"minimalist theme", ThemeNameMinimalist, "Theme: Minimalist"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Theme:        tt.theme,
+				ShowHelpText: true,
+			}
+			m := NewModel(config)
+			m.screen = ScreenSettings
+
+			output := m.renderSettings()
+
+			if !containsString(output, tt.expectedText) {
+				t.Errorf("Expected settings output to contain %q", tt.expectedText)
+			}
+		})
+	}
 }

@@ -17,9 +17,9 @@ const (
 // Theme name string constants for serialization and comparison.
 // These are the only valid string values for theme names.
 const (
-	ThemeNameClassic     = "classic"
-	ThemeNameModern      = "modern"
-	ThemeNameMinimalist  = "minimalist"
+	ThemeNameClassic    = "classic"
+	ThemeNameModern     = "modern"
+	ThemeNameMinimalist = "minimalist"
 )
 
 // String returns the string representation of the theme name.
@@ -105,7 +105,58 @@ var themes = map[ThemeName]Theme{
 		WhiteTurnText: lipgloss.Color("#FAFAFA"), // White
 		BlackTurnText: lipgloss.Color("#626262"), // Gray
 	},
-	// ThemeModern and ThemeMinimalist will be added in Slice 2
+	ThemeModern: {
+		Name: ThemeNameModern,
+
+		// Board colors - blues and teals for a modern aesthetic
+		LightSquare: lipgloss.Color("#E8EEF2"), // Light gray-blue
+		DarkSquare:  lipgloss.Color("#5D8AA8"), // Steel blue
+		WhitePiece:  lipgloss.Color("#FFFFFF"), // Pure white for white pieces
+		BlackPiece:  lipgloss.Color("#1A1A2E"), // Dark navy for black pieces
+
+		// Selection colors
+		SelectedHighlight:  lipgloss.Color("#00A0B0"), // Teal
+		ValidMoveHighlight: lipgloss.Color("#4ECDC4"), // Light teal
+
+		// UI colors - clean modern look with blues and teals
+		BoardBorder:  lipgloss.Color("#B8C5D0"), // Light steel
+		MenuSelected: lipgloss.Color("#00A0B0"), // Teal
+		MenuNormal:   lipgloss.Color("#E0E0E0"), // Light gray
+		TitleText:    lipgloss.Color("#E0E0E0"), // Light gray (WCAG AA on dark bg)
+		HelpText:     lipgloss.Color("#8899A6"), // Muted blue-gray
+		ErrorText:    lipgloss.Color("#E74C3C"), // Modern red
+		StatusText:   lipgloss.Color("#4ECDC4"), // Light teal
+
+		// Turn indicator colors
+		WhiteTurnText: lipgloss.Color("#E0E0E0"), // Light gray
+		BlackTurnText: lipgloss.Color("#8899A6"), // Muted blue-gray
+	},
+	ThemeMinimalist: {
+		Name: ThemeNameMinimalist,
+
+		// Board colors - simple grayscale for distraction-free play
+		LightSquare: lipgloss.Color("#D0D0D0"), // Light gray
+		DarkSquare:  lipgloss.Color("#808080"), // Medium gray
+		WhitePiece:  lipgloss.Color("#FFFFFF"), // Pure white for white pieces
+		BlackPiece:  lipgloss.Color("#2D2D2D"), // Dark gray for black pieces
+
+		// Selection colors - subtle accents
+		SelectedHighlight:  lipgloss.Color("#A0A0A0"), // Gray
+		ValidMoveHighlight: lipgloss.Color("#B8B8B8"), // Light gray
+
+		// UI colors - muted grayscale palette
+		BoardBorder:  lipgloss.Color("#A0A0A0"), // Gray
+		MenuSelected: lipgloss.Color("#A0A0A0"), // Gray
+		MenuNormal:   lipgloss.Color("#C0C0C0"), // Light gray
+		TitleText:    lipgloss.Color("#C0C0C0"), // Light gray (WCAG AA on dark bg)
+		HelpText:     lipgloss.Color("#707070"), // Medium gray
+		ErrorText:    lipgloss.Color("#CC6666"), // Muted red
+		StatusText:   lipgloss.Color("#88AA88"), // Muted green
+
+		// Turn indicator colors
+		WhiteTurnText: lipgloss.Color("#C0C0C0"), // Light gray
+		BlackTurnText: lipgloss.Color("#707070"), // Medium gray
+	},
 }
 
 // GetTheme returns the theme for the given ThemeName.
