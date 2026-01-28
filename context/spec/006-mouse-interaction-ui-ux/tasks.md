@@ -27,12 +27,12 @@
 ## Slice 3: Turn Indicator Text Styling
 *Add turn-colored text using theme system*
 
-- [ ] **Slice 3: Turn-Colored Text Indicators**
-  - [ ] Add `WhiteTurnText` and `BlackTurnText` colors to Theme struct
-  - [ ] Update all three themes with appropriate turn colors
-  - [ ] Modify move input prompt to use turn-based color
-  - [ ] Modify turn status text to use turn-based color
-  - [ ] Verify turn indicator is clearly visible in all themes
+- [x] **Slice 3: Turn-Colored Text Indicators**
+  - [x] Add `WhiteTurnText` and `BlackTurnText` colors to Theme struct
+  - [x] Update all three themes with appropriate turn colors
+  - [x] Modify move input prompt to use turn-based color
+  - [x] Modify turn status text to use turn-based color
+  - [x] Verify turn indicator is clearly visible in all themes
 
 ## Slice 4: Navigation Stack and Breadcrumbs
 *Add back navigation and location indicator*

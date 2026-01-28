@@ -66,6 +66,28 @@ func (m Model) cursorStyle() lipgloss.Style {
 		Bold(true)
 }
 
+// whiteTurnStyle returns the style for white's turn indicator.
+func (m Model) whiteTurnStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.WhiteTurnText).
+		Bold(true)
+}
+
+// blackTurnStyle returns the style for black's turn indicator.
+func (m Model) blackTurnStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.BlackTurnText).
+		Bold(true)
+}
+
+// turnStyle returns the appropriate style for the current turn.
+func (m Model) turnStyle() lipgloss.Style {
+	if m.board != nil && m.board.ActiveColor == 1 { // Black
+		return m.blackTurnStyle()
+	}
+	return m.whiteTurnStyle()
+}
+
 // renderHelpText conditionally renders help text based on config.
 // Returns empty string if help text is disabled.
 func (m Model) renderHelpText(text string) string {
@@ -396,26 +418,22 @@ func (m Model) renderGamePlay() string {
 		b.WriteString(moveHistoryStyle.Render(moveHistoryText))
 	}
 
-	// Render turn indicator
+	// Render turn indicator with turn-based color
 	b.WriteString("\n\n")
 	turnText := "White to move"
+	turnStyle := m.whiteTurnStyle()
 	if m.board.ActiveColor == 1 { // Black
 		turnText = "Black to move"
+		turnStyle = m.blackTurnStyle()
 	}
-	turnIndicator := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(m.theme.MenuSelected).
-		Render(turnText)
-	b.WriteString(turnIndicator)
+	b.WriteString(turnStyle.Render(turnText))
 
-	// Render input prompt
+	// Render input prompt with turn-based color for the input text
 	b.WriteString("\n\n")
 	inputPrompt := lipgloss.NewStyle().
 		Foreground(m.theme.MenuNormal).
 		Render("Enter move: ")
-	inputText := lipgloss.NewStyle().
-		Foreground(m.theme.MenuSelected).
-		Render(m.input)
+	inputText := turnStyle.Render(m.input)
 	b.WriteString(inputPrompt + inputText)
 
 	// Add help text

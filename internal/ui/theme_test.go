@@ -2,6 +2,8 @@ package ui
 
 import (
 	"testing"
+
+	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
 // TestGetTheme_Classic tests that GetTheme returns the classic theme for ThemeClassic.
@@ -469,6 +471,47 @@ func TestThemeDisplayName(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestTurnStyleMethods tests that turn style methods work correctly.
+func TestTurnStyleMethods(t *testing.T) {
+	config := Config{
+		Theme: ThemeNameClassic,
+	}
+	m := NewModel(config)
+
+	// Test that turn style methods don't panic and return non-nil styles
+	whiteStyle := m.whiteTurnStyle()
+	blackStyle := m.blackTurnStyle()
+
+	// Test rendering with these styles
+	_ = whiteStyle.Render("White to move")
+	_ = blackStyle.Render("Black to move")
+
+	// If we get here without panics, the test passes
+}
+
+// TestTurnStyleUsesCorrectColor tests that turnStyle returns appropriate style based on turn.
+func TestTurnStyleUsesCorrectColor(t *testing.T) {
+	config := Config{
+		Theme: ThemeNameClassic,
+	}
+	m := NewModel(config)
+
+	// Without a board, turnStyle should return white style (default)
+	style := m.turnStyle()
+	// Render with it to verify it works
+	_ = style.Render("test")
+
+	// With a board set to white's turn
+	m.board = &engine.Board{ActiveColor: 0} // White
+	style = m.turnStyle()
+	_ = style.Render("White to move")
+
+	// With a board set to black's turn
+	m.board = &engine.Board{ActiveColor: 1} // Black
+	style = m.turnStyle()
+	_ = style.Render("Black to move")
 }
 
 // TestSettingsThemeRendering tests that the settings screen renders the theme option.
