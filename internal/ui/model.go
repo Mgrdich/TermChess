@@ -84,6 +84,8 @@ type Model struct {
 	// UI state
 	// screen tracks which screen is currently being displayed
 	screen Screen
+	// navStack tracks the navigation history for back navigation
+	navStack []Screen
 	// config holds display configuration options
 	config Config
 	// theme holds the current color theme for UI rendering

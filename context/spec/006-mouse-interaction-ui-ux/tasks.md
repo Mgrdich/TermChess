@@ -37,15 +37,15 @@
 ## Slice 4: Navigation Stack and Breadcrumbs
 *Add back navigation and location indicator*
 
-- [ ] **Slice 4: Navigation Stack with Breadcrumbs**
-  - [ ] Add `navStack []Screen` field to Model
-  - [ ] Implement `pushScreen(screen Screen)` method
-  - [ ] Implement `popScreen()` method
-  - [ ] Implement `breadcrumb() string` method
-  - [ ] Update all screen transitions to use `pushScreen()` instead of direct assignment
-  - [ ] Handle `Esc` key globally to call `popScreen()` (with appropriate exceptions)
-  - [ ] Render breadcrumb in UI header area
-  - [ ] Verify back navigation works from all screens
+- [x] **Slice 4: Navigation Stack with Breadcrumbs**
+  - [x] Add `navStack []Screen` field to Model
+  - [x] Implement `pushScreen(screen Screen)` method
+  - [x] Implement `popScreen()` method
+  - [x] Implement `breadcrumb() string` method
+  - [x] Update all screen transitions to use `pushScreen()` instead of direct assignment
+  - [x] Handle `Esc` key globally to call `popScreen()` (with appropriate exceptions)
+  - [x] Render breadcrumb in UI header area
+  - [x] Verify back navigation works from all screens
 
 ## Slice 5: Keyboard Shortcuts Help Overlay
 *Add ? shortcut to show help modal*

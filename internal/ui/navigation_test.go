@@ -389,3 +389,187 @@ func TestQKeyBehaviorDiffersByScreen(t *testing.T) {
 		t.Error("Did not expect quit command from GamePlay when pressing 'q' (should show save prompt)")
 	}
 }
+
+// TestScreenName tests the screenName helper function
+func TestScreenName(t *testing.T) {
+	tests := []struct {
+		screen   Screen
+		expected string
+	}{
+		{ScreenMainMenu, "Main Menu"},
+		{ScreenGameTypeSelect, "New Game"},
+		{ScreenBotSelect, "Bot Difficulty"},
+		{ScreenColorSelect, "Choose Color"},
+		{ScreenFENInput, "Load Game"},
+		{ScreenSettings, "Settings"},
+		{ScreenGamePlay, "Game"},
+		{ScreenGameOver, "Game Over"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			got := screenName(tt.screen)
+			if got != tt.expected {
+				t.Errorf("screenName(%v) = %q, want %q", tt.screen, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPushScreen tests the pushScreen method
+func TestPushScreen(t *testing.T) {
+	m := NewModel(DefaultConfig())
+
+	// Initially at MainMenu with empty stack
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected initial screen to be MainMenu, got %v", m.screen)
+	}
+	if len(m.navStack) != 0 {
+		t.Errorf("Expected empty nav stack, got %d items", len(m.navStack))
+	}
+
+	// Push to GameTypeSelect
+	m.pushScreen(ScreenGameTypeSelect)
+	if m.screen != ScreenGameTypeSelect {
+		t.Errorf("Expected screen to be GameTypeSelect, got %v", m.screen)
+	}
+	if len(m.navStack) != 1 {
+		t.Errorf("Expected 1 item in nav stack, got %d", len(m.navStack))
+	}
+	if m.navStack[0] != ScreenMainMenu {
+		t.Errorf("Expected MainMenu in nav stack, got %v", m.navStack[0])
+	}
+
+	// Push to BotSelect
+	m.pushScreen(ScreenBotSelect)
+	if m.screen != ScreenBotSelect {
+		t.Errorf("Expected screen to be BotSelect, got %v", m.screen)
+	}
+	if len(m.navStack) != 2 {
+		t.Errorf("Expected 2 items in nav stack, got %d", len(m.navStack))
+	}
+
+	// Pushing same screen should not add to stack
+	m.pushScreen(ScreenBotSelect)
+	if len(m.navStack) != 2 {
+		t.Errorf("Expected stack to remain at 2 items, got %d", len(m.navStack))
+	}
+}
+
+// TestPopScreen tests the popScreen method
+func TestPopScreen(t *testing.T) {
+	m := NewModel(DefaultConfig())
+
+	// Set up a navigation stack
+	m.navStack = []Screen{ScreenMainMenu, ScreenGameTypeSelect}
+	m.screen = ScreenBotSelect
+
+	// Pop should return to GameTypeSelect
+	result := m.popScreen()
+	if result != ScreenGameTypeSelect {
+		t.Errorf("popScreen() returned %v, expected GameTypeSelect", result)
+	}
+	if m.screen != ScreenGameTypeSelect {
+		t.Errorf("Expected screen to be GameTypeSelect, got %v", m.screen)
+	}
+	if len(m.navStack) != 1 {
+		t.Errorf("Expected 1 item in nav stack, got %d", len(m.navStack))
+	}
+
+	// Pop again should return to MainMenu
+	result = m.popScreen()
+	if result != ScreenMainMenu {
+		t.Errorf("popScreen() returned %v, expected MainMenu", result)
+	}
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected screen to be MainMenu, got %v", m.screen)
+	}
+	if len(m.navStack) != 0 {
+		t.Errorf("Expected empty nav stack, got %d items", len(m.navStack))
+	}
+
+	// Pop with empty stack should go to MainMenu
+	m.screen = ScreenSettings
+	result = m.popScreen()
+	if result != ScreenMainMenu {
+		t.Errorf("popScreen() with empty stack returned %v, expected MainMenu", result)
+	}
+}
+
+// TestClearNavStack tests the clearNavStack method
+func TestClearNavStack(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.navStack = []Screen{ScreenMainMenu, ScreenGameTypeSelect, ScreenBotSelect}
+
+	m.clearNavStack()
+
+	if len(m.navStack) != 0 {
+		t.Errorf("Expected empty nav stack after clear, got %d items", len(m.navStack))
+	}
+}
+
+// TestBreadcrumb tests the breadcrumb method
+func TestBreadcrumb(t *testing.T) {
+	m := NewModel(DefaultConfig())
+
+	// At MainMenu with empty stack - should return empty
+	bc := m.breadcrumb()
+	if bc != "" {
+		t.Errorf("Expected empty breadcrumb at MainMenu, got %q", bc)
+	}
+
+	// Push to Settings - should show "Main Menu > Settings"
+	m.pushScreen(ScreenSettings)
+	bc = m.breadcrumb()
+	expected := "Main Menu > Settings"
+	if bc != expected {
+		t.Errorf("Expected breadcrumb %q, got %q", expected, bc)
+	}
+
+	// Push to GameTypeSelect from MainMenu, then BotSelect
+	m = NewModel(DefaultConfig())
+	m.pushScreen(ScreenGameTypeSelect)
+	m.pushScreen(ScreenBotSelect)
+	bc = m.breadcrumb()
+	expected = "New Game > Bot Difficulty"
+	if bc != expected {
+		t.Errorf("Expected breadcrumb %q, got %q", expected, bc)
+	}
+}
+
+// TestCanGoBack tests the canGoBack method
+func TestCanGoBack(t *testing.T) {
+	m := NewModel(DefaultConfig())
+
+	if m.canGoBack() {
+		t.Error("Expected canGoBack() to return false with empty stack")
+	}
+
+	m.pushScreen(ScreenSettings)
+
+	if !m.canGoBack() {
+		t.Error("Expected canGoBack() to return true with non-empty stack")
+	}
+}
+
+// TestNavStackClearedOnGameStart tests that nav stack is cleared when starting a game
+func TestNavStackClearedOnGameStart(t *testing.T) {
+	m := NewModel(DefaultConfig())
+
+	// Navigate to game type select
+	m.pushScreen(ScreenGameTypeSelect)
+	m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+	m.menuSelection = 0
+
+	// Select Player vs Player
+	result, _ := m.handleGameTypeSelection()
+	m = result.(Model)
+
+	// Nav stack should be cleared
+	if len(m.navStack) != 0 {
+		t.Errorf("Expected empty nav stack after starting game, got %d items", len(m.navStack))
+	}
+	if m.screen != ScreenGamePlay {
+		t.Errorf("Expected screen to be GamePlay, got %v", m.screen)
+	}
+}

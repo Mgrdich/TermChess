@@ -183,6 +183,7 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		// Successfully loaded - start gameplay with loaded board
 		m.board = board
 		m.moveHistory = []engine.Move{}
+		m.clearNavStack() // Clear nav stack when starting game
 		m.screen = ScreenGamePlay
 		m.input = ""
 		m.errorMsg = ""
@@ -198,8 +199,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "New Game":
-		// Transition to game type selection screen
-		m.screen = ScreenGameTypeSelect
+		// Transition to game type selection screen using navigation stack
+		m.pushScreen(ScreenGameTypeSelect)
 		// Set up menu options for game type selection
 		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
 		m.menuSelection = 0
@@ -210,8 +211,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.input = ""
 
 	case "Load Game":
-		// Transition to FEN input screen
-		m.screen = ScreenFENInput
+		// Transition to FEN input screen using navigation stack
+		m.pushScreen(ScreenFENInput)
 		// Reset and focus the text input
 		m.fenInput.SetValue("")
 		m.fenInput.Focus()
@@ -220,8 +221,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.errorMsg = ""
 
 	case "Settings":
-		// Transition to settings screen
-		m.screen = ScreenSettings
+		// Transition to settings screen using navigation stack
+		m.pushScreen(ScreenSettings)
 		m.settingsSelection = 0
 		// Clear any previous status messages
 		m.statusMsg = ""
@@ -262,9 +263,12 @@ func (m Model) handleGameTypeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleGameTypeSelection()
 
 	case "esc":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options in case we're back at main menu
+		if m.screen == ScreenMainMenu {
+			m.menuOptions = buildMainMenuOptions()
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -285,6 +289,8 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 		m.gameType = GameTypePvP
 		// Create a new board with the standard starting position
 		m.board = engine.NewBoard()
+		// Clear nav stack when starting game
+		m.clearNavStack()
 		// Switch to the GamePlay screen
 		m.screen = ScreenGamePlay
 		// Clear any previous status messages
@@ -303,8 +309,8 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 	case "Player vs Bot":
 		// Set game type to PvBot
 		m.gameType = GameTypePvBot
-		// Transition to bot difficulty selection screen
-		m.screen = ScreenBotSelect
+		// Transition to bot difficulty selection screen using navigation stack
+		m.pushScreen(ScreenBotSelect)
 		m.menuOptions = []string{"Easy", "Medium", "Hard"}
 		m.menuSelection = 0
 		m.statusMsg = ""
@@ -467,9 +473,12 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.toggleSelectedSetting()
 
 	case "esc", "q", "b", "backspace":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options if we're back at main menu
+		if m.screen == ScreenMainMenu {
+			m.menuOptions = buildMainMenuOptions()
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -748,9 +757,12 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "esc":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options if we're back at main menu
+		if m.screen == ScreenMainMenu {
+			m.menuOptions = buildMainMenuOptions()
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -776,6 +788,8 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Successfully loaded - start gameplay with loaded board
 		m.board = board
 		m.moveHistory = []engine.Move{}
+		// Clear nav stack when starting game
+		m.clearNavStack()
 		m.screen = ScreenGamePlay
 		m.gameType = GameTypePvP
 		m.input = ""
@@ -1061,9 +1075,12 @@ func (m Model) handleBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBotDifficultySelection()
 
 	case "esc":
-		// Return to game type selection
-		m.screen = ScreenGameTypeSelect
-		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options for game type selection if we're back there
+		if m.screen == ScreenGameTypeSelect {
+			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -1699,9 +1716,12 @@ func (m Model) handleColorSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleColorSelection()
 
 	case "esc":
-		// Return to bot difficulty selection
-		m.screen = ScreenBotSelect
-		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options for bot selection if we're back there
+		if m.screen == ScreenBotSelect {
+			m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -1725,6 +1745,8 @@ func (m Model) handleColorSelection() (tea.Model, tea.Cmd) {
 
 	// Create a new board with the standard starting position
 	m.board = engine.NewBoard()
+	// Clear nav stack when starting game
+	m.clearNavStack()
 	// Switch to the GamePlay screen
 	m.screen = ScreenGamePlay
 	// Clear any previous status messages
@@ -1762,8 +1784,8 @@ func (m Model) handleBotDifficultySelection() (tea.Model, tea.Cmd) {
 		m.botDifficulty = BotHard
 	}
 
-	// Transition to color selection screen
-	m.screen = ScreenColorSelect
+	// Transition to color selection screen using navigation stack
+	m.pushScreen(ScreenColorSelect)
 	m.menuOptions = []string{"Play as White", "Play as Black"}
 	m.menuSelection = 0
 	m.statusMsg = ""

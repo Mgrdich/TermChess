@@ -88,6 +88,23 @@ func (m Model) turnStyle() lipgloss.Style {
 	return m.whiteTurnStyle()
 }
 
+// breadcrumbStyle returns the style for navigation breadcrumbs.
+func (m Model) breadcrumbStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true)
+}
+
+// renderBreadcrumb renders the navigation breadcrumb if present.
+// Returns an empty string if there's no breadcrumb to display.
+func (m Model) renderBreadcrumb() string {
+	bc := m.breadcrumb()
+	if bc == "" {
+		return ""
+	}
+	return m.breadcrumbStyle().Render(bc) + "\n\n"
+}
+
 // renderHelpText conditionally renders help text based on config.
 // Returns empty string if help text is disabled.
 func (m Model) renderHelpText(text string) string {
@@ -221,7 +238,10 @@ func (m Model) renderGameTypeSelect() string {
 	// Render the application title
 	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
@@ -281,7 +301,10 @@ func (m Model) renderBotSelect() string {
 	// Render the application title
 	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
@@ -341,7 +364,10 @@ func (m Model) renderColorSelect() string {
 	// Render the application title
 	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
@@ -589,7 +615,10 @@ func (m Model) renderSettings() string {
 	// Render the application title
 	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
@@ -780,7 +809,10 @@ func (m Model) renderFENInput() string {
 	// Render the application title
 	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
