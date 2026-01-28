@@ -86,6 +86,8 @@ type Model struct {
 	screen Screen
 	// config holds display configuration options
 	config Config
+	// theme holds the current color theme for UI rendering
+	theme Theme
 	// termWidth holds the current terminal width in characters
 	termWidth int
 	// termHeight holds the current terminal height in lines
@@ -199,6 +201,9 @@ func NewModel(config Config) Model {
 	// Build menu options dynamically based on saved game existence
 	menuOptions := buildMainMenuOptions()
 
+	// Load theme based on config
+	theme := GetTheme(ParseThemeName(config.Theme))
+
 	return Model{
 		// Initialize with nil board (created when starting a new game)
 		board:       nil,
@@ -209,6 +214,9 @@ func NewModel(config Config) Model {
 
 		// Use the provided configuration
 		config: config,
+
+		// Use the loaded theme
+		theme: theme,
 
 		// Initialize input state
 		input:     "",

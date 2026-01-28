@@ -3,15 +3,15 @@
 ## Slice 1: Theme System Foundation
 *Establish the theme infrastructure with Classic theme only - app remains runnable with new theme system*
 
-- [ ] **Slice 1: Implement Theme System with Classic Theme**
-  - [ ] Create `internal/ui/theme.go` with `Theme` struct containing all color fields
-  - [ ] Define `ClassicTheme` variable with WCAG AA compliant colors
-  - [ ] Implement `GetTheme(name string) Theme` function (returns Classic for now)
-  - [ ] Add `Theme string` field to `DisplayConfig` in `internal/config/config.go` with default `"classic"`
-  - [ ] Update `configFileToConfig()` and `configToConfigFile()` conversion functions
-  - [ ] Add `theme Theme` field to UI Model and load theme on initialization
-  - [ ] Replace hardcoded lipgloss styles in `view.go` with theme-based style getters
-  - [ ] Verify app runs with new theme system (visual appearance unchanged)
+- [x] **Slice 1: Implement Theme System with Classic Theme**
+  - [x] Create `internal/ui/theme.go` with `Theme` struct containing all color fields
+  - [x] Define `ClassicTheme` variable with WCAG AA compliant colors
+  - [x] Implement `GetTheme(name ThemeName) Theme` function with enum type (returns Classic for now)
+  - [x] Add `Theme string` field to `DisplayConfig` in `internal/config/config.go` with default `"classic"`
+  - [x] Update `configFileToConfig()` and `configToConfigFile()` conversion functions
+  - [x] Add `theme Theme` field to UI Model and load theme on initialization
+  - [x] Replace hardcoded lipgloss styles in `view.go` with theme-based style getters
+  - [x] Verify app runs with new theme system (visual appearance unchanged)
 
 ## Slice 2: Additional Themes
 *Add Modern and Minimalist themes with settings selection*

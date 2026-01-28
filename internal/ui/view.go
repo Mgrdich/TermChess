@@ -10,56 +10,69 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Define lipgloss styles for consistent UI rendering across the application.
-// These styles use colors that work well on both light and dark terminals.
-var (
-	// titleStyle is used for the main application title
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Align(lipgloss.Center).
-			Padding(1, 0)
+// Style helper methods that use the theme colors.
+// These methods return lipgloss styles based on the model's current theme.
 
-	// menuItemStyle is used for regular (unselected) menu items
-	menuItemStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
-			Padding(0, 2)
+// titleStyle returns the style for the main application title.
+func (m Model) titleStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+}
 
-	// selectedItemStyle is used for the currently selected menu item
-	selectedItemStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#7D56F4")).
-				Bold(true).
-				Padding(0, 2)
+// menuItemStyle returns the style for regular (unselected) menu items.
+func (m Model) menuItemStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal).
+		Padding(0, 2)
+}
 
-	// helpStyle is used for help text and instructions
-	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#626262")).
-			Padding(1, 0)
+// selectedItemStyle returns the style for the currently selected menu item.
+func (m Model) selectedItemStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true).
+		Padding(0, 2)
+}
 
-	// errorStyle is used for error messages
-	errorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF5555")).
-			Bold(true).
-			Padding(1, 0)
+// helpStyle returns the style for help text and instructions.
+func (m Model) helpStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Padding(1, 0)
+}
 
-	// statusStyle is used for status messages
-	statusStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#50FA7B")).
-			Padding(1, 0)
+// errorStyle returns the style for error messages.
+func (m Model) errorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.ErrorText).
+		Bold(true).
+		Padding(1, 0)
+}
 
-	// cursorStyle is used for the cursor indicator
-	cursorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
-			Bold(true)
-)
+// statusStyle returns the style for status messages.
+func (m Model) statusStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(1, 0)
+}
+
+// cursorStyle returns the style for the cursor indicator.
+func (m Model) cursorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true)
+}
 
 // renderHelpText conditionally renders help text based on config.
 // Returns empty string if help text is disabled.
-func renderHelpText(text string, config Config) string {
-	if !config.ShowHelpText {
+func (m Model) renderHelpText(text string) string {
+	if !m.config.ShowHelpText {
 		return ""
 	}
-	return helpStyle.Render(text)
+	return m.helpStyle().Render(text)
 }
 
 // View renders the UI based on the current model state.
@@ -111,7 +124,7 @@ func (m Model) renderMainMenu() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -127,27 +140,27 @@ func (m Model) renderMainMenu() string {
 			// Highlight the selected item
 			if isResumeGame {
 				// Special styling for selected Resume Game option
-				cursor = cursorStyle.Render("▶ ")
+				cursor = m.cursorStyle().Render("▶ ")
 				resumeStyle := lipgloss.NewStyle().
-					Foreground(lipgloss.Color("#50FA7B")).
+					Foreground(m.theme.StatusText).
 					Bold(true).
 					Padding(0, 2)
 				optionText = resumeStyle.Render(option)
 			} else {
-				cursor = cursorStyle.Render("> ")
-				optionText = selectedItemStyle.Render(option)
+				cursor = m.cursorStyle().Render("> ")
+				optionText = m.selectedItemStyle().Render(option)
 			}
 		} else {
 			// Regular menu item styling
 			if isResumeGame {
 				// Special styling for unselected Resume Game option
 				resumeStyle := lipgloss.NewStyle().
-					Foreground(lipgloss.Color("#50FA7B")).
+					Foreground(m.theme.StatusText).
 					Padding(0, 2)
 				optionText = resumeStyle.Render("▶ " + option)
 				cursor = "" // No cursor needed, indicator is part of the text
 			} else {
-				optionText = menuItemStyle.Render(option)
+				optionText = m.menuItemStyle().Render(option)
 			}
 		}
 
@@ -155,7 +168,7 @@ func (m Model) renderMainMenu() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("arrows/jk: navigate | enter: select | q: quit", m.config)
+	helpText := m.renderHelpText("arrows/jk: navigate | enter: select | q: quit")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -164,14 +177,14 @@ func (m Model) renderMainMenu() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -184,14 +197,14 @@ func (m Model) renderGameTypeSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Game Type:")
 	b.WriteString(header)
@@ -204,18 +217,18 @@ func (m Model) renderGameTypeSelect() string {
 
 		if i == m.menuSelection {
 			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			cursor = m.cursorStyle().Render("> ")
+			optionText = m.selectedItemStyle().Render(option)
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			optionText = m.menuItemStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back to menu | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back to menu | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -224,14 +237,14 @@ func (m Model) renderGameTypeSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -244,14 +257,14 @@ func (m Model) renderBotSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Bot Difficulty:")
 	b.WriteString(header)
@@ -264,18 +277,18 @@ func (m Model) renderBotSelect() string {
 
 		if i == m.menuSelection {
 			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			cursor = m.cursorStyle().Render("> ")
+			optionText = m.selectedItemStyle().Render(option)
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			optionText = m.menuItemStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back to game type | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back to game type | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -284,14 +297,14 @@ func (m Model) renderBotSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -304,14 +317,14 @@ func (m Model) renderColorSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Your Color:")
 	b.WriteString(header)
@@ -324,18 +337,18 @@ func (m Model) renderColorSelect() string {
 
 		if i == m.menuSelection {
 			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			cursor = m.cursorStyle().Render("> ")
+			optionText = m.selectedItemStyle().Render(option)
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			optionText = m.menuItemStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back to difficulty | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back to difficulty | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -344,14 +357,14 @@ func (m Model) renderColorSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -364,7 +377,7 @@ func (m Model) renderGamePlay() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -378,7 +391,7 @@ func (m Model) renderGamePlay() string {
 		b.WriteString("\n\n")
 		moveHistoryText := m.formatMoveHistory()
 		moveHistoryStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
+			Foreground(m.theme.MenuNormal).
 			Padding(0, 2)
 		b.WriteString(moveHistoryStyle.Render(moveHistoryText))
 	}
@@ -391,22 +404,22 @@ func (m Model) renderGamePlay() string {
 	}
 	turnIndicator := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Render(turnText)
 	b.WriteString(turnIndicator)
 
 	// Render input prompt
 	b.WriteString("\n\n")
 	inputPrompt := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Render("Enter move: ")
 	inputText := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Render(m.input)
 	b.WriteString(inputPrompt + inputText)
 
 	// Add help text
-	helpText := renderHelpText("ESC: menu (with save) | type move (e.g. e4, Nf3) | Commands: resign, offerdraw, showfen, menu", m.config)
+	helpText := m.renderHelpText("ESC: menu (with save) | type move (e.g. e4, Nf3) | Commands: resign, offerdraw, showfen, menu")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -415,14 +428,14 @@ func (m Model) renderGamePlay() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -433,7 +446,7 @@ func (m Model) renderGamePlay() string {
 		// Move history header
 		historyHeaderStyle := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA"))
+			Foreground(m.theme.TitleText)
 		historyHeader := historyHeaderStyle.Render("Move History:")
 		b.WriteString(historyHeader)
 		b.WriteString("\n")
@@ -441,7 +454,7 @@ func (m Model) renderGamePlay() string {
 		// Format and display move history
 		historyText := FormatMoveHistory(m.moveHistory)
 		historyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4"))
+			Foreground(m.theme.MenuSelected)
 		history := historyStyle.Render(historyText)
 		b.WriteString(history)
 		b.WriteString("\n")
@@ -505,7 +518,7 @@ func (m Model) renderGameOver() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -528,7 +541,7 @@ func (m Model) renderGameOver() string {
 	b.WriteString("\n\n")
 	moveCountMsg := fmt.Sprintf("Game ended after %d moves", m.board.FullMoveNum)
 	moveCountStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Align(lipgloss.Center)
 	b.WriteString(moveCountStyle.Render(moveCountMsg))
 
@@ -536,12 +549,12 @@ func (m Model) renderGameOver() string {
 	b.WriteString("\n\n")
 	optionsText := "Press 'n' for New Game  |  Press 'm' for Main Menu  |  Press 'q' to Quit"
 	optionsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Align(lipgloss.Center)
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := renderHelpText("ESC/m: menu | n: new game | q: quit", m.config)
+	helpText := m.renderHelpText("ESC/m: menu | n: new game | q: quit")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -556,14 +569,14 @@ func (m Model) renderSettings() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Settings")
 	b.WriteString(header)
@@ -597,18 +610,18 @@ func (m Model) renderSettings() string {
 
 		if i == m.settingsSelection {
 			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(optionText)
+			cursor = m.cursorStyle().Render("> ")
+			optionText = m.selectedItemStyle().Render(optionText)
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(optionText)
+			optionText = m.menuItemStyle().Render(optionText)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle", m.config)
+	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -617,14 +630,14 @@ func (m Model) renderSettings() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -637,7 +650,7 @@ func (m Model) renderSavePrompt() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -661,13 +674,13 @@ func (m Model) renderSavePrompt() string {
 
 	// Render options
 	optionsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Align(lipgloss.Center)
 	optionsText := "y: Yes  |  n: No  |  ESC: Cancel"
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := renderHelpText("y: save and exit | n: exit without saving | ESC: cancel", m.config)
+	helpText := m.renderHelpText("y: save and exit | n: exit without saving | ESC: cancel")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -676,7 +689,7 @@ func (m Model) renderSavePrompt() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
@@ -689,7 +702,7 @@ func (m Model) renderResumePrompt() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -705,13 +718,13 @@ func (m Model) renderResumePrompt() string {
 
 	// Render options
 	optionsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Align(lipgloss.Center)
 	optionsText := "y: Yes  |  n: No"
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := renderHelpText("y: resume game | n: go to main menu", m.config)
+	helpText := m.renderHelpText("y: resume game | n: go to main menu")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -720,7 +733,7 @@ func (m Model) renderResumePrompt() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
@@ -733,14 +746,14 @@ func (m Model) renderFENInput() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Load Game from FEN")
 	b.WriteString(header)
@@ -757,13 +770,13 @@ func (m Model) renderFENInput() string {
 
 	// Example
 	exampleStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#626262"))
+		Foreground(m.theme.HelpText)
 	example := exampleStyle.Render("Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	b.WriteString(example)
 	b.WriteString("\n\n")
 
 	// Help text
-	helpText := renderHelpText("ESC: back to menu | enter: load position", m.config)
+	helpText := m.renderHelpText("ESC: back to menu | enter: load position")
 	if helpText != "" {
 		b.WriteString(helpText)
 	}
@@ -771,7 +784,7 @@ func (m Model) renderFENInput() string {
 	// Error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
@@ -784,7 +797,7 @@ func (m Model) renderDrawPrompt() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -804,7 +817,7 @@ func (m Model) renderDrawPrompt() string {
 		offerMessage = "Black offers a draw. Accept?"
 	}
 	promptMessage := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Padding(0, 2).
 		Render(offerMessage)
 	b.WriteString(promptMessage)
@@ -820,11 +833,11 @@ func (m Model) renderDrawPrompt() string {
 
 		if i == m.drawPromptSelection {
 			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			cursor = m.cursorStyle().Render("> ")
+			optionText = m.selectedItemStyle().Render(option)
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			optionText = m.menuItemStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -832,20 +845,20 @@ func (m Model) renderDrawPrompt() string {
 
 	// Render help text
 	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to select, Enter to confirm, ESC to cancel")
+	helpText := m.helpStyle().Render("Use arrow keys to select, Enter to confirm, ESC to cancel")
 	b.WriteString(helpText)
 
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -858,14 +871,14 @@ func (m Model) renderBvBBotSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header based on which bot we're selecting
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 
 	headerText := "Select White Bot Difficulty:"
@@ -882,10 +895,10 @@ func (m Model) renderBvBBotSelect() string {
 		optionText := option
 
 		if i == m.menuSelection {
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			cursor = m.cursorStyle().Render("> ")
+			optionText = m.selectedItemStyle().Render(option)
 		} else {
-			optionText = menuItemStyle.Render(option)
+			optionText = m.menuItemStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -895,7 +908,7 @@ func (m Model) renderBvBBotSelect() string {
 	if !m.bvbSelectingWhite {
 		b.WriteString("\n")
 		infoStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#50FA7B")).
+			Foreground(m.theme.StatusText).
 			Padding(0, 2)
 		diffName := botDifficultyName(m.bvbWhiteDiff)
 		b.WriteString(infoStyle.Render(fmt.Sprintf("White: %s Bot", diffName)))
@@ -903,7 +916,7 @@ func (m Model) renderBvBBotSelect() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -912,14 +925,14 @@ func (m Model) renderBvBBotSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -932,14 +945,14 @@ func (m Model) renderBvBGameMode() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Game Mode:")
 	b.WriteString(header)
@@ -947,7 +960,7 @@ func (m Model) renderBvBGameMode() string {
 
 	// Show matchup info
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
 		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
@@ -957,13 +970,13 @@ func (m Model) renderBvBGameMode() string {
 	if m.bvbInputtingCount {
 		// Show text input for game count
 		promptStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
+			Foreground(m.theme.MenuNormal).
 			Padding(0, 2)
 		b.WriteString(promptStyle.Render("Number of games:"))
 		b.WriteString("\n\n")
 
 		inputStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
+			Foreground(m.theme.MenuSelected).
 			Padding(0, 2)
 		inputDisplay := m.bvbCountInput
 		if inputDisplay == "" {
@@ -972,7 +985,7 @@ func (m Model) renderBvBGameMode() string {
 		b.WriteString(inputStyle.Render("> " + inputDisplay))
 		b.WriteString("\n")
 
-		helpText := renderHelpText("ESC: back | enter: confirm | type number", m.config)
+		helpText := m.renderHelpText("ESC: back | enter: confirm | type number")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -984,16 +997,16 @@ func (m Model) renderBvBGameMode() string {
 			optionText := option
 
 			if i == m.menuSelection {
-				cursor = cursorStyle.Render("> ")
-				optionText = selectedItemStyle.Render(option)
+				cursor = m.cursorStyle().Render("> ")
+				optionText = m.selectedItemStyle().Render(option)
 			} else {
-				optionText = menuItemStyle.Render(option)
+				optionText = m.menuItemStyle().Render(option)
 			}
 
 			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 		}
 
-		helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+		helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -1003,14 +1016,14 @@ func (m Model) renderBvBGameMode() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -1021,7 +1034,7 @@ func (m Model) renderBvBGameMode() string {
 func (m Model) renderBvBGridView() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess - Bot vs Bot")
+	title := m.titleStyle().Render("TermChess - Bot vs Bot")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -1030,7 +1043,7 @@ func (m Model) renderBvBGridView() string {
 	minHeight := m.bvbGridRows*11 + 8 // 8 lines for header/footer
 	if m.termWidth > 0 && m.termHeight > 0 && (m.termWidth < minWidth || m.termHeight < minHeight) {
 		warnStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF5555")).
+			Foreground(m.theme.ErrorText).
 			Padding(0, 2)
 		b.WriteString(warnStyle.Render(fmt.Sprintf("Terminal too small for %dx%d grid (need %dx%d, have %dx%d)",
 			m.bvbGridRows, m.bvbGridCols, minWidth, minHeight, m.termWidth, m.termHeight)))
@@ -1061,7 +1074,7 @@ func (m Model) renderBvBGridView() string {
 
 	// Show matchup and progress info
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 
 	finished := 0
@@ -1088,7 +1101,7 @@ func (m Model) renderBvBGridView() string {
 	if totalPages > 1 {
 		pageInfo := fmt.Sprintf("Page %d/%d", pageIdx+1, totalPages)
 		pageStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
+			Foreground(m.theme.MenuSelected).
 			Bold(true).
 			Padding(0, 2)
 		b.WriteString(pageStyle.Render(pageInfo))
@@ -1107,13 +1120,13 @@ func (m Model) renderBvBGridView() string {
 		controlStatus += " | PAUSED"
 	}
 	controlStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Padding(0, 2)
 	b.WriteString(controlStyle.Render(controlStatus))
 	b.WriteString("\n")
 
 	// Help text
-	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: pages | Tab: single view | f: FEN | ESC: abort", m.config)
+	helpText := m.renderHelpText("Space: pause/resume | 1-4: speed | ←/→: pages | Tab: single view | f: FEN | ESC: abort")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1194,7 +1207,7 @@ func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
 
 	if isFinished {
 		// Dimmed style for finished games
-		cellStyle = cellStyle.Foreground(lipgloss.Color("#626262"))
+		cellStyle = cellStyle.Foreground(m.theme.HelpText)
 	}
 
 	return cellStyle.Render(b.String())
@@ -1204,13 +1217,13 @@ func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
 func (m Model) renderBvBGridConfig() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Grid Layout:")
 	b.WriteString(header)
@@ -1218,7 +1231,7 @@ func (m Model) renderBvBGridConfig() string {
 
 	// Show game count info
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 	gameInfo := fmt.Sprintf("%d game(s) | %s Bot (White) vs %s Bot (Black)",
 		m.bvbGameCount, botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
@@ -1227,13 +1240,13 @@ func (m Model) renderBvBGridConfig() string {
 
 	if m.bvbInputtingGrid {
 		promptStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
+			Foreground(m.theme.MenuNormal).
 			Padding(0, 2)
 		b.WriteString(promptStyle.Render("Enter grid dimensions (RxC, max 8 total):"))
 		b.WriteString("\n\n")
 
 		inputStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
+			Foreground(m.theme.MenuSelected).
 			Padding(0, 2)
 		inputDisplay := m.bvbCustomGridInput
 		if inputDisplay == "" {
@@ -1242,7 +1255,7 @@ func (m Model) renderBvBGridConfig() string {
 		b.WriteString(inputStyle.Render("> " + inputDisplay))
 		b.WriteString("\n")
 
-		helpText := renderHelpText("ESC: back | enter: confirm | e.g. 2x3", m.config)
+		helpText := m.renderHelpText("ESC: back | enter: confirm | e.g. 2x3")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -1253,16 +1266,16 @@ func (m Model) renderBvBGridConfig() string {
 			optionText := option
 
 			if i == m.menuSelection {
-				cursor = cursorStyle.Render("> ")
-				optionText = selectedItemStyle.Render(option)
+				cursor = m.cursorStyle().Render("> ")
+				optionText = m.selectedItemStyle().Render(option)
 			} else {
-				optionText = menuItemStyle.Render(option)
+				optionText = m.menuItemStyle().Render(option)
 			}
 
 			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 		}
 
-		helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+		helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -1271,7 +1284,7 @@ func (m Model) renderBvBGridConfig() string {
 
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
@@ -1295,7 +1308,7 @@ func (m Model) renderBvBGamePlay() string {
 func (m Model) renderBvBStats() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess - Bot vs Bot Results")
+	title := m.titleStyle().Render("TermChess - Bot vs Bot Results")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -1311,14 +1324,14 @@ func (m Model) renderBvBStats() string {
 	}
 
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 
 	statStyle := lipgloss.NewStyle().
 		Padding(0, 2)
 
 	dimStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#626262")).
+		Foreground(m.theme.HelpText).
 		Padding(0, 2)
 
 	if stats.TotalGames == 1 {
@@ -1397,24 +1410,24 @@ func (m Model) renderBvBStats() string {
 	// Menu options
 	for i, opt := range m.menuOptions {
 		cursor := "  "
-		optionText := menuItemStyle.Render(opt)
+		optionText := m.menuItemStyle().Render(opt)
 		if i == m.bvbStatsSelection {
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(opt)
+			cursor = m.cursorStyle().Render("> ")
+			optionText = m.selectedItemStyle().Render(opt)
 		}
 		b.WriteString(cursor + optionText)
 		b.WriteString("\n")
 	}
 
 	// Build help text, including pagination controls if multiple pages
-	helpStr := "↑/↓: navigate | Enter: select | ESC: menu"
+	helpStr := "up/down: navigate | Enter: select | ESC: menu"
 	if stats.TotalGames > 1 {
 		totalPages := (len(stats.IndividualResults) + 14) / 15 // resultsPerPage = 15
 		if totalPages > 1 {
-			helpStr = "↑/↓: navigate | ←/→: page | Enter: select | ESC: menu"
+			helpStr = "up/down: navigate | left/right: page | Enter: select | ESC: menu"
 		}
 	}
-	helpText := renderHelpText(helpStr, m.config)
+	helpText := m.renderHelpText(helpStr)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1427,7 +1440,7 @@ func (m Model) renderBvBStats() string {
 func (m Model) renderBvBSingleView() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess - Bot vs Bot")
+	title := m.titleStyle().Render("TermChess - Bot vs Bot")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -1446,7 +1459,7 @@ func (m Model) renderBvBSingleView() string {
 
 	// Show game info header
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 
 	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
@@ -1499,7 +1512,7 @@ func (m Model) renderBvBSingleView() string {
 	}
 
 	statusLineStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Bold(true)
 	b.WriteString(statusLineStyle.Render(statusLine))
 	b.WriteString("\n")
@@ -1516,7 +1529,7 @@ func (m Model) renderBvBSingleView() string {
 		controlStatus += " | PAUSED"
 	}
 	controlStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Padding(0, 2)
 	b.WriteString(controlStyle.Render(controlStatus))
 	b.WriteString("\n")
@@ -1526,14 +1539,14 @@ func (m Model) renderBvBSingleView() string {
 		b.WriteString("\n")
 		historyHeader := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
+			Foreground(m.theme.TitleText).
 			Render("Move History:")
 		b.WriteString(historyHeader)
 		b.WriteString("\n")
 
 		historyText := FormatMoveHistory(moves)
 		historyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4"))
+			Foreground(m.theme.MenuSelected)
 		b.WriteString(historyStyle.Render(historyText))
 		b.WriteString("\n")
 	}
@@ -1541,10 +1554,10 @@ func (m Model) renderBvBSingleView() string {
 	// Help text
 	helpStr := "Space: pause/resume | 1-4: speed | "
 	if m.bvbGameCount > 1 {
-		helpStr += "←/→: games | "
+		helpStr += "left/right: games | "
 	}
 	helpStr += "Tab: view | f: FEN | ESC: abort"
-	helpText := renderHelpText(helpStr, m.config)
+	helpText := m.renderHelpText(helpStr)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
