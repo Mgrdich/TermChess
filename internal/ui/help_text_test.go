@@ -10,20 +10,20 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// TestRenderHelpText tests the renderHelpText helper function
+// TestRenderHelpText tests the renderHelpText helper method
 func TestRenderHelpText(t *testing.T) {
 	testText := "test help text"
 
 	// Test with ShowHelpText enabled
-	config := Config{ShowHelpText: true}
-	result := renderHelpText(testText, config)
+	m := NewModel(Config{ShowHelpText: true, Theme: ThemeNameClassic})
+	result := m.renderHelpText(testText)
 	if result == "" {
 		t.Error("Expected non-empty result when ShowHelpText is true")
 	}
 
 	// Test with ShowHelpText disabled
-	config = Config{ShowHelpText: false}
-	result = renderHelpText(testText, config)
+	m.config.ShowHelpText = false
+	result = m.renderHelpText(testText)
 	if result != "" {
 		t.Errorf("Expected empty result when ShowHelpText is false, got %q", result)
 	}

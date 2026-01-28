@@ -84,8 +84,12 @@ type Model struct {
 	// UI state
 	// screen tracks which screen is currently being displayed
 	screen Screen
+	// navStack tracks the navigation history for back navigation
+	navStack []Screen
 	// config holds display configuration options
 	config Config
+	// theme holds the current color theme for UI rendering
+	theme Theme
 	// termWidth holds the current terminal width in characters
 	termWidth int
 	// termHeight holds the current terminal height in lines
@@ -174,6 +178,10 @@ type Model struct {
 	bvbStatsSelection int
 	// bvbStatsResultsPage tracks the current page of individual results on the stats screen
 	bvbStatsResultsPage int
+
+	// Overlay state
+	// showShortcutsOverlay indicates whether the keyboard shortcuts help overlay is displayed
+	showShortcutsOverlay bool
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.
@@ -199,6 +207,9 @@ func NewModel(config Config) Model {
 	// Build menu options dynamically based on saved game existence
 	menuOptions := buildMainMenuOptions()
 
+	// Load theme based on config
+	theme := GetTheme(ParseThemeName(config.Theme))
+
 	return Model{
 		// Initialize with nil board (created when starting a new game)
 		board:       nil,
@@ -209,6 +220,9 @@ func NewModel(config Config) Model {
 
 		// Use the provided configuration
 		config: config,
+
+		// Use the loaded theme
+		theme: theme,
 
 		// Initialize input state
 		input:     "",

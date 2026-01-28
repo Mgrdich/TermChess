@@ -61,6 +61,44 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // Global keys like quit are handled first, then screen-specific keys are delegated
 // to the current screen's handler.
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If shortcuts overlay is showing, any key dismisses it
+	if m.showShortcutsOverlay {
+		m.showShortcutsOverlay = false
+		return m, nil
+	}
+
+	// Handle '?' key to toggle shortcuts overlay (only when not in text input mode)
+	if msg.String() == "?" && !m.isInTextInputMode() {
+		m.showShortcutsOverlay = true
+		return m, nil
+	}
+
+	// Handle 'n' key globally for new game (only when not in text input mode)
+	if msg.String() == "n" && !m.isInTextInputMode() {
+		// Don't trigger if already on game type select, in active game, or game over
+		if m.screen != ScreenGameTypeSelect && m.screen != ScreenGamePlay && m.screen != ScreenGameOver &&
+			m.screen != ScreenBvBGamePlay && m.screen != ScreenBvBStats {
+			m.pushScreen(ScreenGameTypeSelect)
+			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+			m.menuSelection = 0
+			m.statusMsg = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+
+	// Handle 's' key globally for settings (only when not in text input mode)
+	if msg.String() == "s" && !m.isInTextInputMode() {
+		// Don't trigger if already on settings
+		if m.screen != ScreenSettings {
+			m.pushScreen(ScreenSettings)
+			m.settingsSelection = 0
+			m.statusMsg = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+
 	// Handle global quit keys (work from any screen except GamePlay where 'q' shows save prompt)
 	switch msg.String() {
 	case "ctrl+c":
@@ -183,6 +221,7 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		// Successfully loaded - start gameplay with loaded board
 		m.board = board
 		m.moveHistory = []engine.Move{}
+		m.clearNavStack() // Clear nav stack when starting game
 		m.screen = ScreenGamePlay
 		m.input = ""
 		m.errorMsg = ""
@@ -198,8 +237,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "New Game":
-		// Transition to game type selection screen
-		m.screen = ScreenGameTypeSelect
+		// Transition to game type selection screen using navigation stack
+		m.pushScreen(ScreenGameTypeSelect)
 		// Set up menu options for game type selection
 		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
 		m.menuSelection = 0
@@ -210,8 +249,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.input = ""
 
 	case "Load Game":
-		// Transition to FEN input screen
-		m.screen = ScreenFENInput
+		// Transition to FEN input screen using navigation stack
+		m.pushScreen(ScreenFENInput)
 		// Reset and focus the text input
 		m.fenInput.SetValue("")
 		m.fenInput.Focus()
@@ -220,8 +259,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.errorMsg = ""
 
 	case "Settings":
-		// Transition to settings screen
-		m.screen = ScreenSettings
+		// Transition to settings screen using navigation stack
+		m.pushScreen(ScreenSettings)
 		m.settingsSelection = 0
 		// Clear any previous status messages
 		m.statusMsg = ""
@@ -262,9 +301,12 @@ func (m Model) handleGameTypeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleGameTypeSelection()
 
 	case "esc":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options in case we're back at main menu
+		if m.screen == ScreenMainMenu {
+			m.menuOptions = buildMainMenuOptions()
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -285,6 +327,8 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 		m.gameType = GameTypePvP
 		// Create a new board with the standard starting position
 		m.board = engine.NewBoard()
+		// Clear nav stack when starting game
+		m.clearNavStack()
 		// Switch to the GamePlay screen
 		m.screen = ScreenGamePlay
 		// Clear any previous status messages
@@ -303,8 +347,8 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 	case "Player vs Bot":
 		// Set game type to PvBot
 		m.gameType = GameTypePvBot
-		// Transition to bot difficulty selection screen
-		m.screen = ScreenBotSelect
+		// Transition to bot difficulty selection screen using navigation stack
+		m.pushScreen(ScreenBotSelect)
 		m.menuOptions = []string{"Easy", "Medium", "Hard"}
 		m.menuSelection = 0
 		m.statusMsg = ""
@@ -433,15 +477,15 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleSettingsKeys handles keyboard input for the Settings screen.
-// Supports arrow keys and vi-style navigation (j/k), Space or Enter to toggle,
+// Supports arrow keys and vi-style navigation (j/k), Space or Enter to toggle/cycle,
 // ESC to return to main menu, and wraps around at top and bottom of the settings.
 func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Clear any previous error or status messages when user takes action
 	m.errorMsg = ""
 	m.statusMsg = ""
 
-	// Number of settings options
-	numSettings := 5 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText
+	// Number of settings options (5 toggles + 1 theme selector)
+	numSettings := 6 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText, Theme
 
 	switch msg.String() {
 	case "up", "k":
@@ -467,9 +511,12 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.toggleSelectedSetting()
 
 	case "esc", "q", "b", "backspace":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options if we're back at main menu
+		if m.screen == ScreenMainMenu {
+			m.menuOptions = buildMainMenuOptions()
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -479,8 +526,10 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // toggleSelectedSetting toggles the currently selected setting and saves the config.
+// For boolean settings, it toggles between true/false.
+// For the theme setting, it cycles through: Classic -> Modern -> Minimalist -> Classic.
 func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
-	// Toggle the selected setting based on settingsSelection index
+	// Toggle or cycle the selected setting based on settingsSelection index
 	switch m.settingsSelection {
 	case 0: // Use Unicode Pieces
 		m.config.UseUnicode = !m.config.UseUnicode
@@ -492,6 +541,11 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 		m.config.ShowMoveHistory = !m.config.ShowMoveHistory
 	case 4: // Show Help Text
 		m.config.ShowHelpText = !m.config.ShowHelpText
+	case 5: // Theme
+		// Cycle through themes: Classic -> Modern -> Minimalist -> Classic
+		m.config.Theme = cycleTheme(m.config.Theme)
+		// Update the theme in the model immediately for visual feedback
+		m.theme = GetTheme(ParseThemeName(m.config.Theme))
 	}
 
 	// Save the configuration immediately
@@ -503,6 +557,21 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// cycleTheme cycles through theme names: classic -> modern -> minimalist -> classic.
+func cycleTheme(current string) string {
+	switch current {
+	case ThemeNameClassic:
+		return ThemeNameModern
+	case ThemeNameModern:
+		return ThemeNameMinimalist
+	case ThemeNameMinimalist:
+		return ThemeNameClassic
+	default:
+		// Unknown theme, reset to modern (next after classic)
+		return ThemeNameModern
+	}
 }
 
 // handleSavePromptKeys handles keyboard input for the Save Prompt screen.
@@ -726,9 +795,12 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "esc":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options if we're back at main menu
+		if m.screen == ScreenMainMenu {
+			m.menuOptions = buildMainMenuOptions()
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -754,6 +826,8 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Successfully loaded - start gameplay with loaded board
 		m.board = board
 		m.moveHistory = []engine.Move{}
+		// Clear nav stack when starting game
+		m.clearNavStack()
 		m.screen = ScreenGamePlay
 		m.gameType = GameTypePvP
 		m.input = ""
@@ -1039,9 +1113,12 @@ func (m Model) handleBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBotDifficultySelection()
 
 	case "esc":
-		// Return to game type selection
-		m.screen = ScreenGameTypeSelect
-		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options for game type selection if we're back there
+		if m.screen == ScreenGameTypeSelect {
+			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -1677,9 +1754,12 @@ func (m Model) handleColorSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleColorSelection()
 
 	case "esc":
-		// Return to bot difficulty selection
-		m.screen = ScreenBotSelect
-		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		// Return to previous screen using navigation stack
+		m.popScreen()
+		// Rebuild menu options for bot selection if we're back there
+		if m.screen == ScreenBotSelect {
+			m.menuOptions = []string{"Easy", "Medium", "Hard"}
+		}
 		m.menuSelection = 0
 		m.errorMsg = ""
 		m.statusMsg = ""
@@ -1703,6 +1783,8 @@ func (m Model) handleColorSelection() (tea.Model, tea.Cmd) {
 
 	// Create a new board with the standard starting position
 	m.board = engine.NewBoard()
+	// Clear nav stack when starting game
+	m.clearNavStack()
 	// Switch to the GamePlay screen
 	m.screen = ScreenGamePlay
 	// Clear any previous status messages
@@ -1740,8 +1822,8 @@ func (m Model) handleBotDifficultySelection() (tea.Model, tea.Cmd) {
 		m.botDifficulty = BotHard
 	}
 
-	// Transition to color selection screen
-	m.screen = ScreenColorSelect
+	// Transition to color selection screen using navigation stack
+	m.pushScreen(ScreenColorSelect)
 	m.menuOptions = []string{"Play as White", "Play as Black"}
 	m.menuSelection = 0
 	m.statusMsg = ""
@@ -1870,4 +1952,30 @@ func (m Model) handleBotMoveError(msg BotMoveErrorMsg) (tea.Model, tea.Cmd) {
 	m.errorMsg = fmt.Sprintf("Bot error: %v", msg.err)
 	m.statusMsg = ""
 	return m, nil
+}
+
+// isInTextInputMode returns true if the user is currently in a text input mode
+// where the '?' key should be typed rather than triggering the shortcuts overlay.
+func (m Model) isInTextInputMode() bool {
+	// FEN input screen uses text input
+	if m.screen == ScreenFENInput {
+		return true
+	}
+
+	// GamePlay screen uses text input for moves
+	if m.screen == ScreenGamePlay {
+		return true
+	}
+
+	// BvB game count input mode
+	if m.screen == ScreenBvBGameMode && m.bvbInputtingCount {
+		return true
+	}
+
+	// BvB custom grid input mode
+	if m.screen == ScreenBvBGridConfig && m.bvbInputtingGrid {
+		return true
+	}
+
+	return false
 }

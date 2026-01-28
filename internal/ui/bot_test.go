@@ -184,6 +184,8 @@ func TestBotMoveErrorHandling(t *testing.T) {
 func TestBotSelectNavigation(t *testing.T) {
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenBotSelect
+	// Set up nav stack as if we navigated from GameTypeSelect
+	m.navStack = []Screen{ScreenMainMenu, ScreenGameTypeSelect}
 	m.menuOptions = []string{"Easy", "Medium", "Hard"}
 	m.menuSelection = 0
 
@@ -217,7 +219,7 @@ func TestBotSelectNavigation(t *testing.T) {
 		t.Errorf("Expected selection to wrap to 2, got: %d", m.menuSelection)
 	}
 
-	// Test ESC returns to game type select
+	// Test ESC returns to game type select (via nav stack)
 	result, _ = m.handleBotSelectKeys(tea.KeyMsg{Type: tea.KeyEsc})
 	m = result.(Model)
 	if m.screen != ScreenGameTypeSelect {
@@ -299,6 +301,8 @@ func TestColorSelection(t *testing.T) {
 func TestColorSelectNavigation(t *testing.T) {
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenColorSelect
+	// Set up nav stack as if we navigated from BotSelect
+	m.navStack = []Screen{ScreenMainMenu, ScreenGameTypeSelect, ScreenBotSelect}
 	m.menuOptions = []string{"Play as White", "Play as Black"}
 	m.menuSelection = 0
 
@@ -332,7 +336,7 @@ func TestColorSelectNavigation(t *testing.T) {
 		t.Errorf("Expected selection to wrap to 1, got: %d", m.menuSelection)
 	}
 
-	// Test ESC returns to bot difficulty select
+	// Test ESC returns to bot difficulty select (via nav stack)
 	result, _ = m.handleColorSelectKeys(tea.KeyMsg{Type: tea.KeyEsc})
 	m = result.(Model)
 	if m.screen != ScreenBotSelect {
