@@ -357,6 +357,90 @@ func (m *SessionManager) Stop() {
 - [ ] Abort channel properly signals waiting goroutines to exit
 - [ ] No references to completed sessions are retained in the manager
 
+**Stats-Only Mode** (`internal/ui/model.go` and `internal/ui/view.go`):
+
+Stats-Only mode addresses terminal performance issues when running high-concurrency Bot vs Bot sessions. Rendering many boards simultaneously causes terminal lag; Stats-Only mode eliminates this bottleneck.
+
+**New Screen** (`internal/ui/model.go`):
+```go
+const (
+    // ... existing screens
+    ScreenBvBViewModeSelect  // New: Select view mode before starting session
+)
+```
+
+**Updated Bot vs Bot Flow**:
+```
+ScreenBvBBotSelect (select White/Black bot difficulties)
+    ↓
+ScreenBvBGameMode (single game or multi-game)
+    ↓ (if multi-game)
+ScreenBvBGridConfig (select game count)
+    ↓
+ScreenBvBViewModeSelect (NEW: select Grid/Single/Stats Only)
+    ↓
+ScreenBvBGamePlay (session starts with selected view mode)
+```
+
+**View Mode Selection Screen**:
+- Menu options:
+  1. "Grid View" - Watch multiple games in a grid layout
+  2. "Single Board" - Focus on one game at a time
+  3. "Stats Only (Recommended for 50+ games)" - No boards, just statistics
+- Arrow keys to navigate, Enter to select
+- Esc to go back to game count input
+
+```go
+type BvBViewMode int
+
+const (
+    BvBGridView BvBViewMode = iota
+    BvBSingleView
+    BvBStatsOnlyView  // New: No board rendering
+)
+```
+
+**Model Fields**:
+```go
+type Model struct {
+    // ... existing fields
+    bvbViewMode BvBViewMode  // Extended to include BvBStatsOnlyView
+}
+```
+
+**Stats-Only View Rendering** (`internal/ui/view.go`):
+```go
+func (m Model) renderBvBStatsOnly() string {
+    // Render comprehensive statistics without any board visualization
+    // - Session title and configuration
+    // - Progress bar: [████████░░░░░░░░] 45% (45/100 games)
+    // - Score summary: White: 20 | Black: 15 | Draws: 10
+    // - Average moves per completed game
+    // - Estimated time remaining (based on avg game duration)
+    // - Current active games indicator (e.g., "12 games in progress")
+    // - Recent completions log (last 5 game results)
+}
+```
+
+**View Mode Toggle**:
+- `v` key cycles through view modes: Grid → Single → Stats Only → Grid
+- Mode can be changed during active session
+- Current mode persists until user changes it or session ends
+
+**Performance Benefits**:
+- No board string rendering (each board is ~20 lines × 30 chars)
+- No per-game state tracking for display purposes
+- Reduced terminal I/O (single stats panel vs. multiple boards)
+- Allows safely running 50+ concurrent games without terminal lag
+
+**Config Integration** (`internal/config/config.go`):
+```go
+type GameConfig struct {
+    // ... existing fields
+    BvBDefaultViewMode string `toml:"bvb_default_view_mode"` // "grid", "single", "stats_only"
+}
+```
+
 ### 2.5 Accessibility
 
 **WCAG AA Compliance**:
@@ -381,6 +465,7 @@ func (m *SessionManager) Stop() {
 | Theme System | `Config`, all UI rendering | High - Touches all view code |
 | Navigation | `Model`, `Update`, `View` | Medium - Cross-cutting but isolated |
 | BvB Improvements | `SessionManager`, `Config`, UI | Medium - Changes to existing feature |
+| BvB Stats-Only Mode | `Model`, `View`, `Config` | Low - New view mode, additive change |
 
 ### Potential Risks & Mitigations
 
@@ -392,6 +477,7 @@ func (m *SessionManager) Stop() {
 | Breaking existing keyboard navigation | Medium | High | Comprehensive regression testing; keep existing shortcuts working |
 | BvB concurrency regression | Low | Medium | Preserve existing behavior when concurrency=0 (auto); add unit tests |
 | Memory leaks from undestroyed engines | High (if not addressed) | High | Implement `cleanup()` with defer pattern; nil out engine references; add `io.Closer` interface support |
+| Stats-only mode missing critical info | Low | Low | Include all essential statistics; allow toggling back to board view |
 
 ---
 
@@ -406,6 +492,8 @@ func (m *SessionManager) Stop() {
 | `Model.pushScreen/popScreen` | Stack behavior, empty stack handling |
 | `SessionManager` concurrency | Auto-detection logic (tiered formula), manual override, bounds checking |
 | `GameSession.cleanup()` | Engines properly nil'd, Close() called if implemented |
+| `BvBViewMode` toggle | Cycling through Grid → Single → Stats Only → Grid |
+| `renderBvBStatsOnly()` | Output contains score, progress, avg moves |
 
 ### Integration Tests
 
@@ -428,6 +516,7 @@ func (m *SessionManager) Stop() {
 | BvB statistics | All stats display and update correctly |
 | Breadcrumb navigation | Back navigation works from all screens |
 | Concurrency testing | Test on 2, 4, 8, 16 core systems with various multipliers |
+| BvB stats-only mode | View toggle works, stats update correctly, no terminal lag at high concurrency |
 
 ### Benchmarks
 
@@ -437,3 +526,5 @@ func (m *SessionManager) Stop() {
 | BvB 10-game session (Hard vs Hard) | CPU-intensive scenario |
 | Concurrency sweep (1x, 1.5x, 2x, 3x NumCPU) | Find optimal multiplier |
 | Memory profiling during BvB | Verify no leaks after cleanup |
+| BvB 100-game session stats-only mode | Verify high concurrency stability |
+| Stats-only vs Grid view terminal I/O | Compare rendering overhead |

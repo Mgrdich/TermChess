@@ -139,6 +139,23 @@
 - [ ] Focus indicators are visible when navigating with keyboard
 - [ ] No functionality is mouse-only; keyboard alternatives exist for all actions
 
+### 2.10 Bot vs Bot Stats-Only Mode
+
+**As a** user running many Bot vs Bot games, **I want** an option to hide the game boards and only see statistics, **so that** I can run higher concurrency sessions without terminal lag or rendering issues.
+
+**Acceptance Criteria:**
+- [ ] After selecting game count in multi-game mode, a "View Mode" selection screen appears
+- [ ] View mode options are: "Grid View" (default), "Single Board", and "Stats Only"
+- [ ] Each option has a brief description explaining the mode
+- [ ] Stats Only description mentions it's recommended for high game counts (50+)
+- [ ] Selected view mode is used when the session starts
+- [ ] When Stats Only mode is enabled, no game boards are rendered during the session
+- [ ] Statistics panel displays all relevant information: current score, games completed/total, average moves per game, current game being played indicators
+- [ ] Progress bar or similar visualization shows overall session progress
+- [ ] User can toggle between Stats Only and Grid/Single view modes during a running session using `v` key
+- [ ] Stats Only mode allows running higher concurrency without terminal performance degradation
+- [ ] Session completes successfully and shows final statistics regardless of view mode
+
 ---
 
 ## 3. Scope and Boundaries
@@ -156,6 +173,7 @@
 - Bot vs Bot comprehensive live statistics panel
 - Bot vs Bot speed simplification (Normal/Instant only)
 - Bot vs Bot concurrency control with auto-detection
+- Bot vs Bot stats-only mode for high-concurrency sessions
 - WCAG AA color contrast compliance
 - Full keyboard navigation as mouse alternative
 

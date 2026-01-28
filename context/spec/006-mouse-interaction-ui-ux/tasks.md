@@ -192,10 +192,35 @@
   - [ ] Add captured pieces display for current game
   - [ ] Verify all statistics display and update in real-time
 
-## Slice 17: Final Polish and Accessibility Verification
+## Slice 17: Bot vs Bot Stats-Only Mode
+*Add stats-only view mode for high-concurrency sessions*
+
+- [ ] **Slice 17: Stats-Only View Mode**
+  - [ ] Add `ScreenBvBViewModeSelect` constant to Screen type in `model.go`
+  - [ ] Add `BvBStatsOnlyView` constant to `BvBViewMode` type in `model.go`
+  - [ ] Create `renderBvBViewModeSelect()` function in `view.go` with three options
+  - [ ] Add descriptions for each view mode option (Grid, Single, Stats Only)
+  - [ ] Include "(Recommended for 50+ games)" hint on Stats Only option
+  - [ ] Update `ScreenBvBGridConfig` to navigate to `ScreenBvBViewModeSelect` after game count entry
+  - [ ] Handle arrow keys and Enter for view mode selection
+  - [ ] Handle Esc to go back to game count input
+  - [ ] Set `bvbViewMode` based on selection before starting session
+  - [ ] Update `v` key handler to cycle through Grid → Single → Stats Only → Grid during session
+  - [ ] Create `renderBvBStatsOnly()` function in `view.go`
+  - [ ] Display progress bar showing completed/total games
+  - [ ] Display score summary (White wins / Black wins / Draws)
+  - [ ] Display average moves per completed game
+  - [ ] Display "X games in progress" indicator
+  - [ ] Display recent completions log (last 5 game results)
+  - [ ] Add `BvBDefaultViewMode string` to `GameConfig` in `config.go`
+  - [ ] Update config loading/saving for new field
+  - [ ] Verify stats-only mode works correctly with high concurrency (50+ games)
+  - [ ] Verify view mode can be toggled during active session
+
+## Slice 18: Final Polish and Accessibility Verification
 *Ensure WCAG compliance and keyboard accessibility*
 
-- [ ] **Slice 17: Accessibility and Final Polish**
+- [ ] **Slice 18: Accessibility and Final Polish**
   - [ ] Verify all three themes meet WCAG AA contrast standards using contrast checker
   - [ ] Verify every interactive element is reachable via keyboard
   - [ ] Verify focus indicators are visible throughout the app
