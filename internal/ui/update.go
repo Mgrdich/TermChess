@@ -61,6 +61,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // Global keys like quit are handled first, then screen-specific keys are delegated
 // to the current screen's handler.
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If shortcuts overlay is showing, any key dismisses it
+	if m.showShortcutsOverlay {
+		m.showShortcutsOverlay = false
+		return m, nil
+	}
+
+	// Handle '?' key to toggle shortcuts overlay (only when not in text input mode)
+	if msg.String() == "?" && !m.isInTextInputMode() {
+		m.showShortcutsOverlay = true
+		return m, nil
+	}
+
 	// Handle global quit keys (work from any screen except GamePlay where 'q' shows save prompt)
 	switch msg.String() {
 	case "ctrl+c":
@@ -1914,4 +1926,30 @@ func (m Model) handleBotMoveError(msg BotMoveErrorMsg) (tea.Model, tea.Cmd) {
 	m.errorMsg = fmt.Sprintf("Bot error: %v", msg.err)
 	m.statusMsg = ""
 	return m, nil
+}
+
+// isInTextInputMode returns true if the user is currently in a text input mode
+// where the '?' key should be typed rather than triggering the shortcuts overlay.
+func (m Model) isInTextInputMode() bool {
+	// FEN input screen uses text input
+	if m.screen == ScreenFENInput {
+		return true
+	}
+
+	// GamePlay screen uses text input for moves
+	if m.screen == ScreenGamePlay {
+		return true
+	}
+
+	// BvB game count input mode
+	if m.screen == ScreenBvBGameMode && m.bvbInputtingCount {
+		return true
+	}
+
+	// BvB custom grid input mode
+	if m.screen == ScreenBvBGridConfig && m.bvbInputtingGrid {
+		return true
+	}
+
+	return false
 }

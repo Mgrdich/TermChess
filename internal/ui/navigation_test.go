@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Mgrdich/TermChess/internal/engine"
@@ -572,4 +573,279 @@ func TestNavStackClearedOnGameStart(t *testing.T) {
 	if m.screen != ScreenGamePlay {
 		t.Errorf("Expected screen to be GamePlay, got %v", m.screen)
 	}
+}
+
+// TestShortcutsOverlayToggle tests that '?' key toggles the shortcuts overlay
+func TestShortcutsOverlayToggle(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenMainMenu
+
+	// Initially overlay should be hidden
+	if m.showShortcutsOverlay {
+		t.Error("Expected shortcuts overlay to be hidden initially")
+	}
+
+	// Press '?' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
+	result, _ := m.handleKeyPress(msg)
+	m = result.(Model)
+
+	// Overlay should now be visible
+	if !m.showShortcutsOverlay {
+		t.Error("Expected shortcuts overlay to be visible after pressing '?'")
+	}
+
+	// Verify screen didn't change
+	if m.screen != ScreenMainMenu {
+		t.Errorf("Expected screen to remain MainMenu, got %v", m.screen)
+	}
+}
+
+// TestShortcutsOverlayDismissOnAnyKey tests that any key dismisses the overlay
+func TestShortcutsOverlayDismissOnAnyKey(t *testing.T) {
+	testKeys := []tea.KeyMsg{
+		{Type: tea.KeyRunes, Runes: []rune{'a'}},
+		{Type: tea.KeyEnter},
+		{Type: tea.KeyEsc},
+		{Type: tea.KeySpace},
+		{Type: tea.KeyRunes, Runes: []rune{'?'}},
+	}
+
+	for _, key := range testKeys {
+		m := NewModel(DefaultConfig())
+		m.screen = ScreenMainMenu
+		m.showShortcutsOverlay = true
+
+		result, _ := m.handleKeyPress(key)
+		m = result.(Model)
+
+		if m.showShortcutsOverlay {
+			t.Errorf("Expected overlay to be dismissed by key %v", key)
+		}
+
+		// Screen should remain unchanged
+		if m.screen != ScreenMainMenu {
+			t.Errorf("Expected screen to remain MainMenu after dismiss, got %v", m.screen)
+		}
+	}
+}
+
+// TestShortcutsOverlayNotShownInTextInputMode tests that '?' doesn't show overlay in text input modes
+func TestShortcutsOverlayNotShownInTextInputMode(t *testing.T) {
+	// Test FEN input screen (text input mode)
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenFENInput
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
+	result, _ := m.handleKeyPress(msg)
+	m = result.(Model)
+
+	if m.showShortcutsOverlay {
+		t.Error("Expected shortcuts overlay NOT to show on FEN input screen")
+	}
+
+	// Test GamePlay screen (text input mode)
+	m = NewModel(DefaultConfig())
+	m.board = engine.NewBoard()
+	m.screen = ScreenGamePlay
+
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+
+	if m.showShortcutsOverlay {
+		t.Error("Expected shortcuts overlay NOT to show on GamePlay screen")
+	}
+
+	// Test BvB count input mode
+	m = NewModel(DefaultConfig())
+	m.screen = ScreenBvBGameMode
+	m.bvbInputtingCount = true
+
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+
+	if m.showShortcutsOverlay {
+		t.Error("Expected shortcuts overlay NOT to show in BvB count input mode")
+	}
+
+	// Test BvB grid input mode
+	m = NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.bvbInputtingGrid = true
+
+	result, _ = m.handleKeyPress(msg)
+	m = result.(Model)
+
+	if m.showShortcutsOverlay {
+		t.Error("Expected shortcuts overlay NOT to show in BvB grid input mode")
+	}
+}
+
+// TestShortcutsOverlayShownOnNonTextInputScreens tests that '?' shows overlay on non-text-input screens
+func TestShortcutsOverlayShownOnNonTextInputScreens(t *testing.T) {
+	screens := []Screen{
+		ScreenMainMenu,
+		ScreenGameTypeSelect,
+		ScreenBotSelect,
+		ScreenColorSelect,
+		ScreenSettings,
+		ScreenGameOver,
+		ScreenBvBBotSelect,
+	}
+
+	for _, screen := range screens {
+		m := NewModel(DefaultConfig())
+		m.screen = screen
+
+		// Set up any required state for certain screens
+		if screen == ScreenGameOver || screen == ScreenGamePlay {
+			m.board = engine.NewBoard()
+		}
+		if screen == ScreenGameTypeSelect || screen == ScreenBotSelect || screen == ScreenColorSelect || screen == ScreenBvBBotSelect {
+			m.menuOptions = []string{"Option 1", "Option 2"}
+		}
+
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
+		result, _ := m.handleKeyPress(msg)
+		m = result.(Model)
+
+		if !m.showShortcutsOverlay {
+			t.Errorf("Expected shortcuts overlay to show on screen %v", screen)
+		}
+	}
+}
+
+// TestShortcutsOverlayRendersContent tests that the overlay renders expected content
+func TestShortcutsOverlayRendersContent(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.showShortcutsOverlay = true
+
+	view := m.View()
+
+	// Check for title
+	if !containsText(view, "Keyboard Shortcuts") {
+		t.Error("Expected overlay to contain 'Keyboard Shortcuts' title")
+	}
+
+	// Check for section headers
+	expectedSections := []string{
+		"Global",
+		"Menu Navigation",
+		"Settings",
+		"Gameplay",
+		"Bot vs Bot",
+	}
+	for _, section := range expectedSections {
+		if !containsText(view, section) {
+			t.Errorf("Expected overlay to contain section '%s'", section)
+		}
+	}
+
+	// Check for some key shortcuts
+	expectedShortcuts := []string{
+		"Ctrl+C",
+		"Esc",
+		"Enter",
+		"resign",
+		"offerdraw",
+		"Space",
+	}
+	for _, shortcut := range expectedShortcuts {
+		if !containsText(view, shortcut) {
+			t.Errorf("Expected overlay to contain shortcut '%s'", shortcut)
+		}
+	}
+
+	// Check for dismiss hint
+	if !containsText(view, "Press any key to close") {
+		t.Error("Expected overlay to contain dismiss hint")
+	}
+}
+
+// TestIsInTextInputMode tests the isInTextInputMode helper function
+func TestIsInTextInputMode(t *testing.T) {
+	tests := []struct {
+		name           string
+		setup          func(*Model)
+		expectedResult bool
+	}{
+		{
+			name: "MainMenu is not text input",
+			setup: func(m *Model) {
+				m.screen = ScreenMainMenu
+			},
+			expectedResult: false,
+		},
+		{
+			name: "FENInput is text input",
+			setup: func(m *Model) {
+				m.screen = ScreenFENInput
+			},
+			expectedResult: true,
+		},
+		{
+			name: "GamePlay is text input",
+			setup: func(m *Model) {
+				m.screen = ScreenGamePlay
+				m.board = engine.NewBoard()
+			},
+			expectedResult: true,
+		},
+		{
+			name: "BvBGameMode without input is not text input",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGameMode
+				m.bvbInputtingCount = false
+			},
+			expectedResult: false,
+		},
+		{
+			name: "BvBGameMode with input is text input",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGameMode
+				m.bvbInputtingCount = true
+			},
+			expectedResult: true,
+		},
+		{
+			name: "BvBGridConfig without input is not text input",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGridConfig
+				m.bvbInputtingGrid = false
+			},
+			expectedResult: false,
+		},
+		{
+			name: "BvBGridConfig with input is text input",
+			setup: func(m *Model) {
+				m.screen = ScreenBvBGridConfig
+				m.bvbInputtingGrid = true
+			},
+			expectedResult: true,
+		},
+		{
+			name: "Settings is not text input",
+			setup: func(m *Model) {
+				m.screen = ScreenSettings
+			},
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			tt.setup(&m)
+
+			result := m.isInTextInputMode()
+			if result != tt.expectedResult {
+				t.Errorf("isInTextInputMode() = %v, want %v", result, tt.expectedResult)
+			}
+		})
+	}
+}
+
+// containsText is a helper function to check if a string contains a substring
+func containsText(s, substr string) bool {
+	return strings.Contains(s, substr)
 }

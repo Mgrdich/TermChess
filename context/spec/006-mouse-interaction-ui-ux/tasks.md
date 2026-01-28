@@ -50,13 +50,13 @@
 ## Slice 5: Keyboard Shortcuts Help Overlay
 *Add ? shortcut to show help modal*
 
-- [ ] **Slice 5: Keyboard Shortcuts Overlay**
-  - [ ] Add `showShortcutsOverlay bool` field to Model
-  - [ ] Handle `?` key globally to toggle overlay
-  - [ ] Create `renderShortcutsOverlay()` function with all shortcuts organized by context
-  - [ ] Render overlay as full-screen modal over current view
-  - [ ] Dismiss overlay on any key press
-  - [ ] Verify overlay displays correctly and dismisses properly
+- [x] **Slice 5: Keyboard Shortcuts Overlay**
+  - [x] Add `showShortcutsOverlay bool` field to Model
+  - [x] Handle `?` key globally to toggle overlay
+  - [x] Create `renderShortcutsOverlay()` function with all shortcuts organized by context
+  - [x] Render overlay as full-screen modal over current view
+  - [x] Dismiss overlay on any key press
+  - [x] Verify overlay displays correctly and dismisses properly
 
 ## Slice 6: Global Keyboard Shortcuts
 *Implement remaining global shortcuts (n, q, s)*

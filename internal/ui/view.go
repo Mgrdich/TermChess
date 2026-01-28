@@ -118,6 +118,11 @@ func (m Model) renderHelpText(text string) string {
 // This function is called by Bubbletea on every update to generate
 // the string that will be displayed in the terminal.
 func (m Model) View() string {
+	// If the shortcuts overlay is active, render it over the current view
+	if m.showShortcutsOverlay {
+		return m.renderShortcutsOverlay()
+	}
+
 	switch m.screen {
 	case ScreenMainMenu:
 		return m.renderMainMenu()
@@ -1697,4 +1702,100 @@ func getThemeDisplayName(themeName string) string {
 	default:
 		return "Classic"
 	}
+}
+
+// renderShortcutsOverlay renders a full-screen modal overlay displaying all keyboard shortcuts.
+// The overlay is organized by context (Global, Menu, Settings, Gameplay, Bot vs Bot).
+func (m Model) renderShortcutsOverlay() string {
+	var b strings.Builder
+
+	// Title style for the overlay
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+
+	// Section header style
+	sectionStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.MenuSelected).
+		Padding(1, 0, 0, 0)
+
+	// Shortcut key style (left column)
+	keyStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true).
+		Width(15)
+
+	// Description style (right column)
+	descStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal)
+
+	// Hint style for the footer
+	hintStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true).
+		Padding(2, 0, 0, 0)
+
+	// Render title
+	b.WriteString(titleStyle.Render("Keyboard Shortcuts"))
+	b.WriteString("\n")
+
+	// Helper function to render a shortcut line
+	renderShortcut := func(key, description string) {
+		b.WriteString(keyStyle.Render(key))
+		b.WriteString(descStyle.Render(description))
+		b.WriteString("\n")
+	}
+
+	// Global shortcuts
+	b.WriteString(sectionStyle.Render("Global"))
+	b.WriteString("\n")
+	renderShortcut("?", "Show this help overlay")
+	renderShortcut("Ctrl+C", "Quit application")
+	renderShortcut("q", "Quit (or show save prompt in game)")
+	renderShortcut("Esc", "Go back / Cancel")
+
+	// Menu navigation
+	b.WriteString(sectionStyle.Render("Menu Navigation"))
+	b.WriteString("\n")
+	renderShortcut("Up / k", "Move selection up")
+	renderShortcut("Down / j", "Move selection down")
+	renderShortcut("Enter", "Select / Confirm")
+
+	// Settings
+	b.WriteString(sectionStyle.Render("Settings"))
+	b.WriteString("\n")
+	renderShortcut("Up / k", "Previous setting")
+	renderShortcut("Down / j", "Next setting")
+	renderShortcut("Enter/Space", "Toggle / Cycle setting")
+
+	// Gameplay
+	b.WriteString(sectionStyle.Render("Gameplay"))
+	b.WriteString("\n")
+	renderShortcut("Type move", "Enter move (e.g., e4, Nf3, O-O)")
+	renderShortcut("Enter", "Submit move")
+	renderShortcut("resign", "Resign the game")
+	renderShortcut("offerdraw", "Offer a draw")
+	renderShortcut("showfen", "Show/copy FEN position")
+	renderShortcut("menu", "Return to menu (with save)")
+
+	// Bot vs Bot
+	b.WriteString(sectionStyle.Render("Bot vs Bot"))
+	b.WriteString("\n")
+	renderShortcut("Space", "Pause / Resume")
+	renderShortcut("Left / h", "Previous game / page")
+	renderShortcut("Right / l", "Next game / page")
+	renderShortcut("Tab", "Toggle grid / single view")
+	renderShortcut("1", "Speed: Instant")
+	renderShortcut("2", "Speed: Fast")
+	renderShortcut("3", "Speed: Normal")
+	renderShortcut("4", "Speed: Slow")
+	renderShortcut("f", "Copy FEN of current game")
+
+	// Footer hint
+	b.WriteString(hintStyle.Render("Press any key to close"))
+
+	return b.String()
 }
