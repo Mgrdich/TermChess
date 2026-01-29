@@ -133,16 +133,16 @@
 ## Slice 12: Bot vs Bot Concurrency Config
 *Add configurable concurrency with auto-detection*
 
-- [ ] **Slice 12: Bot vs Bot Concurrency Control**
-  - [ ] Add `BvBConcurrency int` to `GameConfig` in `config.go`
-  - [ ] Implement `calculateDefaultConcurrency()` with tiered formula
-  - [ ] Modify `SessionManager` constructor to accept concurrency parameter
-  - [ ] If concurrency is 0, use auto-detected value
-  - [ ] Cap concurrency at `maxConcurrentGames`
-  - [ ] Display current concurrency setting when starting multi-game session
-  - [ ] Add concurrency setting to Settings screen or Bot vs Bot config screen
-  - [ ] Write unit tests for `calculateDefaultConcurrency()` formula
-  - [ ] Verify concurrency setting affects actual game parallelism
+- [x] **Slice 12: Bot vs Bot Concurrency Control**
+  - [x] Add `BvBConcurrency int` to `GameConfig` in `config.go`
+  - [x] Implement `calculateDefaultConcurrency()` with tiered formula
+  - [x] Modify `SessionManager` constructor to accept concurrency parameter
+  - [x] If concurrency is 0, use auto-detected value
+  - [x] Cap concurrency at `maxConcurrentGames`
+  - [x] Display current concurrency setting when starting multi-game session
+  - [x] Add concurrency setting to Settings screen or Bot vs Bot config screen
+  - [x] Write unit tests for `calculateDefaultConcurrency()` formula
+  - [x] Verify concurrency setting affects actual game parallelism
 
 ## Slice 13: Bot vs Bot Engine Cleanup
 *Prevent memory leaks by destroying engines after games*

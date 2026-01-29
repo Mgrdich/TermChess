@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewSessionManager(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "Easy Bot", "Easy Bot", 3)
+	m := NewSessionManager(bot.Easy, bot.Easy, "Easy Bot", "Easy Bot", 3, 0)
 	if m == nil {
 		t.Fatal("NewSessionManager returned nil")
 	}
@@ -21,7 +21,7 @@ func TestNewSessionManager(t *testing.T) {
 }
 
 func TestSessionManagerStartLaunchesSessions(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3)
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3, 0)
 	err := m.Start()
 	if err != nil {
 		t.Fatalf("Start() error: %v", err)
@@ -40,7 +40,7 @@ func TestSessionManagerStartLaunchesSessions(t *testing.T) {
 }
 
 func TestSessionManagerAllComplete(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3)
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3, 0)
 	m.speed = SpeedInstant
 	err := m.Start()
 	if err != nil {
@@ -75,7 +75,7 @@ func TestSessionManagerAllComplete(t *testing.T) {
 }
 
 func TestSessionManagerPauseResume(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 2)
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 2, 0)
 	m.speed = SpeedNormal
 	err := m.Start()
 	if err != nil {
@@ -105,7 +105,7 @@ func TestSessionManagerPauseResume(t *testing.T) {
 }
 
 func TestSessionManagerSetSpeed(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 2)
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 2, 0)
 	m.speed = SpeedNormal
 	err := m.Start()
 	if err != nil {
@@ -121,7 +121,7 @@ func TestSessionManagerSetSpeed(t *testing.T) {
 }
 
 func TestSessionManagerAbort(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3)
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3, 0)
 	m.speed = SpeedNormal
 	err := m.Start()
 	if err != nil {
@@ -146,7 +146,7 @@ func TestSessionManagerAbort(t *testing.T) {
 }
 
 func TestSessionManagerAllFinishedFalseBeforeComplete(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3)
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3, 0)
 	// Not started yet.
 	if m.AllFinished() {
 		t.Error("AllFinished should be false before Start")
@@ -163,5 +163,106 @@ func TestSessionManagerAllFinishedFalseBeforeComplete(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	if m.AllFinished() {
 		t.Error("AllFinished should be false while games are running")
+	}
+}
+
+// TestCalculateDefaultConcurrencyWithCPU tests the tiered concurrency formula.
+func TestCalculateDefaultConcurrencyWithCPU(t *testing.T) {
+	tests := []struct {
+		name     string
+		numCPU   int
+		expected int
+	}{
+		// Tier 1: numCPU <= 2, use numCPU directly
+		{"1 CPU", 1, 1},
+		{"2 CPUs", 2, 2},
+
+		// Tier 2: numCPU <= 4, use numCPU * 1.5
+		{"3 CPUs", 3, 4},  // 3 * 1.5 = 4.5 -> 4
+		{"4 CPUs", 4, 6},  // 4 * 1.5 = 6
+
+		// Tier 3: numCPU > 4, use numCPU * 2
+		{"5 CPUs", 5, 10},   // 5 * 2 = 10
+		{"8 CPUs", 8, 16},   // 8 * 2 = 16
+		{"16 CPUs", 16, 32}, // 16 * 2 = 32
+
+		// Test max cap (maxConcurrentGames = 50)
+		{"30 CPUs", 30, 50}, // 30 * 2 = 60, capped at 50
+
+		// Edge case: 0 CPUs should return 1
+		{"0 CPUs", 0, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := calculateDefaultConcurrencyWithCPU(tt.numCPU)
+			if got != tt.expected {
+				t.Errorf("calculateDefaultConcurrencyWithCPU(%d) = %d, want %d",
+					tt.numCPU, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCalculateDefaultConcurrency verifies the exported function returns a reasonable value.
+func TestCalculateDefaultConcurrency(t *testing.T) {
+	concurrency := CalculateDefaultConcurrency()
+
+	// Should be at least 1
+	if concurrency < 1 {
+		t.Errorf("CalculateDefaultConcurrency() = %d, want >= 1", concurrency)
+	}
+
+	// Should be at most maxConcurrentGames
+	if concurrency > maxConcurrentGames {
+		t.Errorf("CalculateDefaultConcurrency() = %d, want <= %d",
+			concurrency, maxConcurrentGames)
+	}
+}
+
+// TestNewSessionManagerAutoDetectConcurrency verifies that concurrency 0 triggers auto-detection.
+func TestNewSessionManagerAutoDetectConcurrency(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 10, 0)
+
+	// Concurrency should be auto-detected (not 0)
+	if m.Concurrency() == 0 {
+		t.Error("Concurrency should be auto-detected when passed 0, but got 0")
+	}
+
+	// Should be at least 1
+	if m.Concurrency() < 1 {
+		t.Errorf("Concurrency() = %d, want >= 1", m.Concurrency())
+	}
+
+	// Should be at most maxConcurrentGames
+	if m.Concurrency() > maxConcurrentGames {
+		t.Errorf("Concurrency() = %d, want <= %d", m.Concurrency(), maxConcurrentGames)
+	}
+}
+
+// TestNewSessionManagerExplicitConcurrency verifies that explicit concurrency values are used.
+func TestNewSessionManagerExplicitConcurrency(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 10, 5)
+
+	if m.Concurrency() != 5 {
+		t.Errorf("Concurrency() = %d, want 5", m.Concurrency())
+	}
+}
+
+// TestNewSessionManagerConcurrencyCap verifies that concurrency is capped at maxConcurrentGames.
+func TestNewSessionManagerConcurrencyCap(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 10, 100)
+
+	if m.Concurrency() != maxConcurrentGames {
+		t.Errorf("Concurrency() = %d, want %d (capped at max)", m.Concurrency(), maxConcurrentGames)
+	}
+}
+
+// TestNewSessionManagerConcurrencyMinimum verifies that concurrency has a minimum of 1.
+func TestNewSessionManagerConcurrencyMinimum(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 10, -5)
+
+	if m.Concurrency() != 1 {
+		t.Errorf("Concurrency() = %d, want 1 (minimum)", m.Concurrency())
 	}
 }

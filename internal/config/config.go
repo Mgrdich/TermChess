@@ -77,6 +77,9 @@ type DisplayConfig struct {
 type GameConfig struct {
 	DefaultGameType      string `toml:"default_game_type"`
 	DefaultBotDifficulty string `toml:"default_bot_difficulty"`
+	// BvBConcurrency controls how many Bot vs Bot games run simultaneously.
+	// 0 = auto-detect based on CPU count, positive values specify exact count.
+	BvBConcurrency int `toml:"bvb_concurrency"`
 }
 
 // defaultConfigFile returns a ConfigFile with default values.
@@ -159,6 +162,32 @@ func LoadConfig() Config {
 
 	// Convert ConfigFile to Config and return
 	return configFileToConfig(cf)
+}
+
+// LoadGameConfig reads the game configuration from ~/.termchess/config.toml.
+// If the file doesn't exist or cannot be parsed, it returns the default game configuration.
+// This function never returns an error - it always returns a valid configuration.
+func LoadGameConfig() GameConfig {
+	configPath, err := getConfigFilePath()
+	if err != nil {
+		// Cannot determine config path, use defaults
+		return defaultConfigFile().Game
+	}
+
+	// Check if config file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// Config file doesn't exist, use defaults
+		return defaultConfigFile().Game
+	}
+
+	// Read and parse the config file
+	var cf ConfigFile
+	if _, err := toml.DecodeFile(configPath, &cf); err != nil {
+		// Failed to parse config file, use defaults
+		return defaultConfigFile().Game
+	}
+
+	return cf.Game
 }
 
 // SaveConfig writes the configuration to ~/.termchess/config.toml.

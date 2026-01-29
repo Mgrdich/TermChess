@@ -1247,9 +1247,10 @@ func (m Model) renderBvBGridView() string {
 	}
 	running := m.bvbManager.RunningCount()
 	queued := m.bvbManager.QueuedCount()
-	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black) | Completed: %d/%d | Running: %d | Queued: %d",
+	concurrency := m.bvbManager.Concurrency()
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black) | Completed: %d/%d | Running: %d | Queued: %d | Concurrency: %d",
 		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff),
-		finished, len(sessions), running, queued)
+		finished, len(sessions), running, queued, concurrency)
 	b.WriteString(infoStyle.Render(matchup))
 	b.WriteString("\n\n")
 
@@ -1648,12 +1649,13 @@ func (m Model) renderBvBSingleView() string {
 	}
 	running := m.bvbManager.RunningCount()
 	queued := m.bvbManager.QueuedCount()
+	concurrency := m.bvbManager.Concurrency()
 	var gameInfo string
 	if len(sessions) > 1 {
-		gameInfo = fmt.Sprintf("Game %d of %d | Completed: %d | Running: %d | Queued: %d",
-			selectedIdx+1, len(sessions), finished, running, queued)
+		gameInfo = fmt.Sprintf("Game %d of %d | Completed: %d | Running: %d | Queued: %d | Concurrency: %d",
+			selectedIdx+1, len(sessions), finished, running, queued, concurrency)
 	} else {
-		gameInfo = fmt.Sprintf("Game %d of %d", selectedIdx+1, len(sessions))
+		gameInfo = fmt.Sprintf("Game %d of %d | Concurrency: %d", selectedIdx+1, len(sessions), concurrency)
 	}
 	b.WriteString(infoStyle.Render(gameInfo))
 	b.WriteString("\n\n")
