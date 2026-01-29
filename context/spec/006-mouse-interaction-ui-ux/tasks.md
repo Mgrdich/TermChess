@@ -82,16 +82,16 @@
 ## Slice 8: Mouse Selection (No Highlighting Yet)
 *Basic click-to-select without visual feedback*
 
-- [ ] **Slice 8: Basic Mouse Piece Selection**
-  - [ ] Add `selectedSquare *engine.Square` field to Model
-  - [ ] Add `tea.MouseMsg` case to `Update()` function
-  - [ ] Implement `squareFromMouse(x, y int) *engine.Square` helper with fixed board position
-  - [ ] Implement `handleMouseEvent(msg tea.MouseMsg)` method
-  - [ ] Only process mouse in PvP and Player vs Bot modes (not Bot vs Bot)
-  - [ ] Click on own piece sets `selectedSquare`
-  - [ ] Click on different own piece changes selection
-  - [ ] Write unit tests for `squareFromMouse()` with various positions
-  - [ ] Verify piece selection works (no visual feedback yet, but state changes)
+- [x] **Slice 8: Basic Mouse Piece Selection**
+  - [x] Add `selectedSquare *engine.Square` field to Model
+  - [x] Add `tea.MouseMsg` case to `Update()` function
+  - [x] Implement `squareFromMouse(x, y int) *engine.Square` helper with fixed board position
+  - [x] Implement `handleMouseEvent(msg tea.MouseMsg)` method
+  - [x] Only process mouse in PvP and Player vs Bot modes (not Bot vs Bot)
+  - [x] Click on own piece sets `selectedSquare`
+  - [x] Click on different own piece changes selection
+  - [x] Write unit tests for `squareFromMouse()` with various positions
+  - [x] Verify piece selection works (no visual feedback yet, but state changes)
 
 ## Slice 9: Mouse Move Execution
 *Complete moves by clicking destination*

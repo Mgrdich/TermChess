@@ -182,6 +182,11 @@ type Model struct {
 	// Overlay state
 	// showShortcutsOverlay indicates whether the keyboard shortcuts help overlay is displayed
 	showShortcutsOverlay bool
+
+	// Mouse interaction state
+	// selectedSquare holds the currently selected piece's square for mouse interaction
+	// nil means no piece is currently selected
+	selectedSquare *engine.Square
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.

@@ -52,6 +52,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleBotMove(msg)
 	case BotMoveErrorMsg:
 		return m.handleBotMoveError(msg)
+	case tea.MouseMsg:
+		// Only handle mouse in interactive game modes (not Bot vs Bot)
+		if m.screen == ScreenGamePlay && m.gameType != GameTypeBvB {
+			return m.handleMouseEvent(msg)
+		}
+		return m, nil
 	}
 
 	return m, nil
