@@ -106,7 +106,7 @@ func TestSessionManagerPauseResume(t *testing.T) {
 
 func TestSessionManagerSetSpeed(t *testing.T) {
 	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 2)
-	m.speed = SpeedSlow
+	m.speed = SpeedNormal
 	err := m.Start()
 	if err != nil {
 		t.Fatalf("Start() error: %v", err)
@@ -122,7 +122,7 @@ func TestSessionManagerSetSpeed(t *testing.T) {
 
 func TestSessionManagerAbort(t *testing.T) {
 	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3)
-	m.speed = SpeedSlow
+	m.speed = SpeedNormal
 	err := m.Start()
 	if err != nil {
 		t.Fatalf("Start() error: %v", err)
@@ -152,14 +152,14 @@ func TestSessionManagerAllFinishedFalseBeforeComplete(t *testing.T) {
 		t.Error("AllFinished should be false before Start")
 	}
 
-	m.speed = SpeedSlow
+	m.speed = SpeedNormal
 	err := m.Start()
 	if err != nil {
 		t.Fatalf("Start() error: %v", err)
 	}
 	defer m.Abort()
 
-	// Games should still be running (slow speed).
+	// Games should still be running (normal speed).
 	time.Sleep(100 * time.Millisecond)
 	if m.AllFinished() {
 		t.Error("AllFinished should be false while games are running")

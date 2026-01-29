@@ -1569,7 +1569,7 @@ func TestBvBGamePlay_EscAbortsSession(t *testing.T) {
 	}
 }
 
-// TestBvBGamePlay_SpeedChange tests speed change keys.
+// TestBvBGamePlay_SpeedChange tests speed toggle key.
 func TestBvBGamePlay_SpeedChange(t *testing.T) {
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenBvBGridConfig
@@ -1587,22 +1587,22 @@ func TestBvBGamePlay_SpeedChange(t *testing.T) {
 		t.Errorf("Expected default speed Normal, got %v", m.bvbSpeed)
 	}
 
-	// Change to Fast (key "2")
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
-	result, _ = m.handleBvBGamePlayKeys(msg)
-	m = result.(Model)
-
-	if m.bvbSpeed != bvb.SpeedFast {
-		t.Errorf("Expected speed Fast after pressing '2', got %v", m.bvbSpeed)
-	}
-
-	// Change to Instant (key "1")
-	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}}
+	// Toggle to Instant (key "t")
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
 	result, _ = m.handleBvBGamePlayKeys(msg)
 	m = result.(Model)
 
 	if m.bvbSpeed != bvb.SpeedInstant {
-		t.Errorf("Expected speed Instant after pressing '1', got %v", m.bvbSpeed)
+		t.Errorf("Expected speed Instant after pressing 't', got %v", m.bvbSpeed)
+	}
+
+	// Toggle back to Normal (key "t")
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+	result, _ = m.handleBvBGamePlayKeys(msg)
+	m = result.(Model)
+
+	if m.bvbSpeed != bvb.SpeedNormal {
+		t.Errorf("Expected speed Normal after pressing 't' again, got %v", m.bvbSpeed)
 	}
 
 	// Clean up

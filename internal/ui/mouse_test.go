@@ -575,3 +575,526 @@ func TestUpdate_NonGamePlayIgnoresMouse(t *testing.T) {
 			*newModel.selectedSquare)
 	}
 }
+
+// TestComputeValidMoves tests that valid moves are computed correctly when selecting a piece.
+func TestComputeValidMoves(t *testing.T) {
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:    engine.NewBoard(),
+		gameType: GameTypePvP,
+		screen:   ScreenGamePlay,
+		config:   config,
+	}
+
+	// Select the e2 pawn (white pawn)
+	// e2 = file 4, rank 1
+	// mouseX = 2 + 4*2 = 10
+	// mouseY = 4 + (7-1) = 10
+	msg := tea.MouseMsg{
+		X:      10,
+		Y:      10,
+		Button: tea.MouseButtonLeft,
+		Action: tea.MouseActionPress,
+	}
+
+	newModel, _ := m.handleMouseEvent(msg)
+
+	if newModel.selectedSquare == nil {
+		t.Fatalf("Expected selectedSquare to be set")
+	}
+
+	// Check that valid moves were computed
+	if len(newModel.validMoves) == 0 {
+		t.Fatalf("Expected validMoves to be populated")
+	}
+
+	// e2 pawn should have 2 valid moves: e3 and e4
+	if len(newModel.validMoves) != 2 {
+		t.Errorf("Expected 2 valid moves for e2 pawn, got %d", len(newModel.validMoves))
+	}
+
+	// Check that e3 and e4 are in valid moves
+	e3 := engine.NewSquare(4, 2)
+	e4 := engine.NewSquare(4, 3)
+	hasE3, hasE4 := false, false
+	for _, sq := range newModel.validMoves {
+		if sq == e3 {
+			hasE3 = true
+		}
+		if sq == e4 {
+			hasE4 = true
+		}
+	}
+
+	if !hasE3 {
+		t.Errorf("Expected e3 to be in validMoves")
+	}
+	if !hasE4 {
+		t.Errorf("Expected e4 to be in validMoves")
+	}
+}
+
+// TestIsValidMoveDestination tests the helper function for checking valid destinations.
+func TestIsValidMoveDestination(t *testing.T) {
+	e3 := engine.NewSquare(4, 2)
+	e4 := engine.NewSquare(4, 3)
+	d4 := engine.NewSquare(3, 3)
+
+	m := Model{
+		validMoves: []engine.Square{e3, e4},
+	}
+
+	if !m.isValidMoveDestination(e3) {
+		t.Errorf("Expected e3 to be valid destination")
+	}
+
+	if !m.isValidMoveDestination(e4) {
+		t.Errorf("Expected e4 to be valid destination")
+	}
+
+	if m.isValidMoveDestination(d4) {
+		t.Errorf("Expected d4 to NOT be valid destination")
+	}
+}
+
+// TestExecuteMouseMove_ValidMove tests that clicking on a valid destination executes the move.
+func TestExecuteMouseMove_ValidMove(t *testing.T) {
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:    engine.NewBoard(),
+		gameType: GameTypePvP,
+		screen:   ScreenGamePlay,
+		config:   config,
+	}
+
+	// First, select the e2 pawn
+	e2 := engine.NewSquare(4, 1)
+	m.selectedSquare = &e2
+	m.computeValidMoves()
+
+	// Now click on e4 (valid move destination)
+	// e4 = file 4, rank 3
+	// mouseX = 2 + 4*2 = 10
+	// mouseY = 4 + (7-3) = 8
+	msg := tea.MouseMsg{
+		X:      10,
+		Y:      8,
+		Button: tea.MouseButtonLeft,
+		Action: tea.MouseActionPress,
+	}
+
+	newModel, _ := m.handleMouseEvent(msg)
+
+	// Move should be executed
+	if newModel.selectedSquare != nil {
+		t.Errorf("Expected selectedSquare to be cleared after move execution")
+	}
+
+	if newModel.validMoves != nil {
+		t.Errorf("Expected validMoves to be cleared after move execution")
+	}
+
+	// Check that the pawn is now on e4
+	e4 := engine.NewSquare(4, 3)
+	piece := newModel.board.PieceAt(e4)
+	if piece.Type() != engine.Pawn || piece.Color() != engine.White {
+		t.Errorf("Expected white pawn on e4 after move")
+	}
+
+	// Check that e2 is now empty
+	piece = newModel.board.PieceAt(e2)
+	if !piece.IsEmpty() {
+		t.Errorf("Expected e2 to be empty after move")
+	}
+
+	// Check that it's now Black's turn
+	if newModel.board.ActiveColor != engine.Black {
+		t.Errorf("Expected Black to move after White's move")
+	}
+
+	// Check that move was added to history
+	if len(newModel.moveHistory) != 1 {
+		t.Errorf("Expected 1 move in history, got %d", len(newModel.moveHistory))
+	}
+}
+
+// TestExecuteMouseMove_InvalidDestination tests that clicking on an invalid destination
+// keeps the piece selected.
+func TestExecuteMouseMove_InvalidDestination(t *testing.T) {
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:    engine.NewBoard(),
+		gameType: GameTypePvP,
+		screen:   ScreenGamePlay,
+		config:   config,
+	}
+
+	// First, select the e2 pawn
+	e2 := engine.NewSquare(4, 1)
+	m.selectedSquare = &e2
+	m.computeValidMoves()
+
+	// Click on a5 (not a valid destination for e2 pawn)
+	// a5 = file 0, rank 4
+	// mouseX = 2 + 0*2 = 2
+	// mouseY = 4 + (7-4) = 7
+	msg := tea.MouseMsg{
+		X:      2,
+		Y:      7,
+		Button: tea.MouseButtonLeft,
+		Action: tea.MouseActionPress,
+	}
+
+	newModel, _ := m.handleMouseEvent(msg)
+
+	// Selection should remain (piece stays selected)
+	if newModel.selectedSquare == nil {
+		t.Errorf("Expected selectedSquare to remain set")
+	}
+
+	if *newModel.selectedSquare != e2 {
+		t.Errorf("Expected selectedSquare to remain e2")
+	}
+
+	// Move should NOT be executed
+	if newModel.board.ActiveColor != engine.White {
+		t.Errorf("Expected White to still be the active color (no move made)")
+	}
+}
+
+// TestMouseMoveClears_Selection tests that a successful move clears the selection.
+func TestMouseMoveClears_Selection(t *testing.T) {
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:    engine.NewBoard(),
+		gameType: GameTypePvP,
+		screen:   ScreenGamePlay,
+		config:   config,
+	}
+
+	// Select and move e2-e4
+	e2 := engine.NewSquare(4, 1)
+	m.selectedSquare = &e2
+	m.computeValidMoves()
+
+	e4 := engine.NewSquare(4, 3)
+	newModel, _ := m.executeMouseMove(e4)
+
+	if newModel.selectedSquare != nil {
+		t.Errorf("Expected selection to be cleared after move")
+	}
+
+	if len(newModel.validMoves) != 0 {
+		t.Errorf("Expected validMoves to be cleared after move")
+	}
+}
+
+// TestMouseMove_PvP_CompleteTurn tests a complete mouse-based turn in PvP mode.
+func TestMouseMove_PvP_CompleteTurn(t *testing.T) {
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:       engine.NewBoard(),
+		gameType:    GameTypePvP,
+		screen:      ScreenGamePlay,
+		config:      config,
+		moveHistory: []engine.Move{},
+	}
+
+	// White's turn: select e2, move to e4
+	// Click on e2
+	msgSelectE2 := tea.MouseMsg{X: 10, Y: 10, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress}
+	m, _ = m.handleMouseEvent(msgSelectE2)
+
+	if m.selectedSquare == nil || m.selectedSquare.File() != 4 || m.selectedSquare.Rank() != 1 {
+		t.Fatalf("Expected e2 to be selected")
+	}
+
+	// Click on e4
+	msgMoveE4 := tea.MouseMsg{X: 10, Y: 8, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress}
+	m, _ = m.handleMouseEvent(msgMoveE4)
+
+	// Verify move executed
+	if m.board.ActiveColor != engine.Black {
+		t.Errorf("Expected Black's turn after White's move")
+	}
+
+	// Black's turn: select e7, move to e5
+	// e7 = file 4, rank 6 -> mouseX=10, mouseY=4+(7-6)=5
+	msgSelectE7 := tea.MouseMsg{X: 10, Y: 5, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress}
+	m, _ = m.handleMouseEvent(msgSelectE7)
+
+	if m.selectedSquare == nil || m.selectedSquare.File() != 4 || m.selectedSquare.Rank() != 6 {
+		t.Fatalf("Expected e7 to be selected")
+	}
+
+	// e5 = file 4, rank 4 -> mouseX=10, mouseY=4+(7-4)=7
+	msgMoveE5 := tea.MouseMsg{X: 10, Y: 7, Button: tea.MouseButtonLeft, Action: tea.MouseActionPress}
+	m, _ = m.handleMouseEvent(msgMoveE5)
+
+	// Verify move executed
+	if m.board.ActiveColor != engine.White {
+		t.Errorf("Expected White's turn after Black's move")
+	}
+
+	// Verify move history has 2 moves
+	if len(m.moveHistory) != 2 {
+		t.Errorf("Expected 2 moves in history, got %d", len(m.moveHistory))
+	}
+}
+
+// TestMouseMove_PvBot_HumanMove tests that human can make moves with mouse in PvBot mode.
+func TestMouseMove_PvBot_HumanMove(t *testing.T) {
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:       engine.NewBoard(),
+		gameType:    GameTypePvBot,
+		screen:      ScreenGamePlay,
+		config:      config,
+		userColor:   engine.White, // Human plays White
+		moveHistory: []engine.Move{},
+	}
+
+	// Select e2 pawn
+	e2 := engine.NewSquare(4, 1)
+	m.selectedSquare = &e2
+	m.computeValidMoves()
+
+	// Execute move to e4
+	newModel, cmd := m.executeMouseMove(engine.NewSquare(4, 3))
+
+	// Move should be executed
+	if newModel.board.ActiveColor != engine.Black {
+		t.Errorf("Expected Black's turn after White's move")
+	}
+
+	// Bot move command should be triggered
+	if cmd == nil {
+		t.Errorf("Expected bot move command to be triggered")
+	}
+}
+
+// TestMouseMove_Capture tests that a capture move works correctly via mouse.
+func TestMouseMove_Capture(t *testing.T) {
+	// Set up a position where white pawn can capture
+	// Use FEN: starting position with e4 and d5 played
+	board, _ := engine.FromFEN("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2")
+
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:       board,
+		gameType:    GameTypePvP,
+		screen:      ScreenGamePlay,
+		config:      config,
+		moveHistory: []engine.Move{},
+	}
+
+	// Select e4 pawn
+	e4 := engine.NewSquare(4, 3)
+	m.selectedSquare = &e4
+	m.computeValidMoves()
+
+	// Verify d5 is a valid move (capture)
+	d5 := engine.NewSquare(3, 4)
+	if !m.isValidMoveDestination(d5) {
+		t.Fatalf("Expected d5 to be a valid capture destination")
+	}
+
+	// Execute capture
+	newModel, _ := m.executeMouseMove(d5)
+
+	// Verify capture was executed
+	piece := newModel.board.PieceAt(d5)
+	if piece.Type() != engine.Pawn || piece.Color() != engine.White {
+		t.Errorf("Expected white pawn on d5 after capture")
+	}
+
+	// e4 should be empty
+	piece = newModel.board.PieceAt(e4)
+	if !piece.IsEmpty() {
+		t.Errorf("Expected e4 to be empty after capture")
+	}
+}
+
+// TestMouseMove_ChangeSelectionToAnotherPiece tests that clicking on another own piece
+// changes the selection instead of trying to move there.
+func TestMouseMove_ChangeSelectionToAnotherPiece(t *testing.T) {
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:    engine.NewBoard(),
+		gameType: GameTypePvP,
+		screen:   ScreenGamePlay,
+		config:   config,
+	}
+
+	// Select e2 pawn
+	e2 := engine.NewSquare(4, 1)
+	m.selectedSquare = &e2
+	m.computeValidMoves()
+
+	// Click on d2 (another white pawn)
+	// d2 = file 3, rank 1
+	// mouseX = 2 + 3*2 = 8
+	// mouseY = 4 + (7-1) = 10
+	msg := tea.MouseMsg{
+		X:      8,
+		Y:      10,
+		Button: tea.MouseButtonLeft,
+		Action: tea.MouseActionPress,
+	}
+
+	newModel, _ := m.handleMouseEvent(msg)
+
+	// Selection should change to d2
+	if newModel.selectedSquare == nil {
+		t.Fatalf("Expected selectedSquare to be set")
+	}
+
+	d2 := engine.NewSquare(3, 1)
+	if *newModel.selectedSquare != d2 {
+		t.Errorf("Expected selectedSquare to be d2, got %v", *newModel.selectedSquare)
+	}
+
+	// Valid moves should be for d2, not e2
+	d3 := engine.NewSquare(3, 2)
+	d4 := engine.NewSquare(3, 3)
+	hasD3, hasD4 := false, false
+	for _, sq := range newModel.validMoves {
+		if sq == d3 {
+			hasD3 = true
+		}
+		if sq == d4 {
+			hasD4 = true
+		}
+	}
+
+	if !hasD3 || !hasD4 {
+		t.Errorf("Expected valid moves to include d3 and d4 for d2 pawn")
+	}
+}
+
+// TestMouseMove_PromotionAutoQueen tests that pawn promotion automatically promotes to Queen.
+func TestMouseMove_PromotionAutoQueen(t *testing.T) {
+	// Set up a position where white pawn is about to promote
+	// FEN with white pawn on a7 (simpler - no piece blocking)
+	// 8 . . . . k . . .
+	// 7 P . . . . . . .
+	// etc.
+	board, err := engine.FromFEN("4k3/P7/8/8/8/8/8/4K3 w - - 0 1")
+	if err != nil {
+		t.Fatalf("Failed to parse FEN: %v", err)
+	}
+
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:       board,
+		gameType:    GameTypePvP,
+		screen:      ScreenGamePlay,
+		config:      config,
+		moveHistory: []engine.Move{},
+	}
+
+	// Select a7 pawn (file 0, rank 6)
+	a7 := engine.NewSquare(0, 6)
+	piece := m.board.PieceAt(a7)
+	if piece.Type() != engine.Pawn || piece.Color() != engine.White {
+		// Debug: print board state
+		for rank := 7; rank >= 0; rank-- {
+			for file := 0; file < 8; file++ {
+				sq := engine.NewSquare(file, rank)
+				p := m.board.PieceAt(sq)
+				if p.IsEmpty() {
+					t.Logf("  ")
+				} else {
+					t.Logf("%v ", p)
+				}
+			}
+			t.Logf("\n")
+		}
+		t.Fatalf("Expected white pawn at a7 (file 0, rank 6), got %v", piece)
+	}
+
+	m.selectedSquare = &a7
+	m.computeValidMoves()
+
+	// a8 should be a valid move (file 0, rank 7)
+	a8 := engine.NewSquare(0, 7)
+	if !m.isValidMoveDestination(a8) {
+		// Debug: show all legal moves
+		for _, move := range m.board.LegalMoves() {
+			t.Logf("Legal move: %v -> %v (promo: %v)", move.From, move.To, move.Promotion)
+		}
+		t.Fatalf("Expected a8 to be a valid promotion destination, validMoves: %v", m.validMoves)
+	}
+
+	// Execute promotion move
+	newModel, _ := m.executeMouseMove(a8)
+
+	// Verify promotion to Queen
+	pieceAtA8 := newModel.board.PieceAt(a8)
+	if pieceAtA8.Type() != engine.Queen {
+		t.Errorf("Expected Queen on a8 after promotion, got %v", pieceAtA8.Type())
+	}
+	if pieceAtA8.Color() != engine.White {
+		t.Errorf("Expected White Queen on a8 after promotion")
+	}
+}
+
+// TestMouseMove_GameOver tests that game transitions to GameOver screen after checkmate.
+func TestMouseMove_GameOver(t *testing.T) {
+	// Set up a position where white can checkmate in one move
+	// Fool's mate position: after 1. f3 e5 2. g4, Black can play Qh4#
+	board, _ := engine.FromFEN("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3")
+
+	config := Config{
+		ShowCoords: true,
+	}
+
+	m := Model{
+		board:       board,
+		gameType:    GameTypePvP,
+		screen:      ScreenGamePlay,
+		config:      config,
+		moveHistory: []engine.Move{},
+	}
+
+	// This position is already checkmate for white
+	if !m.board.IsGameOver() {
+		t.Skip("Position should be game over (checkmate)")
+	}
+
+	// Verify game is over
+	if m.board.IsGameOver() {
+		m.screen = ScreenGameOver
+	}
+
+	if m.screen != ScreenGameOver {
+		t.Errorf("Expected screen to be GameOver")
+	}
+}

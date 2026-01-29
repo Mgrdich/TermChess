@@ -18,6 +18,10 @@ import (
 // BvBTickMsg triggers a UI re-render for Bot vs Bot gameplay.
 type BvBTickMsg struct{}
 
+// BlinkTickMsg triggers the blink state toggle for selected square highlighting.
+// The blink effect runs at 500ms intervals while a piece is selected.
+type BlinkTickMsg time.Time
+
 // BotMoveMsg is sent when the bot has selected a move.
 type BotMoveMsg struct {
 	move engine.Move
@@ -26,6 +30,14 @@ type BotMoveMsg struct {
 // BotMoveErrorMsg is sent when the bot encounters an error during move selection.
 type BotMoveErrorMsg struct {
 	err error
+}
+
+// blinkTickCmd returns a command that sends a BlinkTickMsg after 500ms.
+// Used to create the blinking highlight effect for selected squares.
+func blinkTickCmd() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+		return BlinkTickMsg(t)
+	})
 }
 
 // Init initializes the model. Called once at program start.
@@ -57,6 +69,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.screen == ScreenGamePlay && m.gameType != GameTypeBvB {
 			return m.handleMouseEvent(msg)
 		}
+		return m, nil
+	case BlinkTickMsg:
+		// Only continue ticking if a piece is selected
+		if m.selectedSquare != nil {
+			m.blinkOn = !m.blinkOn
+			return m, blinkTickCmd()
+		}
+		m.blinkOn = false
 		return m, nil
 	}
 
@@ -1540,23 +1560,13 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-	case "1":
-		m.bvbSpeed = bvb.SpeedInstant
-		if m.bvbManager != nil {
-			m.bvbManager.SetSpeed(m.bvbSpeed)
+	case "t", "T":
+		// Toggle between Normal and Instant speed
+		if m.bvbSpeed == bvb.SpeedNormal {
+			m.bvbSpeed = bvb.SpeedInstant
+		} else {
+			m.bvbSpeed = bvb.SpeedNormal
 		}
-	case "2":
-		m.bvbSpeed = bvb.SpeedFast
-		if m.bvbManager != nil {
-			m.bvbManager.SetSpeed(m.bvbSpeed)
-		}
-	case "3":
-		m.bvbSpeed = bvb.SpeedNormal
-		if m.bvbManager != nil {
-			m.bvbManager.SetSpeed(m.bvbSpeed)
-		}
-	case "4":
-		m.bvbSpeed = bvb.SpeedSlow
 		if m.bvbManager != nil {
 			m.bvbManager.SetSpeed(m.bvbSpeed)
 		}

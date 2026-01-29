@@ -510,9 +510,9 @@ func (m Model) renderGamePlay() string {
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
-	// Render the chess board
-	renderer := NewBoardRenderer(m.config)
-	boardStr := renderer.Render(m.board)
+	// Render the chess board with selection highlighting
+	renderer := NewBoardRendererWithTheme(m.config, m.theme)
+	boardStr := renderer.RenderWithSelection(m.board, m.selectedSquare, m.validMoves, m.blinkOn)
 	b.WriteString(boardStr)
 
 	// Render move history if enabled
@@ -1273,9 +1273,7 @@ func (m Model) renderBvBGridView() string {
 	// Speed/pause status
 	speedNames := map[bvb.PlaybackSpeed]string{
 		bvb.SpeedInstant: "Instant",
-		bvb.SpeedFast:    "Fast",
 		bvb.SpeedNormal:  "Normal",
-		bvb.SpeedSlow:    "Slow",
 	}
 	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
 	if m.bvbPaused {
@@ -1288,7 +1286,7 @@ func (m Model) renderBvBGridView() string {
 	b.WriteString("\n")
 
 	// Help text
-	helpText := m.renderHelpText("Space: pause/resume | 1-4: speed | ←/→: pages | Tab: single view | f: FEN | ESC: abort")
+	helpText := m.renderHelpText("Space: pause/resume | t: toggle speed | ←/→: pages | Tab: single view | f: FEN | ESC: abort")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1694,9 +1692,7 @@ func (m Model) renderBvBSingleView() string {
 	// Show pause/speed status
 	speedNames := map[bvb.PlaybackSpeed]string{
 		bvb.SpeedInstant: "Instant",
-		bvb.SpeedFast:    "Fast",
 		bvb.SpeedNormal:  "Normal",
-		bvb.SpeedSlow:    "Slow",
 	}
 	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
 	if m.bvbPaused {
@@ -1726,7 +1722,7 @@ func (m Model) renderBvBSingleView() string {
 	}
 
 	// Help text
-	helpStr := "Space: pause/resume | 1-4: speed | "
+	helpStr := "Space: pause/resume | t: toggle speed | "
 	if m.bvbGameCount > 1 {
 		helpStr += "left/right: games | "
 	}
@@ -1895,10 +1891,7 @@ func (m Model) renderShortcutsOverlay() string {
 	renderShortcut("Left / h", "Previous game / page")
 	renderShortcut("Right / l", "Next game / page")
 	renderShortcut("Tab", "Toggle grid / single view")
-	renderShortcut("1", "Speed: Instant")
-	renderShortcut("2", "Speed: Fast")
-	renderShortcut("3", "Speed: Normal")
-	renderShortcut("4", "Speed: Slow")
+	renderShortcut("t", "Toggle speed (Normal / Instant)")
 	renderShortcut("f", "Copy FEN of current game")
 
 	// Footer hint

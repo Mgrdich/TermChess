@@ -96,39 +96,39 @@
 ## Slice 9: Mouse Move Execution
 *Complete moves by clicking destination*
 
-- [ ] **Slice 9: Mouse Move Execution**
-  - [ ] Add `validMoves []engine.Square` field to Model
-  - [ ] When piece selected, compute and store valid moves using `engine.Board.LegalMoves()`
-  - [ ] Click on valid destination executes the move
-  - [ ] Click on invalid destination keeps piece selected
-  - [ ] Clear selection after successful move
-  - [ ] Verify complete mouse-based moves work in PvP and vs Bot modes
+- [x] **Slice 9: Mouse Move Execution**
+  - [x] Add `validMoves []engine.Square` field to Model
+  - [x] When piece selected, compute and store valid moves using `engine.Board.LegalMoves()`
+  - [x] Click on valid destination executes the move
+  - [x] Click on invalid destination keeps piece selected
+  - [x] Clear selection after successful move
+  - [x] Verify complete mouse-based moves work in PvP and vs Bot modes
 
 ## Slice 10: Selection Blinking Effect
 *Add visual feedback for selected piece and valid moves*
 
-- [ ] **Slice 10: Blinking Highlight Effect**
-  - [ ] Add `blinkOn bool` field to Model
-  - [ ] Create `BlinkTickMsg` message type
-  - [ ] Start tick command (500ms interval) when piece is selected
-  - [ ] Stop tick when selection is cleared
-  - [ ] Toggle `blinkOn` on each tick
-  - [ ] Add `SelectedHighlight` and `ValidMoveHighlight` colors to all themes
-  - [ ] Update `BoardRenderer.Render()` to accept selection state parameters
-  - [ ] Apply blinking highlight style to selected square when `blinkOn` is true
-  - [ ] Apply blinking highlight style to valid move squares when `blinkOn` is true
-  - [ ] Verify blinking effect displays correctly at ~500ms intervals
+- [x] **Slice 10: Blinking Highlight Effect**
+  - [x] Add `blinkOn bool` field to Model
+  - [x] Create `BlinkTickMsg` message type
+  - [x] Start tick command (500ms interval) when piece is selected
+  - [x] Stop tick when selection is cleared
+  - [x] Toggle `blinkOn` on each tick
+  - [x] Add `SelectedHighlight` and `ValidMoveHighlight` colors to all themes
+  - [x] Update `BoardRenderer.Render()` to accept selection state parameters
+  - [x] Apply blinking highlight style to selected square when `blinkOn` is true
+  - [x] Apply blinking highlight style to valid move squares when `blinkOn` is true
+  - [x] Verify blinking effect displays correctly at ~500ms intervals
 
 ## Slice 11: Bot vs Bot Speed Simplification
 *Reduce speed options to Normal and Instant*
 
-- [ ] **Slice 11: Simplify Bot vs Bot Speed Options**
-  - [ ] Remove `SpeedFast` and `SpeedSlow` constants from `internal/bvb/types.go`
-  - [ ] Update `SpeedNormal` to 1 second delay
-  - [ ] Keep `SpeedInstant` as 0 delay
-  - [ ] Update UI to show only two speed options
-  - [ ] Update speed toggle controls (remove `1-4` keys, use simpler toggle)
-  - [ ] Verify speed changes work correctly during Bot vs Bot
+- [x] **Slice 11: Simplify Bot vs Bot Speed Options**
+  - [x] Remove `SpeedFast` and `SpeedSlow` constants from `internal/bvb/types.go`
+  - [x] Update `SpeedNormal` to 1 second delay
+  - [x] Keep `SpeedInstant` as 0 delay
+  - [x] Update UI to show only two speed options
+  - [x] Update speed toggle controls (remove `1-4` keys, use simpler toggle)
+  - [x] Verify speed changes work correctly during Bot vs Bot
 
 ## Slice 12: Bot vs Bot Concurrency Config
 *Add configurable concurrency with auto-detection*

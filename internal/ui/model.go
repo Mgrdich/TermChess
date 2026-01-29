@@ -187,6 +187,12 @@ type Model struct {
 	// selectedSquare holds the currently selected piece's square for mouse interaction
 	// nil means no piece is currently selected
 	selectedSquare *engine.Square
+	// validMoves stores the valid destination squares for the currently selected piece
+	// This is computed when a piece is selected and used to validate move execution
+	validMoves []engine.Square
+	// blinkOn controls the blinking highlight state for selected squares
+	// Toggles every 500ms when a piece is selected to create a blinking effect
+	blinkOn bool
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.

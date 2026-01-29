@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -66,7 +67,7 @@ func squareFromMouse(x, y int, config Config) *engine.Square {
 }
 
 // handleMouseEvent processes mouse events during gameplay.
-// It handles piece selection for interactive game modes (PvP and PvBot).
+// It handles piece selection and move execution for interactive game modes (PvP and PvBot).
 // Returns the updated model and any commands to execute.
 func (m Model) handleMouseEvent(msg tea.MouseMsg) (Model, tea.Cmd) {
 	// Only process left mouse button clicks
@@ -81,7 +82,7 @@ func (m Model) handleMouseEvent(msg tea.MouseMsg) (Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// For PvBot games, only allow selection when it's the human's turn
+	// For PvBot games, only allow interaction when it's the human's turn
 	if m.gameType == GameTypePvBot && m.board.ActiveColor != m.userColor {
 		return m, nil
 	}
@@ -89,13 +90,121 @@ func (m Model) handleMouseEvent(msg tea.MouseMsg) (Model, tea.Cmd) {
 	// Get the piece at the clicked square
 	piece := m.board.PieceAt(*sq)
 
+	// If we have a selected piece and clicked on a valid move destination, execute the move
+	if m.selectedSquare != nil && m.isValidMoveDestination(*sq) {
+		return m.executeMouseMove(*sq)
+	}
+
 	// Check if the clicked square contains a piece belonging to the current player
 	if !piece.IsEmpty() && piece.Color() == m.board.ActiveColor {
 		// Select this piece (or change selection to a different own piece)
 		m.selectedSquare = sq
+		m.computeValidMoves()
+		m.blinkOn = true
+		return m, blinkTickCmd()
 	}
-	// Note: Clicking on empty squares or opponent pieces does NOT clear selection
-	// That behavior will be added in Slice 9 for move execution
+	// Clicking on empty squares or opponent pieces (that are not valid move destinations)
+	// keeps the current selection - this allows players to reconsider their move
+
+	return m, nil
+}
+
+// computeValidMoves populates the validMoves field with all legal destination squares
+// for the currently selected piece.
+func (m *Model) computeValidMoves() {
+	if m.selectedSquare == nil || m.board == nil {
+		m.validMoves = nil
+		return
+	}
+
+	var moves []engine.Square
+	for _, move := range m.board.LegalMoves() {
+		if move.From == *m.selectedSquare {
+			moves = append(moves, move.To)
+		}
+	}
+	m.validMoves = moves
+}
+
+// isValidMoveDestination checks if the given square is a valid destination
+// for the currently selected piece.
+func (m Model) isValidMoveDestination(sq engine.Square) bool {
+	for _, valid := range m.validMoves {
+		if valid == sq {
+			return true
+		}
+	}
+	return false
+}
+
+// executeMouseMove executes a move from the selected square to the destination square.
+// It finds the matching legal move, handles promotion (auto-promotes to Queen),
+// and triggers bot response if needed.
+func (m Model) executeMouseMove(destination engine.Square) (Model, tea.Cmd) {
+	if m.selectedSquare == nil {
+		return m, nil
+	}
+
+	// Find the matching move from legal moves
+	// For pawn promotions, we default to Queen promotion
+	var matchingMove *engine.Move
+	for _, move := range m.board.LegalMoves() {
+		if move.From == *m.selectedSquare && move.To == destination {
+			// For promotion moves, prefer Queen (or take the first one if no Queen promotion exists)
+			if matchingMove == nil {
+				moveCopy := move
+				matchingMove = &moveCopy
+			}
+			// If this is a Queen promotion, prefer it
+			if move.Promotion == engine.Queen {
+				moveCopy := move
+				matchingMove = &moveCopy
+				break
+			}
+		}
+	}
+
+	if matchingMove == nil {
+		// Should not happen if isValidMoveDestination was true, but handle gracefully
+		m.errorMsg = "Invalid move"
+		return m, nil
+	}
+
+	// Execute the move
+	err := m.board.MakeMove(*matchingMove)
+	if err != nil {
+		m.errorMsg = err.Error()
+		return m, nil
+	}
+
+	// Move was successful - clear selection, valid moves, and stop blinking
+	m.selectedSquare = nil
+	m.validMoves = nil
+	m.blinkOn = false
+	m.errorMsg = ""
+	m.statusMsg = ""
+	m.input = "" // Clear any keyboard input as well
+
+	// Add move to history
+	m.moveHistory = append(m.moveHistory, *matchingMove)
+
+	// Check if the game is over after this move
+	if m.board.IsGameOver() {
+		m.screen = ScreenGameOver
+		// Delete the save game file since the game is over
+		_ = config.DeleteSaveGame()
+		// Clean up bot engine if it exists
+		if m.botEngine != nil {
+			_ = m.botEngine.Close()
+			m.botEngine = nil
+		}
+		return m, nil
+	}
+
+	// If this is a bot game and game is not over, trigger bot move
+	if m.gameType == GameTypePvBot {
+		return m.makeBotMove()
+	}
 
 	return m, nil
 }
