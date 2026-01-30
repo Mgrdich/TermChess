@@ -1286,8 +1286,38 @@ func (m Model) renderBvBGridView() string {
 	b.WriteString(controlStyle.Render(controlStatus))
 	b.WriteString("\n")
 
+	// Jump prompt (if showing)
+	if m.bvbShowJumpPrompt {
+		b.WriteString("\n")
+		jumpPromptStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(m.theme.MenuSelected).
+			Padding(0, 2)
+		inputDisplay := m.bvbJumpInput
+		if inputDisplay == "" {
+			inputDisplay = "_"
+		}
+		jumpPrompt := fmt.Sprintf("Jump to game (1-%d): %s", m.bvbGameCount, inputDisplay)
+		b.WriteString(jumpPromptStyle.Render(jumpPrompt))
+		b.WriteString("\n")
+
+		jumpHintStyle := lipgloss.NewStyle().
+			Foreground(m.theme.HelpText).
+			Italic(true).
+			Padding(0, 2)
+		b.WriteString(jumpHintStyle.Render("Enter: jump | Esc: cancel"))
+		b.WriteString("\n")
+	}
+
+	// Error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
 	// Help text
-	helpText := m.renderHelpText("Space: pause/resume | t: toggle speed | ←/→: pages | Tab: single view | f: FEN | ESC: abort")
+	helpText := m.renderHelpText("Space: pause/resume | t: toggle speed | ←/→: pages | g: jump to game | Tab: single view | f: FEN | ESC: abort")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1640,7 +1670,18 @@ func (m Model) renderBvBSingleView() string {
 	b.WriteString(infoStyle.Render(matchup))
 	b.WriteString("\n")
 
-	// Game number and progress
+	// Prominent "Game X of Y" indicator for multi-game mode
+	if len(sessions) > 1 {
+		gameIndicatorStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(m.theme.MenuSelected).
+			Padding(0, 2)
+		gameIndicator := fmt.Sprintf(">>> Game %d of %d <<<", selectedIdx+1, len(sessions))
+		b.WriteString(gameIndicatorStyle.Render(gameIndicator))
+		b.WriteString("\n")
+	}
+
+	// Game progress info
 	finished := 0
 	for _, s := range sessions {
 		if s.IsFinished() {
@@ -1652,8 +1693,8 @@ func (m Model) renderBvBSingleView() string {
 	concurrency := m.bvbManager.Concurrency()
 	var gameInfo string
 	if len(sessions) > 1 {
-		gameInfo = fmt.Sprintf("Game %d of %d | Completed: %d | Running: %d | Queued: %d | Concurrency: %d",
-			selectedIdx+1, len(sessions), finished, running, queued, concurrency)
+		gameInfo = fmt.Sprintf("Completed: %d/%d | Running: %d | Queued: %d | Concurrency: %d",
+			finished, len(sessions), running, queued, concurrency)
 	} else {
 		gameInfo = fmt.Sprintf("Game %d of %d | Concurrency: %d", selectedIdx+1, len(sessions), concurrency)
 	}
@@ -1723,10 +1764,40 @@ func (m Model) renderBvBSingleView() string {
 		b.WriteString("\n")
 	}
 
+	// Jump prompt (if showing)
+	if m.bvbShowJumpPrompt {
+		b.WriteString("\n")
+		jumpPromptStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(m.theme.MenuSelected).
+			Padding(0, 2)
+		inputDisplay := m.bvbJumpInput
+		if inputDisplay == "" {
+			inputDisplay = "_"
+		}
+		jumpPrompt := fmt.Sprintf("Jump to game (1-%d): %s", m.bvbGameCount, inputDisplay)
+		b.WriteString(jumpPromptStyle.Render(jumpPrompt))
+		b.WriteString("\n")
+
+		jumpHintStyle := lipgloss.NewStyle().
+			Foreground(m.theme.HelpText).
+			Italic(true).
+			Padding(0, 2)
+		b.WriteString(jumpHintStyle.Render("Enter: jump | Esc: cancel"))
+		b.WriteString("\n")
+	}
+
+	// Error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
 	// Help text
 	helpStr := "Space: pause/resume | t: toggle speed | "
 	if m.bvbGameCount > 1 {
-		helpStr += "left/right: games | "
+		helpStr += "left/right: games | g: jump to game | "
 	}
 	helpStr += "Tab: view | f: FEN | ESC: abort"
 	helpText := m.renderHelpText(helpStr)
@@ -1892,6 +1963,7 @@ func (m Model) renderShortcutsOverlay() string {
 	renderShortcut("Space", "Pause / Resume")
 	renderShortcut("Left / h", "Previous game / page")
 	renderShortcut("Right / l", "Next game / page")
+	renderShortcut("g", "Jump to game (enter game number)")
 	renderShortcut("Tab", "Toggle grid / single view")
 	renderShortcut("t", "Toggle speed (Normal / Instant)")
 	renderShortcut("f", "Copy FEN of current game")

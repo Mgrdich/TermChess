@@ -159,15 +159,15 @@
 ## Slice 14: Bot vs Bot Game Jump Navigation
 *Add ability to jump to specific game number*
 
-- [ ] **Slice 14: Jump to Game Number**
-  - [ ] Add `bvbJumpInput string` and `bvbShowJumpPrompt bool` to Model
-  - [ ] Handle `g` key in Bot vs Bot to show jump prompt
-  - [ ] Implement text input for game number
-  - [ ] Parse input and validate (numeric, within range)
-  - [ ] Navigate to specified game on valid input
-  - [ ] Show error message for invalid input
-  - [ ] Display "Game X of Y" indicator prominently
-  - [ ] Verify jump navigation works correctly
+- [x] **Slice 14: Jump to Game Number**
+  - [x] Add `bvbJumpInput string` and `bvbShowJumpPrompt bool` to Model
+  - [x] Handle `g` key in Bot vs Bot to show jump prompt
+  - [x] Implement text input for game number
+  - [x] Parse input and validate (numeric, within range)
+  - [x] Navigate to specified game on valid input
+  - [x] Show error message for invalid input
+  - [x] Display "Game X of Y" indicator prominently
+  - [x] Verify jump navigation works correctly
 
 ## Slice 15: Bot vs Bot Basic Live Statistics
 *Show score and progress during games*

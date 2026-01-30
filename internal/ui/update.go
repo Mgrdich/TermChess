@@ -1537,9 +1537,23 @@ func uiBotDiffToBvB(d BotDifficulty) bot.Difficulty {
 }
 
 // handleBvBGamePlayKeys handles keyboard input during BvB game viewing.
-// Supports pause/resume, speed changes, view toggle, game navigation, and abort.
+// Supports pause/resume, speed changes, view toggle, game navigation, jump to game, and abort.
 func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If jump prompt is showing, handle jump input
+	if m.bvbShowJumpPrompt {
+		return m.handleBvBJumpInput(msg)
+	}
+
 	switch msg.String() {
+	case "g", "G":
+		// Show jump prompt (only if multi-game mode)
+		if m.bvbManager != nil && m.bvbGameCount > 1 {
+			m.bvbShowJumpPrompt = true
+			m.bvbJumpInput = ""
+			m.errorMsg = ""
+		}
+		return m, nil
+
 	case "esc":
 		// Abort the session and return to menu
 		if m.bvbManager != nil {
@@ -1656,6 +1670,68 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// handleBvBJumpInput handles text input for the game jump prompt.
+// Allows the user to type a game number and press Enter to jump to it.
+func (m Model) handleBvBJumpInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		// Cancel jump prompt
+		m.bvbShowJumpPrompt = false
+		m.bvbJumpInput = ""
+		m.errorMsg = ""
+
+	case tea.KeyBackspace:
+		// Remove last character
+		if len(m.bvbJumpInput) > 0 {
+			m.bvbJumpInput = m.bvbJumpInput[:len(m.bvbJumpInput)-1]
+		}
+		m.errorMsg = ""
+
+	case tea.KeyEnter:
+		// Validate and submit the game number
+		m.handleBvBJumpSubmit()
+
+	case tea.KeyRunes:
+		// Only allow digits
+		for _, r := range msg.Runes {
+			if r >= '0' && r <= '9' {
+				m.bvbJumpInput += string(r)
+			}
+		}
+		m.errorMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBJumpSubmit validates the jump input and navigates to the specified game.
+func (m *Model) handleBvBJumpSubmit() {
+	if m.bvbJumpInput == "" {
+		m.errorMsg = fmt.Sprintf("Enter a game number (1-%d)", m.bvbGameCount)
+		return
+	}
+
+	gameNum, err := parsePositiveInt(m.bvbJumpInput)
+	if err != nil || gameNum < 1 || gameNum > m.bvbGameCount {
+		m.errorMsg = fmt.Sprintf("Invalid game number. Enter 1-%d", m.bvbGameCount)
+		m.bvbShowJumpPrompt = false
+		m.bvbJumpInput = ""
+		return
+	}
+
+	// Navigate to the specified game (convert to 0-indexed)
+	m.bvbSelectedGame = gameNum - 1
+	m.bvbShowJumpPrompt = false
+	m.bvbJumpInput = ""
+	m.errorMsg = ""
+
+	// If in grid view, also update the page index to show the selected game
+	if m.bvbViewMode == BvBGridView {
+		boardsPerPage := m.bvbGridRows * m.bvbGridCols
+		m.bvbPageIndex = m.bvbSelectedGame / boardsPerPage
+	}
 }
 
 // bvbTickCmd returns a command that sends a BvBTickMsg after a delay based on speed.
@@ -1995,6 +2071,11 @@ func (m Model) isInTextInputMode() bool {
 
 	// BvB custom grid input mode
 	if m.screen == ScreenBvBGridConfig && m.bvbInputtingGrid {
+		return true
+	}
+
+	// BvB game jump input mode
+	if m.screen == ScreenBvBGamePlay && m.bvbShowJumpPrompt {
 		return true
 	}
 

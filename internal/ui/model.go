@@ -178,6 +178,10 @@ type Model struct {
 	bvbStatsSelection int
 	// bvbStatsResultsPage tracks the current page of individual results on the stats screen
 	bvbStatsResultsPage int
+	// bvbJumpInput holds the text input for game number entry during jump navigation
+	bvbJumpInput string
+	// bvbShowJumpPrompt indicates whether the jump prompt is visible
+	bvbShowJumpPrompt bool
 
 	// Overlay state
 	// showShortcutsOverlay indicates whether the keyboard shortcuts help overlay is displayed
