@@ -564,6 +564,89 @@ func SaveSessionExport(export *SessionExport, dir string) (string, error) {
 - Convert moves to standard algebraic notation for export
 - Store termination reason when game ends
 
+**Terminal Resize Handling** (`internal/ui/model.go` and `internal/ui/update.go`):
+
+The application must handle terminal resize events to ensure all content fits on screen.
+
+**Model Fields** (already exist):
+```go
+type Model struct {
+    // ... existing fields
+    termWidth  int  // Current terminal width in characters
+    termHeight int  // Current terminal height in lines
+}
+```
+
+**Resize Event Handling** (`internal/ui/update.go`):
+```go
+case tea.WindowSizeMsg:
+    m.termWidth = msg.Width
+    m.termHeight = msg.Height
+
+    // Adjust BvB grid if needed
+    if m.screen == ScreenBvBGamePlay && m.gameType == GameTypeBvB {
+        m.adjustBvBGridForWidth()
+    }
+
+    return m, nil
+```
+
+**Grid Auto-Adjustment** (`internal/ui/view.go`):
+```go
+const (
+    minBoardWidth    = 20  // Minimum width for a single board
+    bvbCellWidth     = 25  // Width per board cell including padding
+    minTerminalWidth = 40  // Minimum usable terminal width
+    minTerminalHeight = 20 // Minimum usable terminal height
+)
+
+func (m *Model) adjustBvBGridForWidth() {
+    if m.termWidth < minTerminalWidth {
+        return // Will show warning instead
+    }
+
+    // Calculate max columns that fit
+    maxCols := m.termWidth / bvbCellWidth
+    if maxCols < 1 {
+        maxCols = 1
+    }
+
+    // If current grid doesn't fit, reduce columns
+    if m.bvbGridCols > maxCols {
+        m.bvbGridCols = maxCols
+        // Recalculate rows to maintain game count
+        m.bvbGridRows = (m.bvbGameCount + maxCols - 1) / maxCols
+    }
+
+    // If grid can't fit even 1 column, switch to single view
+    if m.termWidth < bvbCellWidth {
+        m.bvbViewMode = BvBSingleView
+    }
+}
+```
+
+**Minimum Size Warning** (`internal/ui/view.go`):
+```go
+func (m Model) renderMinSizeWarning() string {
+    return lipgloss.NewStyle().
+        Foreground(m.theme.ErrorText).
+        Bold(true).
+        Render("Terminal too small! Resize to at least 40x20")
+}
+```
+
+**View Integration**:
+- Check `termWidth` and `termHeight` at start of `View()` function
+- If below minimum, return `renderMinSizeWarning()` instead of normal view
+- Pass terminal dimensions to render functions that need responsive layout
+
+**Responsive Elements**:
+- Board: Always fixed size (~20 chars wide with coordinates)
+- BvB Grid: Variable columns based on width
+- Menus: Truncate long options with "..." if needed
+- Stats panel: Collapse to narrower format if needed
+- Help text: Wrap or hide on very narrow terminals
+
 ### 2.5 Accessibility
 
 **WCAG AA Compliance**:
@@ -589,6 +672,7 @@ func SaveSessionExport(export *SessionExport, dir string) (string, error) {
 | Navigation | `Model`, `Update`, `View` | Medium - Cross-cutting but isolated |
 | BvB Improvements | `SessionManager`, `Config`, UI | Medium - Changes to existing feature |
 | BvB Stats-Only Mode | `Model`, `View`, `Config` | Low - New view mode, additive change |
+| Terminal Resize | `Model`, `Update`, `View` | Medium - Affects all screen rendering |
 
 ### Potential Risks & Mitigations
 
@@ -601,6 +685,7 @@ func SaveSessionExport(export *SessionExport, dir string) (string, error) {
 | BvB concurrency regression | Low | Medium | Preserve existing behavior when concurrency=0 (auto); add unit tests |
 | Memory leaks from undestroyed engines | High (if not addressed) | High | Implement `cleanup()` with defer pattern; nil out engine references; add `io.Closer` interface support |
 | Stats-only mode missing critical info | Low | Low | Include all essential statistics; allow toggling back to board view |
+| Layout breaks on small terminals | Medium | Medium | Define minimum size, show warning, auto-adjust grid columns |
 
 ---
 
@@ -620,6 +705,8 @@ func SaveSessionExport(export *SessionExport, dir string) (string, error) {
 | `renderBvBGridCell()` | Output has exactly `bvbCellHeight` lines |
 | `ExportStats()` | Returns valid SessionExport with all game data |
 | `SaveSessionExport()` | Creates file with correct JSON format |
+| `adjustBvBGridForWidth()` | Grid columns reduce when terminal narrows |
+| `renderMinSizeWarning()` | Warning displays for small terminals |
 
 ### Integration Tests
 
@@ -645,6 +732,7 @@ func SaveSessionExport(export *SessionExport, dir string) (string, error) {
 | BvB stats-only mode | View toggle works, stats update correctly, no terminal lag at high concurrency |
 | BvB grid layout stability | Boards don't shift when games end, consistent cell heights across all states |
 | BvB statistics export | Save works, file contains all data, move history is correct |
+| Terminal resize | Grid adjusts on resize, warning shows for small terminals, no crashes |
 
 ### Benchmarks
 

@@ -184,6 +184,22 @@
 - [ ] File format is human-readable (JSON or plain text with clear formatting)
 - [ ] Error handling for disk write failures with appropriate error message
 
+### 2.13 Terminal Resize and Responsive Layout
+
+**As a** user with varying terminal sizes, **I want** the UI to adapt to my terminal dimensions, **so that** all content remains visible and usable without horizontal scrolling or truncation.
+
+**Acceptance Criteria:**
+- [ ] Application detects terminal width and height on startup
+- [ ] Application responds to terminal resize events (`tea.WindowSizeMsg`)
+- [ ] Chess board always fits within terminal width (minimum ~20 characters for board)
+- [ ] Bot vs Bot grid view adjusts columns based on available width
+- [ ] If terminal is too narrow for grid, automatically switch to single board view
+- [ ] Menu text and options wrap or truncate gracefully on narrow terminals
+- [ ] Statistics panel adjusts to available width
+- [ ] Minimum terminal size warning displayed if terminal is too small (e.g., < 40 columns or < 20 rows)
+- [ ] No horizontal scrolling required at reasonable terminal sizes (80+ columns)
+- [ ] Content remains readable after resize without requiring restart
+
 ---
 
 ## 3. Scope and Boundaries
@@ -204,6 +220,7 @@
 - Bot vs Bot stats-only mode for high-concurrency sessions
 - Bot vs Bot grid layout stability (fixed cell heights)
 - Bot vs Bot statistics export to file
+- Terminal resize handling and responsive layout
 - WCAG AA color contrast compliance
 - Full keyboard navigation as mouse alternative
 

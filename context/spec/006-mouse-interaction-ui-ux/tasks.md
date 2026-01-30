@@ -250,10 +250,27 @@
   - [ ] Verify exported JSON contains all session and game data
   - [ ] Verify move history is in standard algebraic notation
 
-## Slice 20: Final Polish and Accessibility Verification
+## Slice 20: Terminal Resize and Responsive Layout
+*Ensure UI adapts to terminal size changes*
+
+- [ ] **Slice 20: Terminal Resize Handling**
+  - [ ] Verify `termWidth` and `termHeight` are updated on `tea.WindowSizeMsg`
+  - [ ] Define constants: `minTerminalWidth` (40), `minTerminalHeight` (20), `bvbCellWidth`
+  - [ ] Create `renderMinSizeWarning()` function for small terminal warning
+  - [ ] Update `View()` to check terminal size and show warning if too small
+  - [ ] Create `adjustBvBGridForWidth()` function to auto-adjust grid columns
+  - [ ] Call `adjustBvBGridForWidth()` on resize during BvB gameplay
+  - [ ] Auto-switch to single view if terminal too narrow for grid
+  - [ ] Ensure menus truncate gracefully on narrow terminals
+  - [ ] Ensure stats panel adjusts to available width
+  - [ ] Test resize during active BvB session
+  - [ ] Test resize during gameplay and menu screens
+  - [ ] Verify no crashes or rendering issues on resize
+
+## Slice 21: Final Polish and Accessibility Verification
 *Ensure WCAG compliance and keyboard accessibility*
 
-- [ ] **Slice 20: Accessibility and Final Polish**
+- [ ] **Slice 21: Accessibility and Final Polish**
   - [ ] Verify all three themes meet WCAG AA contrast standards using contrast checker
   - [ ] Verify every interactive element is reachable via keyboard
   - [ ] Verify focus indicators are visible throughout the app
