@@ -227,6 +227,29 @@ func (m *SessionManager) Abort() {
 	m.abortSessions()
 }
 
+// Stop stops the session manager and cleans up all sessions and their resources.
+// This is the preferred method for graceful shutdown as it ensures all engines
+// are properly closed and resources are freed. It signals all goroutines to exit
+// via the abort channel and then cleans up each session.
+func (m *SessionManager) Stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.state = StateFinished
+
+	// Signal all waiting goroutines to stop
+	m.closeAbortChannel()
+
+	// Abort all running sessions
+	m.abortSessions()
+
+	// Cleanup all sessions (call cleanup on each to ensure engines are properly closed)
+	m.cleanupAllSessions()
+
+	// Nil out the sessions slice to allow garbage collection
+	m.sessions = nil
+}
+
 // closeAbortChannel safely closes the abort channel if not already closed.
 // Must be called with m.mu held.
 func (m *SessionManager) closeAbortChannel() {
@@ -245,6 +268,16 @@ func (m *SessionManager) abortSessions() {
 	for _, s := range m.sessions {
 		if s != nil && !s.IsFinished() {
 			s.Abort()
+		}
+	}
+}
+
+// cleanupAllSessions calls cleanup on all sessions to ensure engines are closed.
+// Must be called with m.mu held.
+func (m *SessionManager) cleanupAllSessions() {
+	for _, s := range m.sessions {
+		if s != nil {
+			s.cleanup()
 		}
 	}
 }

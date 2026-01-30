@@ -147,14 +147,14 @@
 ## Slice 13: Bot vs Bot Engine Cleanup
 *Prevent memory leaks by destroying engines after games*
 
-- [ ] **Slice 13: Engine Lifecycle Management**
-  - [ ] Add `cleanup()` method to `GameSession` struct
-  - [ ] Implement engine destruction logic (check for `io.Closer`, set to nil)
-  - [ ] Call `cleanup()` via defer in `GameSession.Run()`
-  - [ ] Update `SessionManager.Stop()` to cleanup all sessions
-  - [ ] Ensure abort channel properly signals goroutines to exit
-  - [ ] Run memory profiling to verify no leaks after session completion
-  - [ ] Verify Bot vs Bot sessions cleanup properly when user exits
+- [x] **Slice 13: Engine Lifecycle Management**
+  - [x] Add `cleanup()` method to `GameSession` struct
+  - [x] Implement engine destruction logic (check for `io.Closer`, set to nil)
+  - [x] Call `cleanup()` via defer in `GameSession.Run()`
+  - [x] Update `SessionManager.Stop()` to cleanup all sessions
+  - [x] Ensure abort channel properly signals goroutines to exit
+  - [x] Run memory profiling to verify no leaks after session completion
+  - [x] Verify Bot vs Bot sessions cleanup properly when user exits
 
 ## Slice 14: Bot vs Bot Game Jump Navigation
 *Add ability to jump to specific game number*

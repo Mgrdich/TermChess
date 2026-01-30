@@ -3,6 +3,7 @@ package bvb
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -63,7 +64,7 @@ func (s *GameSession) Run() {
 	s.startTime = time.Now()
 	s.mu.Unlock()
 
-	defer s.closeEngines()
+	defer s.cleanup() // Ensure cleanup runs even on panic
 
 	for {
 		// Check for abort signal.
@@ -338,8 +339,33 @@ func (s *GameSession) copyMoveHistory() []engine.Move {
 	return moves
 }
 
-// closeEngines closes both bot engines, ignoring errors.
-func (s *GameSession) closeEngines() {
-	_ = s.whiteEngine.Close()
-	_ = s.blackEngine.Close()
+// cleanup releases resources held by the session.
+// It closes both engines (checking for io.Closer interface for additional cleanup)
+// and nils the engine references to allow garbage collection.
+// This method is idempotent and safe to call multiple times.
+func (s *GameSession) cleanup() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Clean up white engine
+	if s.whiteEngine != nil {
+		// First, call the standard Close method from bot.Engine interface
+		_ = s.whiteEngine.Close()
+		// Also check for io.Closer for additional cleanup (e.g., UCI process termination)
+		if closer, ok := s.whiteEngine.(io.Closer); ok {
+			_ = closer.Close()
+		}
+		s.whiteEngine = nil
+	}
+
+	// Clean up black engine
+	if s.blackEngine != nil {
+		// First, call the standard Close method from bot.Engine interface
+		_ = s.blackEngine.Close()
+		// Also check for io.Closer for additional cleanup (e.g., UCI process termination)
+		if closer, ok := s.blackEngine.(io.Closer); ok {
+			_ = closer.Close()
+		}
+		s.blackEngine = nil
+	}
 }

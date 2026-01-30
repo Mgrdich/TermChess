@@ -266,3 +266,96 @@ func TestNewSessionManagerConcurrencyMinimum(t *testing.T) {
 		t.Errorf("Concurrency() = %d, want 1 (minimum)", m.Concurrency())
 	}
 }
+
+// TestSessionManagerStop verifies that Stop() properly cleans up all sessions.
+func TestSessionManagerStop(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3, 0)
+	m.speed = SpeedNormal
+	err := m.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	m.Stop()
+
+	// Wait briefly for goroutines to clean up.
+	time.Sleep(200 * time.Millisecond)
+
+	if m.State() != StateFinished {
+		t.Errorf("state after Stop = %v, want StateFinished", m.State())
+	}
+
+	// Sessions should be nil'd after Stop()
+	m.mu.Lock()
+	sessionsNil := m.sessions == nil
+	m.mu.Unlock()
+
+	if !sessionsNil {
+		t.Error("sessions should be nil after Stop()")
+	}
+}
+
+// TestSessionManagerStopCleansUpEngines verifies that Stop() cleans up engines.
+func TestSessionManagerStopCleansUpEngines(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 2, 0)
+	m.speed = SpeedInstant
+	err := m.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+
+	// Get a copy of sessions before Stop
+	sessions := m.Sessions()
+
+	// Wait for games to finish
+	deadline := time.After(60 * time.Second)
+	for !m.AllFinished() {
+		select {
+		case <-deadline:
+			m.Stop()
+			t.Fatal("games did not complete within timeout")
+		default:
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+
+	// Now call Stop() to ensure cleanup happens
+	m.Stop()
+
+	// Verify engines in the original sessions are nil'd
+	for i, s := range sessions {
+		s.mu.Lock()
+		whiteEngineNil := s.whiteEngine == nil
+		blackEngineNil := s.blackEngine == nil
+		s.mu.Unlock()
+
+		if !whiteEngineNil {
+			t.Errorf("session[%d] whiteEngine should be nil after Stop()", i)
+		}
+		if !blackEngineNil {
+			t.Errorf("session[%d] blackEngine should be nil after Stop()", i)
+		}
+	}
+}
+
+// TestSessionManagerStopIsIdempotent verifies that Stop() can be called multiple times.
+func TestSessionManagerStopIsIdempotent(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 2, 0)
+	m.speed = SpeedNormal
+	err := m.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Call Stop multiple times - should not panic
+	m.Stop()
+	m.Stop()
+	m.Stop()
+
+	if m.State() != StateFinished {
+		t.Errorf("state after multiple Stop calls = %v, want StateFinished", m.State())
+	}
+}

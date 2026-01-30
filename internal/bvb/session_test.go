@@ -604,3 +604,145 @@ func TestGameSessionSpeedChangeMidGame(t *testing.T) {
 		}
 	}
 }
+
+// TestGameSessionCleanupAfterRun verifies that engines are cleaned up after Run() completes.
+func TestGameSessionCleanupAfterRun(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedInstant
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Game completed.
+	case <-time.After(60 * time.Second):
+		session.Abort()
+		t.Fatal("game did not complete within timeout")
+	}
+
+	// Verify session is finished
+	if !session.IsFinished() {
+		t.Error("session should be finished after Run() returns")
+	}
+
+	// Verify engines are nil'd (cleanup was called)
+	session.mu.Lock()
+	whiteEngineNil := session.whiteEngine == nil
+	blackEngineNil := session.blackEngine == nil
+	session.mu.Unlock()
+
+	if !whiteEngineNil {
+		t.Error("whiteEngine should be nil after cleanup")
+	}
+	if !blackEngineNil {
+		t.Error("blackEngine should be nil after cleanup")
+	}
+}
+
+// TestGameSessionCleanupIsIdempotent verifies that cleanup can be called multiple times safely.
+func TestGameSessionCleanupIsIdempotent(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedInstant
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Game completed.
+	case <-time.After(60 * time.Second):
+		session.Abort()
+		t.Fatal("game did not complete within timeout")
+	}
+
+	// Call cleanup again (should not panic)
+	session.cleanup()
+
+	// And again (should still not panic)
+	session.cleanup()
+
+	// Verify engines are still nil
+	session.mu.Lock()
+	whiteEngineNil := session.whiteEngine == nil
+	blackEngineNil := session.blackEngine == nil
+	session.mu.Unlock()
+
+	if !whiteEngineNil {
+		t.Error("whiteEngine should be nil after multiple cleanup calls")
+	}
+	if !blackEngineNil {
+		t.Error("blackEngine should be nil after multiple cleanup calls")
+	}
+}
+
+// TestGameSessionCleanupAfterAbort verifies that cleanup runs after abort.
+func TestGameSessionCleanupAfterAbort(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedNormal
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Give it a moment to start.
+	time.Sleep(50 * time.Millisecond)
+
+	// Abort the session
+	session.Abort()
+
+	select {
+	case <-done:
+		// Stopped successfully.
+	case <-time.After(5 * time.Second):
+		t.Fatal("session did not stop within timeout")
+	}
+
+	// Verify engines are nil'd (cleanup was called)
+	session.mu.Lock()
+	whiteEngineNil := session.whiteEngine == nil
+	blackEngineNil := session.blackEngine == nil
+	session.mu.Unlock()
+
+	if !whiteEngineNil {
+		t.Error("whiteEngine should be nil after abort")
+	}
+	if !blackEngineNil {
+		t.Error("blackEngine should be nil after abort")
+	}
+}
