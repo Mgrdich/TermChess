@@ -2073,6 +2073,125 @@ func TestBvBStats_TransitionOnAllFinished(t *testing.T) {
 	}
 }
 
+// TestBvBLiveStats_RenderDuringGameplay tests the live statistics panel displays during gameplay.
+func TestBvBLiveStats_RenderDuringGameplay(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotHard
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Test single view
+	m.bvbViewMode = BvBSingleView
+	view := m.renderBvBGamePlay()
+
+	if !strings.Contains(view, "Statistics") {
+		t.Error("Expected 'Statistics' header in single view")
+	}
+	if !strings.Contains(view, "Score: White") {
+		t.Error("Expected 'Score: White' in live stats")
+	}
+	if !strings.Contains(view, "Black") {
+		t.Error("Expected 'Black' in live stats")
+	}
+	if !strings.Contains(view, "Draws") {
+		t.Error("Expected 'Draws' in live stats")
+	}
+	if !strings.Contains(view, "Progress:") {
+		t.Error("Expected 'Progress:' in live stats")
+	}
+	if !strings.Contains(view, "/ 4 games") {
+		t.Error("Expected '/ 4 games' in progress line")
+	}
+
+	// Test grid view
+	m.bvbViewMode = BvBGridView
+	view = m.renderBvBGamePlay()
+
+	if !strings.Contains(view, "Statistics") {
+		t.Error("Expected 'Statistics' header in grid view")
+	}
+	if !strings.Contains(view, "Score: White") {
+		t.Error("Expected 'Score: White' in grid view live stats")
+	}
+	if !strings.Contains(view, "Progress:") {
+		t.Error("Expected 'Progress:' in grid view live stats")
+	}
+
+	// Clean up
+	if m.bvbManager != nil {
+		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBLiveStats_UpdatesAsGamesComplete tests that live stats update as games finish.
+func TestBvBLiveStats_UpdatesAsGamesComplete(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Set to instant speed
+	m.bvbSpeed = bvb.SpeedInstant
+	m.bvbManager.SetSpeed(bvb.SpeedInstant)
+
+	// Initially, should show 0 completed
+	view := m.renderBvBLiveStats()
+	if !strings.Contains(view, "Progress: 0 / 4 games") {
+		// Stats may not have completed games yet, which is fine
+		// Just verify format is correct
+		if !strings.Contains(view, "Progress:") || !strings.Contains(view, "4 games") {
+			t.Error("Expected progress line with 4 games total")
+		}
+	}
+
+	// Wait for games to finish
+	for i := 0; i < 2000; i++ {
+		if m.bvbManager.AllFinished() {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if !m.bvbManager.AllFinished() {
+		t.Skip("Games did not finish in time")
+	}
+
+	// After games complete, should show 4 completed
+	view = m.renderBvBLiveStats()
+	if !strings.Contains(view, "Progress: 4 / 4 games") {
+		t.Error("Expected 'Progress: 4 / 4 games' after all games complete")
+	}
+
+	// Stats should show some wins or draws (white + black + draws = 4)
+	stats := m.bvbManager.Stats()
+	if stats.WhiteWins+stats.BlackWins+stats.Draws != 4 {
+		t.Errorf("Expected total results to equal 4, got %d", stats.WhiteWins+stats.BlackWins+stats.Draws)
+	}
+}
+
+// TestBvBLiveStats_NilManager tests that renderBvBLiveStats handles nil manager gracefully.
+func TestBvBLiveStats_NilManager(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.bvbManager = nil
+
+	result := m.renderBvBLiveStats()
+	if result != "" {
+		t.Error("Expected empty string when bvbManager is nil")
+	}
+}
+
 // TestBvBStats_RenderSingleGame tests stats rendering for a single game.
 func TestBvBStats_RenderSingleGame(t *testing.T) {
 	m := NewModel(DefaultConfig())

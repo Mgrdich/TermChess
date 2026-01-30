@@ -172,13 +172,13 @@
 ## Slice 15: Bot vs Bot Basic Live Statistics
 *Show score and progress during games*
 
-- [ ] **Slice 15: Basic Live Statistics Panel**
-  - [ ] Create `renderBvBStats()` function in `view.go`
-  - [ ] Display during `ScreenBvBGamePlay`
-  - [ ] Show current score: White Wins / Black Wins / Draws
-  - [ ] Show progress: Games Completed / Total
-  - [ ] Update stats on each `BvBTickMsg`
-  - [ ] Verify basic stats display and update correctly
+- [x] **Slice 15: Basic Live Statistics Panel**
+  - [x] Create `renderBvBStats()` function in `view.go`
+  - [x] Display during `ScreenBvBGamePlay`
+  - [x] Show current score: White Wins / Black Wins / Draws
+  - [x] Show progress: Games Completed / Total
+  - [x] Update stats on each `BvBTickMsg`
+  - [x] Verify basic stats display and update correctly
 
 ## Slice 16: Bot vs Bot Detailed Statistics
 *Add comprehensive statistics panel*

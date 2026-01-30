@@ -1254,6 +1254,13 @@ func (m Model) renderBvBGridView() string {
 	b.WriteString(infoStyle.Render(matchup))
 	b.WriteString("\n\n")
 
+	// Render live statistics panel
+	liveStats := m.renderBvBLiveStats()
+	if liveStats != "" {
+		b.WriteString(liveStats)
+		b.WriteString("\n\n")
+	}
+
 	// Render the grid
 	pageSessions := sessions[startIdx:endIdx]
 	gridStr := m.renderBoardGrid(pageSessions, m.bvbGridCols)
@@ -1701,6 +1708,13 @@ func (m Model) renderBvBSingleView() string {
 	b.WriteString(infoStyle.Render(gameInfo))
 	b.WriteString("\n\n")
 
+	// Render live statistics panel
+	liveStats := m.renderBvBLiveStats()
+	if liveStats != "" {
+		b.WriteString(liveStats)
+		b.WriteString("\n\n")
+	}
+
 	// Render the chess board
 	board := session.CurrentBoard()
 	renderer := NewBoardRenderer(m.config)
@@ -1807,6 +1821,63 @@ func (m Model) renderBvBSingleView() string {
 	}
 
 	return b.String()
+}
+
+// renderBvBLiveStats renders a live statistics panel for Bot vs Bot gameplay.
+// Shows current score (White Wins / Black Wins / Draws) and progress (Completed / Total).
+// This panel updates on each BvBTickMsg as the manager's Stats() are recalculated.
+func (m Model) renderBvBLiveStats() string {
+	if m.bvbManager == nil {
+		return ""
+	}
+
+	stats := m.bvbManager.Stats()
+	sessions := m.bvbManager.Sessions()
+	totalGames := len(sessions)
+
+	if totalGames == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	// Stats panel header with box-drawing characters
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText)
+	sb.WriteString(headerStyle.Render("══════ Statistics ══════"))
+	sb.WriteString("\n")
+
+	// Score line: White Wins | Black Wins | Draws
+	scoreStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected)
+
+	whiteWins := 0
+	blackWins := 0
+	draws := 0
+	completed := 0
+
+	if stats != nil {
+		whiteWins = stats.WhiteWins
+		blackWins = stats.BlackWins
+		draws = stats.Draws
+		completed = stats.TotalGames
+	}
+
+	scoreLine := fmt.Sprintf("Score: White %d | Black %d | Draws %d", whiteWins, blackWins, draws)
+	sb.WriteString(scoreStyle.Render(scoreLine))
+	sb.WriteString("\n")
+
+	// Progress line: Games Completed / Total
+	progressStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText)
+	progressLine := fmt.Sprintf("Progress: %d / %d games", completed, totalGames)
+	sb.WriteString(progressStyle.Render(progressLine))
+	sb.WriteString("\n")
+
+	sb.WriteString(headerStyle.Render("═════════════════════════"))
+
+	return sb.String()
 }
 
 // botDifficultyName returns the display name for a bot difficulty.
