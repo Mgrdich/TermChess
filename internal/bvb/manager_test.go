@@ -359,3 +359,77 @@ func TestSessionManagerStopIsIdempotent(t *testing.T) {
 		t.Errorf("state after multiple Stop calls = %v, want StateFinished", m.State())
 	}
 }
+
+// TestSessionManagerGetSession verifies GetSession returns correct sessions.
+func TestSessionManagerGetSession(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3, 0)
+	m.speed = SpeedInstant // Use instant speed so games complete quickly
+	err := m.Start()
+	if err != nil {
+		t.Fatalf("Start() error: %v", err)
+	}
+
+	// Wait for all games to finish before testing and stopping
+	deadline := time.After(60 * time.Second)
+	for !m.AllFinished() {
+		select {
+		case <-deadline:
+			m.Stop()
+			t.Fatal("games did not complete within timeout")
+		default:
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+	defer m.Stop()
+
+	// Valid indices should return non-nil sessions
+	for i := 0; i < 3; i++ {
+		session := m.GetSession(i)
+		if session == nil {
+			t.Errorf("GetSession(%d) returned nil, want non-nil", i)
+		}
+	}
+
+	// Invalid indices should return nil
+	if m.GetSession(-1) != nil {
+		t.Error("GetSession(-1) should return nil")
+	}
+	if m.GetSession(3) != nil {
+		t.Error("GetSession(3) should return nil for 3-game manager")
+	}
+	if m.GetSession(100) != nil {
+		t.Error("GetSession(100) should return nil")
+	}
+}
+
+// TestSessionManagerGetSessionBeforeStart verifies GetSession returns nil before Start.
+func TestSessionManagerGetSessionBeforeStart(t *testing.T) {
+	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 3, 0)
+
+	// Before Start(), sessions haven't been created
+	session := m.GetSession(0)
+	if session != nil {
+		t.Error("GetSession(0) should return nil before Start()")
+	}
+}
+
+// TestSessionManagerGameCount verifies GameCount returns correct value.
+func TestSessionManagerGameCount(t *testing.T) {
+	tests := []struct {
+		gameCount int
+	}{
+		{1},
+		{3},
+		{10},
+		{50},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", tt.gameCount, 0)
+			if m.GameCount() != tt.gameCount {
+				t.Errorf("GameCount() = %d, want %d", m.GameCount(), tt.gameCount)
+			}
+		})
+	}
+}

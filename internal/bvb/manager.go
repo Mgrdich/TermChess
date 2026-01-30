@@ -368,3 +368,22 @@ func (m *SessionManager) Stats() *AggregateStats {
 
 	return ComputeStats(results, m.whiteName, m.blackName)
 }
+
+// GetSession returns the session at the given index (0-indexed).
+// Returns nil if the index is out of bounds or sessions haven't been created yet.
+func (m *SessionManager) GetSession(index int) *GameSession {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if index < 0 || index >= len(m.sessions) {
+		return nil
+	}
+	return m.sessions[index]
+}
+
+// GameCount returns the total number of games configured for this session.
+func (m *SessionManager) GameCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.gameCount
+}

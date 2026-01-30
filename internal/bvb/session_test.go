@@ -746,3 +746,158 @@ func TestGameSessionCleanupAfterAbort(t *testing.T) {
 		t.Error("blackEngine should be nil after abort")
 	}
 }
+
+// TestGameSessionDurationBeforeStart verifies Duration() returns 0 before the game starts.
+func TestGameSessionDurationBeforeStart(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedInstant
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	// Before Run() is called, duration should be 0
+	duration := session.Duration()
+	if duration != 0 {
+		t.Errorf("Duration before Run() = %v, want 0", duration)
+	}
+
+	// Clean up engines
+	_ = whiteEngine.Close()
+	_ = blackEngine.Close()
+}
+
+// TestGameSessionDurationDuringGame verifies Duration() returns elapsed time during the game.
+func TestGameSessionDurationDuringGame(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedNormal // Use normal speed so game doesn't finish immediately
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Wait a bit for the game to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Duration should be positive now
+	duration := session.Duration()
+	if duration <= 0 {
+		t.Errorf("Duration during game = %v, want > 0", duration)
+	}
+
+	// Wait a bit more
+	time.Sleep(200 * time.Millisecond)
+
+	// Duration should have increased
+	newDuration := session.Duration()
+	if newDuration <= duration {
+		t.Errorf("Duration did not increase: before=%v, after=%v", duration, newDuration)
+	}
+
+	// Abort and clean up
+	session.Abort()
+	<-done
+}
+
+// TestGameSessionDurationAfterFinish verifies Duration() returns final duration after game ends.
+func TestGameSessionDurationAfterFinish(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedInstant
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Wait for game to complete
+	select {
+	case <-done:
+	case <-time.After(60 * time.Second):
+		session.Abort()
+		t.Fatal("game did not complete within timeout")
+	}
+
+	// After game finishes, duration should match the result's duration
+	result := session.Result()
+	if result == nil {
+		t.Fatal("result should not be nil after game completes")
+	}
+
+	duration := session.Duration()
+	if duration != result.Duration {
+		t.Errorf("Duration after finish = %v, want %v (from result)", duration, result.Duration)
+	}
+}
+
+// TestGameSessionStartTime verifies StartTime() returns correct values.
+func TestGameSessionStartTime(t *testing.T) {
+	whiteEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create white engine: %v", err)
+	}
+	blackEngine, err := bot.NewRandomEngine()
+	if err != nil {
+		t.Fatalf("failed to create black engine: %v", err)
+	}
+
+	speed := SpeedNormal
+	session := NewGameSession(1, whiteEngine, blackEngine, "White Bot", "Black Bot", &speed)
+
+	// Before Run(), StartTime should be zero
+	startTime := session.StartTime()
+	if !startTime.IsZero() {
+		t.Errorf("StartTime before Run() = %v, want zero time", startTime)
+	}
+
+	beforeRun := time.Now()
+
+	done := make(chan struct{})
+	go func() {
+		session.Run()
+		close(done)
+	}()
+
+	// Give it a moment to start
+	time.Sleep(50 * time.Millisecond)
+
+	// After Run() starts, StartTime should be set
+	startTime = session.StartTime()
+	if startTime.IsZero() {
+		t.Error("StartTime during game should not be zero")
+	}
+
+	// StartTime should be after beforeRun
+	if startTime.Before(beforeRun) {
+		t.Errorf("StartTime = %v, expected after %v", startTime, beforeRun)
+	}
+
+	// Abort and clean up
+	session.Abort()
+	<-done
+}

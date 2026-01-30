@@ -265,6 +265,34 @@ func (s *GameSession) GameNumber() int {
 	return s.gameNumber
 }
 
+// Duration returns the elapsed time since the game started.
+// If the game hasn't started yet, returns 0.
+// If the game has finished, returns the final duration from the result.
+func (s *GameSession) Duration() time.Duration {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.startTime.IsZero() {
+		return 0
+	}
+
+	// If game is finished and we have a result, return the final duration
+	if s.state == StateFinished && s.result != nil {
+		return s.result.Duration
+	}
+
+	// Otherwise return elapsed time since start
+	return time.Since(s.startTime)
+}
+
+// StartTime returns the time when the game started.
+// Returns zero time if the game hasn't started yet.
+func (s *GameSession) StartTime() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.startTime
+}
+
 // State returns the current session state.
 func (s *GameSession) State() SessionState {
 	s.mu.Lock()

@@ -1825,6 +1825,8 @@ func (m Model) renderBvBSingleView() string {
 
 // renderBvBLiveStats renders a live statistics panel for Bot vs Bot gameplay.
 // Shows current score (White Wins / Black Wins / Draws) and progress (Completed / Total).
+// Also shows detailed statistics: average moves, longest/shortest games, current game duration,
+// last 10 moves, and captured pieces.
 // This panel updates on each BvBTickMsg as the manager's Stats() are recalculated.
 func (m Model) renderBvBLiveStats() string {
 	if m.bvbManager == nil {
@@ -1875,9 +1877,189 @@ func (m Model) renderBvBLiveStats() string {
 	sb.WriteString(progressStyle.Render(progressLine))
 	sb.WriteString("\n")
 
+	// Detailed stats (only show if we have completed games)
+	detailStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal)
+
+	if stats != nil && completed > 0 {
+		// Average moves per game
+		avgMovesLine := fmt.Sprintf("Avg Moves: %.1f", stats.AvgMoveCount)
+		sb.WriteString(detailStyle.Render(avgMovesLine))
+		sb.WriteString("\n")
+
+		// Longest and shortest games
+		longestShortestLine := fmt.Sprintf("Longest: %d moves | Shortest: %d moves",
+			stats.LongestGame.MoveCount, stats.ShortestGame.MoveCount)
+		sb.WriteString(detailStyle.Render(longestShortestLine))
+		sb.WriteString("\n")
+	}
+
+	// Current game info (selected game in single view or first running game in grid view)
+	currentSession := m.getCurrentBvBSession()
+	if currentSession != nil {
+		sb.WriteString(headerStyle.Render("─── Current Game ───"))
+		sb.WriteString("\n")
+
+		// Game duration timer
+		duration := currentSession.Duration()
+		durationStr := formatBvBDuration(duration)
+		durationLine := fmt.Sprintf("Duration: %s", durationStr)
+		sb.WriteString(detailStyle.Render(durationLine))
+		sb.WriteString("\n")
+
+		// Last 10 moves
+		moves := currentSession.CurrentMoveHistory()
+		if len(moves) > 0 {
+			lastMoves := formatLastMoves(moves, 10)
+			movesLine := fmt.Sprintf("Last moves: %s", lastMoves)
+			sb.WriteString(detailStyle.Render(movesLine))
+			sb.WriteString("\n")
+		}
+
+		// Captured pieces
+		board := currentSession.CurrentBoard()
+		if board != nil {
+			capturedWhite, capturedBlack := computeCapturedPieces(board)
+			if len(capturedWhite) > 0 || len(capturedBlack) > 0 {
+				capturedLine := fmt.Sprintf("Captured: %s | %s", capturedWhite, capturedBlack)
+				sb.WriteString(detailStyle.Render(capturedLine))
+				sb.WriteString("\n")
+			}
+		}
+	}
+
 	sb.WriteString(headerStyle.Render("═════════════════════════"))
 
 	return sb.String()
+}
+
+// getCurrentBvBSession returns the current session to display detailed stats for.
+// In single view mode, returns the selected game.
+// In grid view mode, returns the first non-finished game, or nil if all finished.
+func (m Model) getCurrentBvBSession() *bvb.GameSession {
+	if m.bvbManager == nil {
+		return nil
+	}
+
+	if m.bvbViewMode == BvBSingleView {
+		return m.bvbManager.GetSession(m.bvbSelectedGame)
+	}
+
+	// In grid view, find first running game
+	sessions := m.bvbManager.Sessions()
+	for _, s := range sessions {
+		if s != nil && !s.IsFinished() {
+			return s
+		}
+	}
+	return nil
+}
+
+// formatBvBDuration formats a duration as MM:SS for display.
+func formatBvBDuration(d time.Duration) string {
+	totalSeconds := int(d.Seconds())
+	minutes := totalSeconds / 60
+	seconds := totalSeconds % 60
+	return fmt.Sprintf("%d:%02d", minutes, seconds)
+}
+
+// formatLastMoves formats the last N moves from a move history as a comma-separated string.
+// Uses coordinate notation (e.g., "e2e4, e7e5, g1f3").
+func formatLastMoves(moves []engine.Move, n int) string {
+	if len(moves) == 0 {
+		return ""
+	}
+
+	start := 0
+	if len(moves) > n {
+		start = len(moves) - n
+	}
+
+	lastMoves := moves[start:]
+	moveStrs := make([]string, len(lastMoves))
+	for i, m := range lastMoves {
+		moveStrs[i] = m.String()
+	}
+
+	return strings.Join(moveStrs, ", ")
+}
+
+// computeCapturedPieces compares the current board state to a starting position
+// and returns strings representing captured pieces for each side.
+// Returns (whiteCaptured, blackCaptured) where whiteCaptured shows white pieces
+// that have been captured (displayed with white symbols) and blackCaptured shows
+// black pieces that have been captured (displayed with black symbols).
+func computeCapturedPieces(board *engine.Board) (string, string) {
+	// Starting piece counts for each side
+	// White: 8 pawns, 2 knights, 2 bishops, 2 rooks, 1 queen, 1 king
+	// Black: same
+	startingCounts := map[engine.PieceType]int{
+		engine.Pawn:   8,
+		engine.Knight: 2,
+		engine.Bishop: 2,
+		engine.Rook:   2,
+		engine.Queen:  1,
+		engine.King:   1,
+	}
+
+	// Count current pieces on board
+	whiteCounts := make(map[engine.PieceType]int)
+	blackCounts := make(map[engine.PieceType]int)
+
+	for sq := 0; sq < 64; sq++ {
+		piece := board.Squares[sq]
+		if piece.IsEmpty() {
+			continue
+		}
+		if piece.Color() == engine.White {
+			whiteCounts[piece.Type()]++
+		} else {
+			blackCounts[piece.Type()]++
+		}
+	}
+
+	// Unicode symbols for pieces
+	// White pieces (captured by black): ♙♘♗♖♕
+	// Black pieces (captured by white): ♟♞♝♜♛
+	whitePieceSymbols := map[engine.PieceType]rune{
+		engine.Pawn:   '♙',
+		engine.Knight: '♘',
+		engine.Bishop: '♗',
+		engine.Rook:   '♖',
+		engine.Queen:  '♕',
+	}
+	blackPieceSymbols := map[engine.PieceType]rune{
+		engine.Pawn:   '♟',
+		engine.Knight: '♞',
+		engine.Bishop: '♝',
+		engine.Rook:   '♜',
+		engine.Queen:  '♛',
+	}
+
+	// Build captured strings
+	// Order: Queen, Rook, Bishop, Knight, Pawn (most valuable first)
+	pieceOrder := []engine.PieceType{engine.Queen, engine.Rook, engine.Bishop, engine.Knight, engine.Pawn}
+
+	var whiteCaptured strings.Builder // White pieces captured (by black)
+	var blackCaptured strings.Builder // Black pieces captured (by white)
+
+	for _, pt := range pieceOrder {
+		// White pieces captured
+		whiteRemaining := whiteCounts[pt]
+		whiteMissing := startingCounts[pt] - whiteRemaining
+		for i := 0; i < whiteMissing; i++ {
+			whiteCaptured.WriteRune(whitePieceSymbols[pt])
+		}
+
+		// Black pieces captured
+		blackRemaining := blackCounts[pt]
+		blackMissing := startingCounts[pt] - blackRemaining
+		for i := 0; i < blackMissing; i++ {
+			blackCaptured.WriteRune(blackPieceSymbols[pt])
+		}
+	}
+
+	return whiteCaptured.String(), blackCaptured.String()
 }
 
 // botDifficultyName returns the display name for a bot difficulty.

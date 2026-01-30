@@ -183,14 +183,14 @@
 ## Slice 16: Bot vs Bot Detailed Statistics
 *Add comprehensive statistics panel*
 
-- [ ] **Slice 16: Comprehensive Live Statistics**
-  - [ ] Add average move count per completed game
-  - [ ] Add current game duration timer
-  - [ ] Add longest game (by moves) tracking
-  - [ ] Add shortest game (by moves) tracking
-  - [ ] Add move history summary for current game (last 10 moves)
-  - [ ] Add captured pieces display for current game
-  - [ ] Verify all statistics display and update in real-time
+- [x] **Slice 16: Comprehensive Live Statistics**
+  - [x] Add average move count per completed game
+  - [x] Add current game duration timer
+  - [x] Add longest game (by moves) tracking
+  - [x] Add shortest game (by moves) tracking
+  - [x] Add move history summary for current game (last 10 moves)
+  - [x] Add captured pieces display for current game
+  - [x] Verify all statistics display and update in real-time
 
 ## Slice 17: Bot vs Bot Stats-Only Mode
 *Add stats-only view mode for high-concurrency sessions*
