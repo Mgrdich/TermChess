@@ -503,6 +503,67 @@ func (m Model) renderBvBGrid() string {
 }
 ```
 
+**Bot vs Bot Statistics Export** (`internal/bvb/export.go`):
+
+Statistics export allows users to save session results and game data to a file for later review or analysis.
+
+**Data Structure**:
+```go
+type SessionExport struct {
+    Timestamp       time.Time           `json:"timestamp"`
+    WhiteBot        string              `json:"white_bot"`       // e.g., "Easy", "Medium", "Hard"
+    BlackBot        string              `json:"black_bot"`
+    TotalGames      int                 `json:"total_games"`
+    WhiteWins       int                 `json:"white_wins"`
+    BlackWins       int                 `json:"black_wins"`
+    Draws           int                 `json:"draws"`
+    AverageMoves    float64             `json:"average_moves"`
+    Games           []GameExport        `json:"games"`
+}
+
+type GameExport struct {
+    GameNumber      int                 `json:"game_number"`
+    Result          string              `json:"result"`          // "White", "Black", "Draw"
+    TerminationReason string            `json:"termination"`     // "Checkmate", "Stalemate", "Insufficient Material", etc.
+    MoveCount       int                 `json:"move_count"`
+    Moves           []string            `json:"moves"`           // Standard algebraic notation
+    FinalFEN        string              `json:"final_fen"`       // Final position
+}
+```
+
+**Export Function**:
+```go
+func (m *SessionManager) ExportStats() (*SessionExport, error) {
+    // Collect all game data from completed sessions
+    // Build SessionExport struct
+    // Return for serialization
+}
+
+func SaveSessionExport(export *SessionExport, dir string) (string, error) {
+    // Create directory if not exists
+    // Generate filename with timestamp
+    // Marshal to JSON with indentation
+    // Write to file
+    // Return filepath
+}
+```
+
+**File Location**:
+- Default directory: `~/.termchess/stats/`
+- Create directory if it doesn't exist
+- Filename format: `bvb_session_YYYY-MM-DD_HH-mm-ss.json`
+
+**UI Integration** (`internal/ui/update.go`):
+- On BvB stats screen, handle `s` key to trigger save
+- Call `ExportStats()` to gather data
+- Call `SaveSessionExport()` to write file
+- Display success message with filepath or error message
+
+**Move History Collection**:
+- Each `GameSession` should store moves as they're made
+- Convert moves to standard algebraic notation for export
+- Store termination reason when game ends
+
 ### 2.5 Accessibility
 
 **WCAG AA Compliance**:
@@ -557,6 +618,8 @@ func (m Model) renderBvBGrid() string {
 | `BvBViewMode` toggle | Cycling through Grid → Single → Stats Only → Grid |
 | `renderBvBStatsOnly()` | Output contains score, progress, avg moves |
 | `renderBvBGridCell()` | Output has exactly `bvbCellHeight` lines |
+| `ExportStats()` | Returns valid SessionExport with all game data |
+| `SaveSessionExport()` | Creates file with correct JSON format |
 
 ### Integration Tests
 
@@ -581,6 +644,7 @@ func (m Model) renderBvBGrid() string {
 | Concurrency testing | Test on 2, 4, 8, 16 core systems with various multipliers |
 | BvB stats-only mode | View toggle works, stats update correctly, no terminal lag at high concurrency |
 | BvB grid layout stability | Boards don't shift when games end, consistent cell heights across all states |
+| BvB statistics export | Save works, file contains all data, move history is correct |
 
 ### Benchmarks
 

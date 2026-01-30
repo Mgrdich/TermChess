@@ -168,6 +168,22 @@
 - [ ] The grid layout remains stable throughout the entire session
 - [ ] No visual jumping or flickering when games complete at different times
 
+### 2.12 Bot vs Bot Statistics Export
+
+**As a** user who has completed a Bot vs Bot session, **I want** to save the statistics and game data to a file, **so that** I can review the results later, share them, or analyze the games offline.
+
+**Acceptance Criteria:**
+- [ ] After a BvB session completes, user is prompted with option to save statistics
+- [ ] Save option is also available from the BvB stats screen via a key (e.g., `s` for save)
+- [ ] Statistics file includes session summary: total games, wins/losses/draws, bot difficulties
+- [ ] Statistics file includes per-game details: game number, result, move count, termination reason
+- [ ] Statistics file includes move history for each game in standard notation (e.g., PGN or simple algebraic)
+- [ ] File is saved in a user-accessible location (e.g., `~/.termchess/stats/` or current directory)
+- [ ] Filename includes timestamp for uniqueness (e.g., `bvb_session_2024-01-15_14-30-00.json`)
+- [ ] User receives confirmation message with file path after successful save
+- [ ] File format is human-readable (JSON or plain text with clear formatting)
+- [ ] Error handling for disk write failures with appropriate error message
+
 ---
 
 ## 3. Scope and Boundaries
@@ -187,6 +203,7 @@
 - Bot vs Bot concurrency control with auto-detection
 - Bot vs Bot stats-only mode for high-concurrency sessions
 - Bot vs Bot grid layout stability (fixed cell heights)
+- Bot vs Bot statistics export to file
 - WCAG AA color contrast compliance
 - Full keyboard navigation as mouse alternative
 

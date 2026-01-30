@@ -232,10 +232,28 @@
   - [ ] Verify all boards in a row maintain consistent vertical alignment
   - [ ] Test with various grid configurations (2x2, 3x3, 4x4)
 
-## Slice 19: Final Polish and Accessibility Verification
+## Slice 19: Bot vs Bot Statistics Export
+*Save session statistics and game data to file*
+
+- [ ] **Slice 19: Statistics Export**
+  - [ ] Create `internal/bvb/export.go` with `SessionExport` and `GameExport` structs
+  - [ ] Add move history tracking to `GameSession` (store moves as they're made)
+  - [ ] Add termination reason tracking when games end
+  - [ ] Implement `ExportStats()` method on `SessionManager` to gather all game data
+  - [ ] Implement `SaveSessionExport()` function to write JSON file
+  - [ ] Create stats directory (`~/.termchess/stats/`) if not exists
+  - [ ] Generate filename with timestamp (e.g., `bvb_session_2024-01-15_14-30-00.json`)
+  - [ ] Handle `s` key on BvB stats screen to trigger save
+  - [ ] Display success message with filepath after save
+  - [ ] Display error message if save fails
+  - [ ] Write unit tests for `ExportStats()` and `SaveSessionExport()`
+  - [ ] Verify exported JSON contains all session and game data
+  - [ ] Verify move history is in standard algebraic notation
+
+## Slice 20: Final Polish and Accessibility Verification
 *Ensure WCAG compliance and keyboard accessibility*
 
-- [ ] **Slice 19: Accessibility and Final Polish**
+- [ ] **Slice 20: Accessibility and Final Polish**
   - [ ] Verify all three themes meet WCAG AA contrast standards using contrast checker
   - [ ] Verify every interactive element is reachable via keyboard
   - [ ] Verify focus indicators are visible throughout the app
