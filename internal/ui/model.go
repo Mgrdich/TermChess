@@ -45,6 +45,8 @@ const (
 	ScreenBvBGamePlay
 	// ScreenBvBStats is displayed after all Bot vs Bot games finish
 	ScreenBvBStats
+	// ScreenBvBViewModeSelect allows the user to select view mode before starting session
+	ScreenBvBViewModeSelect
 )
 
 // GameType represents the type of chess game being played.
@@ -182,6 +184,10 @@ type Model struct {
 	bvbJumpInput string
 	// bvbShowJumpPrompt indicates whether the jump prompt is visible
 	bvbShowJumpPrompt bool
+	// bvbViewModeSelection tracks the currently selected option in view mode selection screen
+	bvbViewModeSelection int
+	// bvbRecentCompletions stores the last 5 game completion results for stats-only view
+	bvbRecentCompletions []string
 
 	// Overlay state
 	// showShortcutsOverlay indicates whether the keyboard shortcuts help overlay is displayed
@@ -207,6 +213,8 @@ const (
 	BvBGridView BvBViewMode = iota
 	// BvBSingleView shows a single board with full details
 	BvBSingleView
+	// BvBStatsOnlyView shows only statistics without board rendering
+	BvBStatsOnlyView
 )
 
 // NewModel creates and initializes a new Model with the provided configuration.

@@ -195,27 +195,27 @@
 ## Slice 17: Bot vs Bot Stats-Only Mode
 *Add stats-only view mode for high-concurrency sessions*
 
-- [ ] **Slice 17: Stats-Only View Mode**
-  - [ ] Add `ScreenBvBViewModeSelect` constant to Screen type in `model.go`
-  - [ ] Add `BvBStatsOnlyView` constant to `BvBViewMode` type in `model.go`
-  - [ ] Create `renderBvBViewModeSelect()` function in `view.go` with three options
-  - [ ] Add descriptions for each view mode option (Grid, Single, Stats Only)
-  - [ ] Include "(Recommended for 50+ games)" hint on Stats Only option
-  - [ ] Update `ScreenBvBGridConfig` to navigate to `ScreenBvBViewModeSelect` after game count entry
-  - [ ] Handle arrow keys and Enter for view mode selection
-  - [ ] Handle Esc to go back to game count input
-  - [ ] Set `bvbViewMode` based on selection before starting session
-  - [ ] Update `v` key handler to cycle through Grid → Single → Stats Only → Grid during session
-  - [ ] Create `renderBvBStatsOnly()` function in `view.go`
-  - [ ] Display progress bar showing completed/total games
-  - [ ] Display score summary (White wins / Black wins / Draws)
-  - [ ] Display average moves per completed game
-  - [ ] Display "X games in progress" indicator
-  - [ ] Display recent completions log (last 5 game results)
-  - [ ] Add `BvBDefaultViewMode string` to `GameConfig` in `config.go`
-  - [ ] Update config loading/saving for new field
-  - [ ] Verify stats-only mode works correctly with high concurrency (50+ games)
-  - [ ] Verify view mode can be toggled during active session
+- [x] **Slice 17: Stats-Only View Mode**
+  - [x] Add `ScreenBvBViewModeSelect` constant to Screen type in `model.go`
+  - [x] Add `BvBStatsOnlyView` constant to `BvBViewMode` type in `model.go`
+  - [x] Create `renderBvBViewModeSelect()` function in `view.go` with three options
+  - [x] Add descriptions for each view mode option (Grid, Single, Stats Only)
+  - [x] Include "(Recommended for 50+ games)" hint on Stats Only option
+  - [x] Update `ScreenBvBGridConfig` to navigate to `ScreenBvBViewModeSelect` after game count entry
+  - [x] Handle arrow keys and Enter for view mode selection
+  - [x] Handle Esc to go back to game count input
+  - [x] Set `bvbViewMode` based on selection before starting session
+  - [x] Update `v` key handler to cycle through Grid → Single → Stats Only → Grid during session
+  - [x] Create `renderBvBStatsOnly()` function in `view.go`
+  - [x] Display progress bar showing completed/total games
+  - [x] Display score summary (White wins / Black wins / Draws)
+  - [x] Display average moves per completed game
+  - [x] Display "X games in progress" indicator
+  - [x] Display recent completions log (last 5 game results)
+  - [x] Add `BvBDefaultViewMode string` to `GameConfig` in `config.go`
+  - [x] Update config loading/saving for new field
+  - [x] Verify stats-only mode works correctly with high concurrency (50+ games)
+  - [x] Verify view mode can be toggled during active session
 
 ## Slice 18: Bot vs Bot Grid Layout Stability
 *Fix board position shifting when games end*

@@ -1314,6 +1314,7 @@ func TestRenderBvBGameMode_InputView(t *testing.T) {
 }
 
 // TestBvBGridConfig_PresetSelection tests selecting grid presets.
+// After grid selection, the flow now goes to view mode selection.
 func TestBvBGridConfig_PresetSelection(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1346,14 +1347,13 @@ func TestBvBGridConfig_PresetSelection(t *testing.T) {
 			if m.bvbGridCols != tt.wantCols {
 				t.Errorf("Expected bvbGridCols=%d, got %d", tt.wantCols, m.bvbGridCols)
 			}
-			if m.screen != ScreenBvBGamePlay {
-				t.Errorf("Expected screen to be ScreenBvBGamePlay, got %v", m.screen)
+			// After grid selection, should go to view mode selection screen
+			if m.screen != ScreenBvBViewModeSelect {
+				t.Errorf("Expected screen to be ScreenBvBViewModeSelect, got %v", m.screen)
 			}
-			if m.bvbManager == nil {
-				t.Error("Expected bvbManager to be initialized")
-			}
-			// Clean up
+			// bvbManager should NOT be initialized yet - it happens after view mode selection
 			if m.bvbManager != nil {
+				t.Error("Expected bvbManager to be nil at view mode selection")
 				m.bvbManager.Abort()
 			}
 		})
@@ -1395,11 +1395,13 @@ func TestBvBGridConfig_CustomInputValid(t *testing.T) {
 	if m.bvbGridRows != 2 || m.bvbGridCols != 3 {
 		t.Errorf("Expected grid 2x3, got %dx%d", m.bvbGridRows, m.bvbGridCols)
 	}
-	if m.screen != ScreenBvBGamePlay {
-		t.Errorf("Expected screen to be ScreenBvBGamePlay, got %v", m.screen)
+	// After grid input, should go to view mode selection screen
+	if m.screen != ScreenBvBViewModeSelect {
+		t.Errorf("Expected screen to be ScreenBvBViewModeSelect, got %v", m.screen)
 	}
-	// Clean up
+	// bvbManager should NOT be initialized yet
 	if m.bvbManager != nil {
+		t.Error("Expected bvbManager to be nil at view mode selection")
 		m.bvbManager.Abort()
 	}
 }
@@ -1547,9 +1549,16 @@ func TestBvBGamePlay_EscAbortsSession(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
-	// Start a session
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	if m.bvbManager == nil {
@@ -1578,8 +1587,16 @@ func TestBvBGamePlay_SpeedChange(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	// Speed should default to Normal
@@ -1620,8 +1637,16 @@ func TestBvBGamePlay_PauseResume(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	if m.bvbPaused {
@@ -1660,8 +1685,16 @@ func TestBvBGamePlay_GameNavigation(t *testing.T) {
 	m.bvbGameCount = 3
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Single View and start the session
+	m.bvbViewModeSelection = 1
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	if m.bvbSelectedGame != 0 {
@@ -1704,29 +1737,34 @@ func TestBvBGamePlay_GameNavigation(t *testing.T) {
 	}
 }
 
-// TestBvBGamePlay_ViewToggle tests Tab toggles between grid and single view.
+// TestBvBGamePlay_ViewToggle tests 'v' key cycles through view modes: Grid -> Single -> StatsOnly -> Grid.
 func TestBvBGamePlay_ViewToggle(t *testing.T) {
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenBvBGamePlay
-	m.bvbViewMode = BvBSingleView
+	m.bvbViewMode = BvBGridView
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'\t'}}
-	// Note: tab is actually "tab" string
-	msg2 := tea.KeyMsg{Type: tea.KeyTab}
-	result, _ := m.handleBvBGamePlayKeys(msg2)
+	vKeyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}}
+
+	// Grid -> Single
+	result, _ := m.handleBvBGamePlayKeys(vKeyMsg)
 	m = result.(Model)
-
-	if m.bvbViewMode != BvBGridView {
-		t.Errorf("Expected BvBGridView after Tab, got %v", m.bvbViewMode)
-	}
-
-	result, _ = m.handleBvBGamePlayKeys(msg2)
-	m = result.(Model)
-
 	if m.bvbViewMode != BvBSingleView {
-		t.Errorf("Expected BvBSingleView after second Tab, got %v", m.bvbViewMode)
+		t.Errorf("Expected BvBSingleView after first 'v', got %v", m.bvbViewMode)
 	}
-	_ = msg
+
+	// Single -> StatsOnly
+	result, _ = m.handleBvBGamePlayKeys(vKeyMsg)
+	m = result.(Model)
+	if m.bvbViewMode != BvBStatsOnlyView {
+		t.Errorf("Expected BvBStatsOnlyView after second 'v', got %v", m.bvbViewMode)
+	}
+
+	// StatsOnly -> Grid
+	result, _ = m.handleBvBGamePlayKeys(vKeyMsg)
+	m = result.(Model)
+	if m.bvbViewMode != BvBGridView {
+		t.Errorf("Expected BvBGridView after third 'v', got %v", m.bvbViewMode)
+	}
 }
 
 // TestBvBGamePlay_TickSchedulesNext tests that tick handler schedules next tick.
@@ -1738,8 +1776,16 @@ func TestBvBGamePlay_TickSchedulesNext(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	// Handle tick - should schedule another tick since game is running
@@ -1768,8 +1814,16 @@ func TestBvBGamePlay_RenderSingleView(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotHard
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Single View and start the session
+	m.bvbViewModeSelection = 1
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	view := m.renderBvBGamePlay()
@@ -1802,8 +1856,16 @@ func TestBvBGamePlay_RenderGridView(t *testing.T) {
 	m.bvbGameCount = 4
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotMedium
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	// Switch to grid view
@@ -1842,12 +1904,17 @@ func TestBvBGamePlay_GridPageNavigation(t *testing.T) {
 	m.bvbGameCount = 3  // 3 games with 1x1 grid = 3 pages
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
 
-	// Switch to grid view
-	m.bvbViewMode = BvBGridView
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
 
 	// Should start at page 0
 	if m.bvbPageIndex != 0 {
@@ -1914,10 +1981,17 @@ func TestBvBGamePlay_GridViewPageIndicator(t *testing.T) {
 	m.bvbGameCount = 2  // 2 pages
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
-	m.bvbViewMode = BvBGridView
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
 
 	view := m.renderBvBGamePlay()
 	if !strings.Contains(view, "Page 1/2") {
@@ -1946,10 +2020,17 @@ func TestBvBGamePlay_GridViewNoPageIndicatorSinglePage(t *testing.T) {
 	m.bvbGameCount = 4  // Exactly fits in one page
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
-	m.bvbViewMode = BvBGridView
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
 
 	view := m.renderBvBGamePlay()
 	if strings.Contains(view, "Page ") {
@@ -1963,29 +2044,22 @@ func TestBvBGamePlay_GridViewNoPageIndicatorSinglePage(t *testing.T) {
 }
 
 // TestBvBGamePlay_ViewTogglePreservesNavigation tests that view toggle doesn't reset navigation state.
+// Uses "v" key to cycle through view modes: Grid -> Single -> StatsOnly -> Grid
 func TestBvBGamePlay_ViewTogglePreservesNavigation(t *testing.T) {
 	m := NewModel(DefaultConfig())
-	m.screen = ScreenBvBGridConfig
-	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
-	m.menuSelection = 0 // 1x1
+	// Set up state directly for testing view toggle behavior
+	m.screen = ScreenBvBGamePlay
 	m.bvbGameCount = 3
-	m.bvbWhiteDiff = BotEasy
-	m.bvbBlackDiff = BotEasy
-
-	result, _ := m.handleBvBGridSelection()
-	m = result.(Model)
-
-	// Start in single view, navigate to game 2
-	m.bvbViewMode = BvBSingleView
+	m.bvbViewMode = BvBGridView
 	m.bvbSelectedGame = 2
 
-	tabMsg := tea.KeyMsg{Type: tea.KeyTab}
+	vKeyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'v'}}
 
-	// Toggle to grid view
-	result, _ = m.handleBvBGamePlayKeys(tabMsg)
+	// Toggle from Grid to Single view
+	result, _ := m.handleBvBGamePlayKeys(vKeyMsg)
 	m = result.(Model)
-	if m.bvbViewMode != BvBGridView {
-		t.Error("Expected grid view after tab")
+	if m.bvbViewMode != BvBSingleView {
+		t.Errorf("Expected single view after first 'v' press, got %v", m.bvbViewMode)
 	}
 
 	// Selected game should be preserved
@@ -1993,16 +2067,23 @@ func TestBvBGamePlay_ViewTogglePreservesNavigation(t *testing.T) {
 		t.Errorf("Expected selectedGame to be preserved as 2, got %d", m.bvbSelectedGame)
 	}
 
-	// Toggle back to single view
-	result, _ = m.handleBvBGamePlayKeys(tabMsg)
+	// Toggle from Single to StatsOnly view
+	result, _ = m.handleBvBGamePlayKeys(vKeyMsg)
 	m = result.(Model)
-	if m.bvbViewMode != BvBSingleView {
-		t.Error("Expected single view after second tab")
+	if m.bvbViewMode != BvBStatsOnlyView {
+		t.Errorf("Expected stats-only view after second 'v' press, got %v", m.bvbViewMode)
 	}
 
-	// Clean up
-	if m.bvbManager != nil {
-		m.bvbManager.Abort()
+	// Toggle from StatsOnly back to Grid view
+	result, _ = m.handleBvBGamePlayKeys(vKeyMsg)
+	m = result.(Model)
+	if m.bvbViewMode != BvBGridView {
+		t.Errorf("Expected grid view after third 'v' press, got %v", m.bvbViewMode)
+	}
+
+	// Selected game should still be preserved
+	if m.bvbSelectedGame != 2 {
+		t.Errorf("Expected selectedGame to still be 2, got %d", m.bvbSelectedGame)
 	}
 }
 
@@ -2015,10 +2096,18 @@ func TestBvBGamePlay_GridViewPausedIndicator(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go through view mode selection to start the session
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
-	m.bvbViewMode = BvBGridView
+
+	// Now select Grid View (option 0) and start session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
 	m.bvbPaused = true
 
 	view := m.renderBvBGamePlay()
@@ -2041,9 +2130,21 @@ func TestBvBStats_TransitionOnAllFinished(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized after view mode selection")
+	}
 
 	// Set speed to instant so game finishes quickly
 	m.bvbSpeed = bvb.SpeedInstant
@@ -2082,8 +2183,16 @@ func TestBvBLiveStats_RenderDuringGameplay(t *testing.T) {
 	m.bvbGameCount = 4
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotHard
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	// Test single view
@@ -2138,9 +2247,21 @@ func TestBvBLiveStats_UpdatesAsGamesComplete(t *testing.T) {
 	m.bvbGameCount = 4
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
 
 	// Set to instant speed
 	m.bvbSpeed = bvb.SpeedInstant
@@ -2201,9 +2322,21 @@ func TestBvBStats_RenderSingleGame(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
 
 	m.bvbSpeed = bvb.SpeedInstant
 	m.bvbManager.SetSpeed(bvb.SpeedInstant)
@@ -2252,9 +2385,21 @@ func TestBvBStats_RenderMultiGame(t *testing.T) {
 	m.bvbGameCount = 4
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
 
 	m.bvbSpeed = bvb.SpeedInstant
 	m.bvbManager.SetSpeed(bvb.SpeedInstant)
@@ -2390,11 +2535,17 @@ func TestBvBGamePlay_FENExportSingleView(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
 
-	m.bvbViewMode = BvBSingleView
+	// Select Single View and start the session
+	m.bvbViewModeSelection = 1
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
 	m.bvbSelectedGame = 0
 
 	// Press 'f' to export FEN
@@ -2425,11 +2576,17 @@ func TestBvBGamePlay_FENExportGridView(t *testing.T) {
 	m.bvbGameCount = 4
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
 
-	m.bvbViewMode = BvBGridView
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
 	m.bvbPageIndex = 0
 
 	// Press 'f' to export FEN
@@ -2477,8 +2634,16 @@ func TestBvB_CtrlCCleansBvBManager(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	if m.bvbManager == nil {
@@ -2511,8 +2676,16 @@ func TestBvB_QuitCleansBvBManager(t *testing.T) {
 	m.bvbGameCount = 1
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 1
+	m.bvbGridCols = 1
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
 	m = result.(Model)
 
 	// Change screen to something that allows 'q' to quit
@@ -2544,11 +2717,17 @@ func TestBvB_GridViewTerminalTooSmall(t *testing.T) {
 	m.bvbGameCount = 4
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
 
-	m.bvbViewMode = BvBGridView
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
 	// Set terminal size too small for 2x2 grid
 	m.termWidth = 20
 	m.termHeight = 15
@@ -2577,11 +2756,17 @@ func TestBvB_GridViewTerminalLargeEnough(t *testing.T) {
 	m.bvbGameCount = 4
 	m.bvbWhiteDiff = BotEasy
 	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
 
+	// Go to view mode selection
 	result, _ := m.handleBvBGridSelection()
 	m = result.(Model)
 
-	m.bvbViewMode = BvBGridView
+	// Select Grid View and start the session
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
 	// Set terminal size large enough
 	m.termWidth = 100
 	m.termHeight = 50

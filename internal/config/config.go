@@ -80,6 +80,9 @@ type GameConfig struct {
 	// BvBConcurrency controls how many Bot vs Bot games run simultaneously.
 	// 0 = auto-detect based on CPU count, positive values specify exact count.
 	BvBConcurrency int `toml:"bvb_concurrency"`
+	// BvBDefaultViewMode specifies the default view mode for Bot vs Bot sessions.
+	// Valid values: "grid", "single", "stats_only"
+	BvBDefaultViewMode string `toml:"bvb_default_view_mode"`
 }
 
 // defaultConfigFile returns a ConfigFile with default values.
@@ -95,6 +98,7 @@ func defaultConfigFile() ConfigFile {
 		Game: GameConfig{
 			DefaultGameType:      "pvp",    // Default to player vs player
 			DefaultBotDifficulty: "medium", // Default bot difficulty
+			BvBDefaultViewMode:   "grid",   // Default to grid view for BvB
 		},
 	}
 }
@@ -133,6 +137,7 @@ func configToConfigFile(c Config) ConfigFile {
 		Game: GameConfig{
 			DefaultGameType:      "pvp",    // Preserve default
 			DefaultBotDifficulty: "medium", // Preserve default
+			BvBDefaultViewMode:   "grid",   // Preserve default
 		},
 	}
 }

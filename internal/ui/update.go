@@ -189,6 +189,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBvBGamePlayKeys(msg)
 	case ScreenBvBStats:
 		return m.handleBvBStatsKeys(msg)
+	case ScreenBvBViewModeSelect:
+		return m.handleBvBViewModeSelectKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -1286,6 +1288,7 @@ func (m Model) handleBvBGameModeSelection() (tea.Model, tea.Cmd) {
 		m.bvbGameCount = 1
 		m.bvbGridRows = 1
 		m.bvbGridCols = 1
+		// For single game, go directly to gameplay with single view (no view mode selection needed)
 		m.bvbViewMode = BvBSingleView
 		return m.startBvBSession()
 
@@ -1419,7 +1422,8 @@ func (m Model) handleBvBGridSelection() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return m.startBvBSession()
+	// Navigate to view mode selection screen
+	return m.navigateToViewModeSelect()
 }
 
 // handleBvBGridInput handles text input for custom grid dimensions.
@@ -1445,7 +1449,8 @@ func (m Model) handleBvBGridInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.bvbGridRows = rows
 		m.bvbGridCols = cols
 		m.bvbInputtingGrid = false
-		return m.startBvBSession()
+		// Navigate to view mode selection screen
+		return m.navigateToViewModeSelect()
 
 	case tea.KeyRunes:
 		for _, r := range msg.Runes {
@@ -1453,6 +1458,63 @@ func (m Model) handleBvBGridInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.bvbCustomGridInput += string(r)
 			}
 		}
+	}
+
+	return m, nil
+}
+
+// navigateToViewModeSelect transitions to the view mode selection screen.
+// This is called after grid configuration is complete.
+func (m Model) navigateToViewModeSelect() (tea.Model, tea.Cmd) {
+	m.screen = ScreenBvBViewModeSelect
+	m.bvbViewModeSelection = 0 // Default to Grid View
+	m.statusMsg = ""
+	m.errorMsg = ""
+	return m, nil
+}
+
+// handleBvBViewModeSelectKeys handles keyboard input for the BvB view mode selection screen.
+// Supports arrow keys for navigation, Enter to select, and Esc to go back.
+func (m Model) handleBvBViewModeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.errorMsg = ""
+
+	numOptions := 3 // Grid View, Single Board, Stats Only
+
+	switch msg.String() {
+	case "up", "k":
+		if m.bvbViewModeSelection > 0 {
+			m.bvbViewModeSelection--
+		} else {
+			m.bvbViewModeSelection = numOptions - 1
+		}
+
+	case "down", "j":
+		if m.bvbViewModeSelection < numOptions-1 {
+			m.bvbViewModeSelection++
+		} else {
+			m.bvbViewModeSelection = 0
+		}
+
+	case "enter":
+		// Set view mode based on selection
+		switch m.bvbViewModeSelection {
+		case 0:
+			m.bvbViewMode = BvBGridView
+		case 1:
+			m.bvbViewMode = BvBSingleView
+		case 2:
+			m.bvbViewMode = BvBStatsOnlyView
+		}
+		// Start the session with the selected view mode
+		return m.startBvBSession()
+
+	case "esc":
+		// Go back to grid config
+		m.screen = ScreenBvBGridConfig
+		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+		m.menuSelection = 0
+		m.bvbInputtingGrid = false
+		m.statusMsg = ""
 	}
 
 	return m, nil
@@ -1514,8 +1576,10 @@ func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
 	m.bvbManager = manager
 	m.bvbSpeed = bvb.SpeedNormal
 	m.bvbSelectedGame = 0
-	m.bvbViewMode = BvBSingleView
+	// Note: bvbViewMode is set by the view mode selection screen or single game handler
+	// Don't override it here
 	m.bvbPaused = false
+	m.bvbRecentCompletions = nil // Reset recent completions for new session
 	m.screen = ScreenBvBGamePlay
 	m.statusMsg = ""
 	m.errorMsg = ""
@@ -1590,11 +1654,14 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.bvbManager.SetSpeed(m.bvbSpeed)
 		}
 
-	case "tab":
-		// Toggle view mode
-		if m.bvbViewMode == BvBGridView {
+	case "tab", "v", "V":
+		// Cycle view mode: Grid -> Single -> StatsOnly -> Grid
+		switch m.bvbViewMode {
+		case BvBGridView:
 			m.bvbViewMode = BvBSingleView
-		} else {
+		case BvBSingleView:
+			m.bvbViewMode = BvBStatsOnlyView
+		case BvBStatsOnlyView:
 			m.bvbViewMode = BvBGridView
 		}
 
@@ -1752,6 +1819,9 @@ func (m Model) handleBvBTick() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Update recent completions for stats-only view
+	m.updateRecentCompletions()
+
 	if m.bvbManager.AllFinished() {
 		m.screen = ScreenBvBStats
 		m.bvbStatsSelection = 0
@@ -1762,6 +1832,40 @@ func (m Model) handleBvBTick() (tea.Model, tea.Cmd) {
 
 	// Schedule next tick
 	return m, bvbTickCmd(m.bvbSpeed)
+}
+
+// updateRecentCompletions updates the list of recent game completions for stats-only view.
+// Keeps track of the last 5 completed games with their results.
+func (m *Model) updateRecentCompletions() {
+	if m.bvbManager == nil {
+		return
+	}
+
+	stats := m.bvbManager.Stats()
+	if stats == nil || len(stats.IndividualResults) == 0 {
+		return
+	}
+
+	// Get the most recent completions (up to 5)
+	results := stats.IndividualResults
+	maxRecent := 5
+	startIdx := 0
+	if len(results) > maxRecent {
+		startIdx = len(results) - maxRecent
+	}
+
+	// Build recent completions list (most recent first)
+	m.bvbRecentCompletions = make([]string, 0, maxRecent)
+	for i := len(results) - 1; i >= startIdx; i-- {
+		r := results[i]
+		var entry string
+		if r.Winner == "Draw" {
+			entry = fmt.Sprintf("Game %d: Draw (%d moves)", r.GameNumber, r.MoveCount)
+		} else {
+			entry = fmt.Sprintf("Game %d: %s wins (%d moves)", r.GameNumber, r.Winner, r.MoveCount)
+		}
+		m.bvbRecentCompletions = append(m.bvbRecentCompletions, entry)
+	}
 }
 
 // handleBvBStatsKeys handles keyboard input on the BvB statistics screen.

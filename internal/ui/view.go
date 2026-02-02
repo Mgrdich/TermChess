@@ -209,6 +209,8 @@ func (m Model) View() string {
 		return m.renderBvBGamePlay()
 	case ScreenBvBStats:
 		return m.renderBvBStats()
+	case ScreenBvBViewModeSelect:
+		return m.renderBvBViewModeSelect()
 	default:
 		return "Unknown screen"
 	}
@@ -1490,16 +1492,20 @@ func (m Model) renderBvBGridConfig() string {
 }
 
 // renderBvBGamePlay renders the Bot vs Bot gameplay screen.
-// Shows the current state of the running games in single-board or grid view.
+// Shows the current state of the running games in single-board, grid, or stats-only view.
 func (m Model) renderBvBGamePlay() string {
 	if m.bvbManager == nil {
 		return "No session running.\n"
 	}
 
-	if m.bvbViewMode == BvBSingleView {
+	switch m.bvbViewMode {
+	case BvBSingleView:
 		return m.renderBvBSingleView()
+	case BvBStatsOnlyView:
+		return m.renderBvBStatsOnly()
+	default:
+		return m.renderBvBGridView()
 	}
-	return m.renderBvBGridView()
 }
 
 // renderBvBStats renders the Bot vs Bot statistics screen after all games finish.
@@ -2060,6 +2066,280 @@ func computeCapturedPieces(board *engine.Board) (string, string) {
 	}
 
 	return whiteCaptured.String(), blackCaptured.String()
+}
+
+// renderBvBViewModeSelect renders the Bot vs Bot view mode selection screen.
+// Shows three options: Grid View, Single Board, Stats Only with descriptions.
+func (m Model) renderBvBViewModeSelect() string {
+	var b strings.Builder
+
+	title := m.titleStyle().Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select View Mode:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Show session info
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+	sessionInfo := fmt.Sprintf("%d game(s) | %s Bot (White) vs %s Bot (Black) | Grid: %dx%d",
+		m.bvbGameCount, botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff),
+		m.bvbGridRows, m.bvbGridCols)
+	b.WriteString(infoStyle.Render(sessionInfo))
+	b.WriteString("\n\n")
+
+	// Define view mode options with descriptions
+	type viewModeOption struct {
+		name        string
+		description string
+		hint        string
+	}
+	options := []viewModeOption{
+		{"Grid View", "Watch multiple games in a grid layout", ""},
+		{"Single Board", "Focus on one game at a time", ""},
+		{"Stats Only", "No boards, just statistics", "(Recommended for 50+ games)"},
+	}
+
+	descStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true).
+		Padding(0, 4)
+
+	hintStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Bold(true)
+
+	for i, opt := range options {
+		cursor := "  "
+		var optionText string
+
+		if i == m.bvbViewModeSelection {
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(opt.name)
+		} else {
+			optionText = m.menuPrimaryStyle().Render(opt.name)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+
+		// Show description
+		descText := opt.description
+		if opt.hint != "" {
+			descText += " " + hintStyle.Render(opt.hint)
+		}
+		b.WriteString(descStyle.Render(descText))
+		b.WriteString("\n")
+	}
+
+	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// renderBvBStatsOnly renders the stats-only view for Bot vs Bot gameplay.
+// Displays progress bar, score summary, average moves, in-progress count, and recent completions.
+func (m Model) renderBvBStatsOnly() string {
+	var b strings.Builder
+
+	title := m.titleStyle().Render("TermChess - Bot vs Bot (Stats Only)")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	if m.bvbManager == nil {
+		b.WriteString("No session running.\n")
+		return b.String()
+	}
+
+	sessions := m.bvbManager.Sessions()
+	totalGames := len(sessions)
+	if totalGames == 0 {
+		b.WriteString("No games available.\n")
+		return b.String()
+	}
+
+	// Calculate stats
+	stats := m.bvbManager.Stats()
+	completed := 0
+	inProgress := 0
+	whiteWins := 0
+	blackWins := 0
+	draws := 0
+	totalMoves := 0
+
+	for _, s := range sessions {
+		if s.IsFinished() {
+			completed++
+			result := s.Result()
+			if result != nil {
+				totalMoves += result.MoveCount
+				switch result.Winner {
+				case "White":
+					whiteWins++
+				case "Black":
+					blackWins++
+				case "Draw":
+					draws++
+				}
+			}
+		} else {
+			inProgress++
+		}
+	}
+
+	// Override with stats from manager if available
+	if stats != nil {
+		whiteWins = stats.WhiteWins
+		blackWins = stats.BlackWins
+		draws = stats.Draws
+	}
+
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+
+	// Matchup header
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
+		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
+	b.WriteString(infoStyle.Render(matchup))
+	b.WriteString("\n\n")
+
+	// Progress bar
+	progressBar := renderProgressBar(completed, totalGames, 40)
+	progressStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.MenuSelected).
+		Padding(0, 2)
+	b.WriteString(progressStyle.Render(progressBar))
+	b.WriteString("\n\n")
+
+	// Score summary
+	statStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal).
+		Padding(0, 2)
+
+	scoreLine := fmt.Sprintf("Score:  White: %d  |  Black: %d  |  Draws: %d", whiteWins, blackWins, draws)
+	scoreStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 2)
+	b.WriteString(scoreStyle.Render(scoreLine))
+	b.WriteString("\n\n")
+
+	// Average moves per completed game
+	avgMoves := 0.0
+	if completed > 0 {
+		if stats != nil {
+			avgMoves = stats.AvgMoveCount
+		} else {
+			avgMoves = float64(totalMoves) / float64(completed)
+		}
+	}
+	avgLine := fmt.Sprintf("Average moves per game: %.1f", avgMoves)
+	b.WriteString(statStyle.Render(avgLine))
+	b.WriteString("\n")
+
+	// In-progress indicator
+	inProgressLine := fmt.Sprintf("%d game(s) in progress", inProgress)
+	inProgressStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+	b.WriteString(inProgressStyle.Render(inProgressLine))
+	b.WriteString("\n\n")
+
+	// Concurrency info
+	running := m.bvbManager.RunningCount()
+	queued := m.bvbManager.QueuedCount()
+	concurrency := m.bvbManager.Concurrency()
+	concurrencyLine := fmt.Sprintf("Running: %d | Queued: %d | Concurrency: %d", running, queued, concurrency)
+	b.WriteString(statStyle.Render(concurrencyLine))
+	b.WriteString("\n\n")
+
+	// Recent completions log (last 5 results)
+	recentHeader := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 2)
+	b.WriteString(recentHeader.Render("Recent Completions:"))
+	b.WriteString("\n")
+
+	recentStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Padding(0, 4)
+
+	if len(m.bvbRecentCompletions) == 0 {
+		b.WriteString(recentStyle.Render("(none yet)"))
+		b.WriteString("\n")
+	} else {
+		for _, entry := range m.bvbRecentCompletions {
+			b.WriteString(recentStyle.Render(entry))
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n")
+
+	// Speed/pause status
+	speedNames := map[bvb.PlaybackSpeed]string{
+		bvb.SpeedInstant: "Instant",
+		bvb.SpeedNormal:  "Normal",
+	}
+	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
+	if m.bvbPaused {
+		controlStatus += " | PAUSED"
+	}
+	controlStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal).
+		Padding(0, 2)
+	b.WriteString(controlStyle.Render(controlStatus))
+	b.WriteString("\n")
+
+	// Error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Help text
+	helpText := m.renderHelpText("[Space] Pause/Resume | [v] Change view | [t] Speed | [q/ESC] Quit")
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	return b.String()
+}
+
+// renderProgressBar creates a text-based progress bar.
+// Parameters: completed items, total items, width of the bar in characters.
+func renderProgressBar(completed, total, width int) string {
+	if total == 0 {
+		return "[" + strings.Repeat("░", width) + "] 0% (0/0)"
+	}
+	percent := float64(completed) / float64(total)
+	filled := int(percent * float64(width))
+	if filled > width {
+		filled = width
+	}
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
+	return fmt.Sprintf("[%s] %d%% (%d/%d)", bar, int(percent*100), completed, total)
 }
 
 // botDifficultyName returns the display name for a bot difficulty.

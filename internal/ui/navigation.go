@@ -38,6 +38,8 @@ func screenName(s Screen) string {
 		return "Bot vs Bot"
 	case ScreenBvBStats:
 		return "Statistics"
+	case ScreenBvBViewModeSelect:
+		return "View Mode"
 	default:
 		return "Unknown"
 	}
