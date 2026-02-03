@@ -10,6 +10,19 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Bot vs Bot grid cell dimension constants.
+// These ensure consistent cell sizes regardless of game state.
+const (
+	// bvbCellHeight is the fixed height for each grid cell in lines.
+	// Breakdown: header (1) + board (8) + status (1) + result (1) + spacing (1) = 12 lines
+	bvbCellHeight = 12
+
+	// bvbCellWidth is the fixed width for each grid cell in characters.
+	// Board width without coords is 15 chars (8 pieces + 7 spaces).
+	// Adding padding and margin gives us 22 characters.
+	bvbCellWidth = 22
+)
+
 // Style helper methods that use the theme colors.
 // These methods return lipgloss styles based on the model's current theme.
 
@@ -1336,18 +1349,19 @@ func (m Model) renderBvBGridView() string {
 }
 
 // renderBoardGrid renders a slice of sessions as a grid with the given number of columns.
+// Each cell has fixed dimensions to prevent layout shifts when games complete.
 func (m Model) renderBoardGrid(sessions []*bvb.GameSession, cols int) string {
 	if len(sessions) == 0 {
 		return ""
 	}
 
-	// Render each session as a compact board cell
+	// Render each session as a fixed-dimension compact board cell
 	cells := make([]string, len(sessions))
 	for i, session := range sessions {
 		cells[i] = m.renderCompactBoardCell(session)
 	}
 
-	// Arrange cells into rows
+	// Arrange cells into rows with consistent alignment
 	var rows []string
 	for i := 0; i < len(cells); i += cols {
 		end := i + cols
@@ -1362,22 +1376,38 @@ func (m Model) renderBoardGrid(sessions []*bvb.GameSession, cols int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, rows...)
 }
 
+// renderBvBGridCell renders a grid cell for the game at the given index.
+// Returns an empty string if the index is out of bounds or manager is nil.
+// The cell has fixed dimensions (bvbCellHeight x bvbCellWidth) to prevent layout shifts.
+func (m Model) renderBvBGridCell(gameIndex int) string {
+	if m.bvbManager == nil {
+		return ""
+	}
+
+	sessions := m.bvbManager.Sessions()
+	if gameIndex < 0 || gameIndex >= len(sessions) {
+		return ""
+	}
+
+	return m.renderCompactBoardCell(sessions[gameIndex])
+}
+
 // renderCompactBoardCell renders a single game session as a compact board cell for the grid.
 // Shows: game number, compact board, move count, and status.
+// The cell has fixed dimensions (bvbCellHeight x bvbCellWidth) to prevent layout shifts.
 func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
-	var b strings.Builder
-
 	board := session.CurrentBoard()
 	gameNum := session.GameNumber()
 	moveCount := len(session.CurrentMoveHistory())
 	isFinished := session.IsFinished()
 
-	// Game header
-	headerText := fmt.Sprintf("Game %d", gameNum)
-	b.WriteString(headerText)
-	b.WriteString("\n")
+	// Build cell content lines
+	var lines []string
 
-	// Render compact board (no coords, no color)
+	// Line 1: Game header
+	lines = append(lines, fmt.Sprintf("Game %d", gameNum))
+
+	// Lines 2-9: Board (8 lines)
 	compactConfig := Config{
 		UseUnicode: m.config.UseUnicode,
 		ShowCoords: false,
@@ -1385,24 +1415,55 @@ func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
 	}
 	renderer := NewBoardRenderer(compactConfig)
 	boardStr := renderer.Render(board)
-	b.WriteString(boardStr)
-	b.WriteString("\n")
+	boardLines := strings.Split(strings.TrimSuffix(boardStr, "\n"), "\n")
+	lines = append(lines, boardLines...)
 
-	// Status line
+	// Line 10: Status line (always shows move count)
+	lines = append(lines, fmt.Sprintf("Moves: %d", moveCount))
+
+	// Line 11: Result line (empty for in-progress, result for finished)
 	if isFinished {
 		result := session.Result()
 		if result != nil {
-			statusText := fmt.Sprintf("Moves: %d | %s", moveCount, result.Winner)
-			b.WriteString(statusText)
+			lines = append(lines, result.Winner)
+		} else {
+			lines = append(lines, "") // Empty placeholder
 		}
 	} else {
-		b.WriteString(fmt.Sprintf("Moves: %d", moveCount))
+		lines = append(lines, "") // Empty placeholder for in-progress games
 	}
-	b.WriteString("\n")
 
-	// Style the cell with border and padding
+	// Line 12: Spacing (empty line)
+	lines = append(lines, "")
+
+	// Pad or truncate to exactly bvbCellHeight lines
+	for len(lines) < bvbCellHeight {
+		lines = append(lines, "")
+	}
+	if len(lines) > bvbCellHeight {
+		lines = lines[:bvbCellHeight]
+	}
+
+	// Normalize each line to bvbCellWidth characters
+	for i, line := range lines {
+		lineWidth := lipgloss.Width(line)
+		if lineWidth < bvbCellWidth {
+			// Pad with spaces to reach target width
+			lines[i] = line + strings.Repeat(" ", bvbCellWidth-lineWidth)
+		} else if lineWidth > bvbCellWidth {
+			// Truncate to target width (keeping ANSI codes intact is tricky,
+			// but for our simple case we just truncate)
+			lines[i] = truncateToWidth(line, bvbCellWidth)
+		}
+	}
+
+	// Join lines and apply styling
+	content := strings.Join(lines, "\n")
+
+	// Style the cell with consistent dimensions
 	cellStyle := lipgloss.NewStyle().
-		Padding(0, 1).
+		Width(bvbCellWidth).
+		Height(bvbCellHeight).
 		Margin(0, 1)
 
 	if isFinished {
@@ -1410,7 +1471,20 @@ func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
 		cellStyle = cellStyle.Foreground(m.theme.HelpText)
 	}
 
-	return cellStyle.Render(b.String())
+	return cellStyle.Render(content)
+}
+
+// truncateToWidth truncates a string to fit within the specified width.
+// This is a simple implementation that handles most common cases.
+func truncateToWidth(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	runes := []rune(s)
+	if len(runes) <= width {
+		return s
+	}
+	return string(runes[:width])
 }
 
 // renderBvBGridConfig renders the Bot vs Bot grid configuration screen.

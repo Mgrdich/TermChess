@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // TestUpdate_QuitKey tests that pressing 'q' or ctrl+c quits the app
@@ -2118,6 +2120,303 @@ func TestBvBGamePlay_GridViewPausedIndicator(t *testing.T) {
 	// Clean up
 	if m.bvbManager != nil {
 		m.bvbManager.Abort()
+	}
+}
+
+// TestBvBGridCell_FixedDimensions tests that grid cells have consistent dimensions.
+func TestBvBGridCell_FixedDimensions(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
+
+	// Go to view mode selection and start session
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
+
+	// Render each cell and verify dimensions
+	sessions := m.bvbManager.Sessions()
+	for i, session := range sessions {
+		cell := m.renderCompactBoardCell(session)
+		cellHeight := lipgloss.Height(cell)
+		cellWidth := lipgloss.Width(cell)
+
+		// Height should be exactly bvbCellHeight
+		if cellHeight != bvbCellHeight {
+			t.Errorf("Cell %d: expected height %d, got %d", i, bvbCellHeight, cellHeight)
+		}
+
+		// Width should be at least bvbCellWidth (may have margin)
+		if cellWidth < bvbCellWidth {
+			t.Errorf("Cell %d: expected width >= %d, got %d", i, bvbCellWidth, cellWidth)
+		}
+	}
+
+	// Clean up
+	m.bvbManager.Abort()
+}
+
+// TestBvBGridCell_ConsistentHeightFinishedVsInProgress tests that finished and in-progress games have same height.
+func TestBvBGridCell_ConsistentHeightFinishedVsInProgress(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
+
+	// Go to view mode selection and start session
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
+
+	// Set instant speed
+	m.bvbSpeed = bvb.SpeedInstant
+	m.bvbManager.SetSpeed(bvb.SpeedInstant)
+
+	// Wait briefly for some games to potentially finish
+	time.Sleep(100 * time.Millisecond)
+
+	// Render cells multiple times to capture different states
+	sessions := m.bvbManager.Sessions()
+	heights := make([]int, len(sessions))
+
+	for i, session := range sessions {
+		cell := m.renderCompactBoardCell(session)
+		heights[i] = lipgloss.Height(cell)
+	}
+
+	// All heights should be equal
+	for i := 1; i < len(heights); i++ {
+		if heights[i] != heights[0] {
+			t.Errorf("Cell heights not consistent: cell 0 has height %d, cell %d has height %d",
+				heights[0], i, heights[i])
+		}
+	}
+
+	// Clean up
+	m.bvbManager.Abort()
+}
+
+// TestBvBGridCell_RenderBvBGridCell tests the renderBvBGridCell helper function.
+func TestBvBGridCell_RenderBvBGridCell(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
+
+	// Go to view mode selection and start session
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
+
+	// Test valid indices
+	for i := 0; i < m.bvbGameCount; i++ {
+		cell := m.renderBvBGridCell(i)
+		if cell == "" {
+			t.Errorf("Expected non-empty cell for game index %d", i)
+		}
+		if !strings.Contains(cell, fmt.Sprintf("Game %d", i+1)) {
+			t.Errorf("Expected cell to contain 'Game %d', got: %s", i+1, cell)
+		}
+	}
+
+	// Test invalid indices
+	if cell := m.renderBvBGridCell(-1); cell != "" {
+		t.Error("Expected empty string for negative index")
+	}
+	if cell := m.renderBvBGridCell(100); cell != "" {
+		t.Error("Expected empty string for out-of-bounds index")
+	}
+
+	// Clean up
+	m.bvbManager.Abort()
+}
+
+// TestBvBGridCell_NilManager tests renderBvBGridCell with nil manager.
+func TestBvBGridCell_NilManager(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.bvbManager = nil
+
+	cell := m.renderBvBGridCell(0)
+	if cell != "" {
+		t.Error("Expected empty string when bvbManager is nil")
+	}
+}
+
+// TestBvBGrid_LayoutStability tests that grid layout remains stable as games finish.
+func TestBvBGrid_LayoutStability(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGridConfig
+	m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	m.menuSelection = 1 // 2x2
+	m.bvbGameCount = 4
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotEasy
+	m.bvbGridRows = 2
+	m.bvbGridCols = 2
+	m.termWidth = 100 // Set terminal size to avoid warning
+	m.termHeight = 50
+
+	// Go to view mode selection and start session
+	result, _ := m.handleBvBGridSelection()
+	m = result.(Model)
+	m.bvbViewModeSelection = 0
+	result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = result.(Model)
+
+	if m.bvbManager == nil {
+		t.Fatal("Expected bvbManager to be initialized")
+	}
+
+	// Capture initial grid dimensions
+	sessions := m.bvbManager.Sessions()
+	grid := m.renderBoardGrid(sessions, m.bvbGridCols)
+	initialHeight := lipgloss.Height(grid)
+	initialWidth := lipgloss.Width(grid)
+
+	// Set instant speed and wait for some games to finish
+	m.bvbSpeed = bvb.SpeedInstant
+	m.bvbManager.SetSpeed(bvb.SpeedInstant)
+
+	// Wait for games to potentially complete
+	for i := 0; i < 50; i++ {
+		time.Sleep(50 * time.Millisecond)
+		if m.bvbManager.AllFinished() {
+			break
+		}
+	}
+
+	// Capture grid dimensions after games may have finished
+	sessions = m.bvbManager.Sessions()
+	grid = m.renderBoardGrid(sessions, m.bvbGridCols)
+	finalHeight := lipgloss.Height(grid)
+	finalWidth := lipgloss.Width(grid)
+
+	// Dimensions should remain stable
+	if finalHeight != initialHeight {
+		t.Errorf("Grid height changed: initial=%d, final=%d", initialHeight, finalHeight)
+	}
+	if finalWidth != initialWidth {
+		t.Errorf("Grid width changed: initial=%d, final=%d", initialWidth, finalWidth)
+	}
+
+	// Clean up
+	m.bvbManager.Abort()
+}
+
+// TestBvBGrid_LayoutStabilityConfigurations tests grid layout stability for 2x2, 3x3, 4x4 configurations.
+func TestBvBGrid_LayoutStabilityConfigurations(t *testing.T) {
+	testCases := []struct {
+		name  string
+		rows  int
+		cols  int
+		games int
+	}{
+		{"2x2", 2, 2, 4},
+		{"3x3", 3, 3, 9},
+		{"4x4", 4, 4, 16},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			m.screen = ScreenBvBGridConfig
+			m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+			m.menuSelection = 4 // Custom
+			m.bvbGameCount = tc.games
+			m.bvbWhiteDiff = BotEasy
+			m.bvbBlackDiff = BotEasy
+			m.bvbGridRows = tc.rows
+			m.bvbGridCols = tc.cols
+			m.termWidth = 200 // Large enough for any grid
+			m.termHeight = 100
+
+			// Go to view mode selection and start session
+			result, _ := m.handleBvBGridSelection()
+			m = result.(Model)
+			m.bvbViewModeSelection = 0
+			result, _ = m.handleBvBViewModeSelectKeys(tea.KeyMsg{Type: tea.KeyEnter})
+			m = result.(Model)
+
+			if m.bvbManager == nil {
+				t.Fatal("Expected bvbManager to be initialized")
+			}
+
+			// Render the grid with the configured columns
+			sessions := m.bvbManager.Sessions()
+
+			// Verify we have the expected number of sessions
+			if len(sessions) != tc.games {
+				t.Errorf("Expected %d sessions, got %d", tc.games, len(sessions))
+			}
+
+			// Render the grid with the correct column count
+			grid := m.renderBoardGrid(sessions, tc.cols)
+			height := lipgloss.Height(grid)
+
+			// Verify dimensions are positive and consistent
+			// Each cell has bvbCellHeight lines
+			// Each row in the grid should have bvbCellHeight lines
+			expectedHeight := tc.rows * bvbCellHeight
+
+			if height != expectedHeight {
+				t.Errorf("Grid height %d != expected %d", height, expectedHeight)
+			}
+
+			// Verify we can see all game numbers in the grid
+			for i := 1; i <= tc.games; i++ {
+				expected := fmt.Sprintf("Game %d", i)
+				if !strings.Contains(grid, expected) {
+					t.Errorf("Expected to find '%s' in grid", expected)
+				}
+			}
+
+			// Verify all cells have consistent dimensions
+			for i, session := range sessions {
+				cell := m.renderCompactBoardCell(session)
+				cellHeight := lipgloss.Height(cell)
+				if cellHeight != bvbCellHeight {
+					t.Errorf("Cell %d in %s grid: expected height %d, got %d",
+						i, tc.name, bvbCellHeight, cellHeight)
+				}
+			}
+
+			// Clean up
+			m.bvbManager.Abort()
+		})
 	}
 }
 

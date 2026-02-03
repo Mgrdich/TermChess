@@ -220,17 +220,17 @@
 ## Slice 18: Bot vs Bot Grid Layout Stability
 *Fix board position shifting when games end*
 
-- [ ] **Slice 18: Grid Layout Stability**
-  - [ ] Define `bvbCellHeight` constant in `view.go` (board + header + status + result + spacing)
-  - [ ] Define `bvbCellWidth` constant based on board width with padding
-  - [ ] Create `renderBvBGridCell(gameIndex int) string` function with fixed dimensions
-  - [ ] Always reserve space for result text line (empty placeholder when game in progress)
-  - [ ] Pad or truncate each cell to exactly `bvbCellHeight` lines
-  - [ ] Use `lipgloss.Width()` to ensure consistent cell widths
-  - [ ] Update `renderBvBGrid()` to use fixed-dimension cells
-  - [ ] Verify boards don't shift when games complete at different times
-  - [ ] Verify all boards in a row maintain consistent vertical alignment
-  - [ ] Test with various grid configurations (2x2, 3x3, 4x4)
+- [x] **Slice 18: Grid Layout Stability**
+  - [x] Define `bvbCellHeight` constant in `view.go` (board + header + status + result + spacing)
+  - [x] Define `bvbCellWidth` constant based on board width with padding
+  - [x] Create `renderBvBGridCell(gameIndex int) string` function with fixed dimensions
+  - [x] Always reserve space for result text line (empty placeholder when game in progress)
+  - [x] Pad or truncate each cell to exactly `bvbCellHeight` lines
+  - [x] Use `lipgloss.Width()` to ensure consistent cell widths
+  - [x] Update `renderBvBGrid()` to use fixed-dimension cells
+  - [x] Verify boards don't shift when games complete at different times
+  - [x] Verify all boards in a row maintain consistent vertical alignment
+  - [x] Test with various grid configurations (2x2, 3x3, 4x4)
 
 ## Slice 19: Bot vs Bot Statistics Export
 *Save session statistics and game data to file*
