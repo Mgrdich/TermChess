@@ -10,9 +10,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Bot vs Bot grid cell dimension constants.
-// These ensure consistent cell sizes regardless of game state.
+// Terminal size and Bot vs Bot grid constants.
 const (
+	// minTerminalWidth is the minimum terminal width for the UI to render properly.
+	minTerminalWidth = 40
+
+	// minTerminalHeight is the minimum terminal height for the UI to render properly.
+	minTerminalHeight = 20
+
 	// bvbCellHeight is the fixed height for each grid cell in lines.
 	// Breakdown: header (1) + board (8) + status (1) + result (1) + spacing (1) = 12 lines
 	bvbCellHeight = 12
@@ -180,10 +185,40 @@ func (m Model) renderHelpText(text string) string {
 	return m.helpStyle().Render(text)
 }
 
+// renderMinSizeWarning renders a warning when the terminal is too small.
+func (m Model) renderMinSizeWarning() string {
+	var b strings.Builder
+
+	warnStyle := lipgloss.NewStyle().
+		Foreground(m.theme.ErrorText).
+		Bold(true)
+
+	b.WriteString(warnStyle.Render("Terminal too small"))
+	b.WriteString("\n\n")
+
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText)
+
+	b.WriteString(infoStyle.Render(fmt.Sprintf("Current: %dx%d", m.termWidth, m.termHeight)))
+	b.WriteString("\n")
+	b.WriteString(infoStyle.Render(fmt.Sprintf("Minimum: %dx%d", minTerminalWidth, minTerminalHeight)))
+	b.WriteString("\n\n")
+	b.WriteString(infoStyle.Render("Please resize your terminal."))
+
+	return b.String()
+}
+
 // View renders the UI based on the current model state.
 // This function is called by Bubbletea on every update to generate
 // the string that will be displayed in the terminal.
 func (m Model) View() string {
+	// Check if terminal is too small to render properly
+	if m.termWidth > 0 && m.termHeight > 0 {
+		if m.termWidth < minTerminalWidth || m.termHeight < minTerminalHeight {
+			return m.renderMinSizeWarning()
+		}
+	}
+
 	// If the shortcuts overlay is active, render it over the current view
 	if m.showShortcutsOverlay {
 		return m.renderShortcutsOverlay()
@@ -1709,12 +1744,28 @@ func (m Model) renderBvBStats() string {
 		b.WriteString("\n")
 	}
 
+	// Show status or error messages
+	if m.statusMsg != "" {
+		statusStyle := lipgloss.NewStyle().
+			Foreground(m.theme.StatusText).
+			Padding(0, 2)
+		b.WriteString("\n")
+		b.WriteString(statusStyle.Render(m.statusMsg))
+	}
+	if m.errorMsg != "" {
+		errorStyle := lipgloss.NewStyle().
+			Foreground(m.theme.ErrorText).
+			Padding(0, 2)
+		b.WriteString("\n")
+		b.WriteString(errorStyle.Render(m.errorMsg))
+	}
+
 	// Build help text, including pagination controls if multiple pages
-	helpStr := "up/down: navigate | Enter: select | ESC: menu"
+	helpStr := "up/down: navigate | s: export | Enter: select | ESC: menu"
 	if stats.TotalGames > 1 {
 		totalPages := (len(stats.IndividualResults) + 14) / 15 // resultsPerPage = 15
 		if totalPages > 1 {
-			helpStr = "up/down: navigate | left/right: page | Enter: select | ESC: menu"
+			helpStr = "up/down: navigate | left/right: page | s: export | Enter: select | ESC: menu"
 		}
 	}
 	helpText := m.renderHelpText(helpStr)

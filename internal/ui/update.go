@@ -57,6 +57,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.termWidth = msg.Width
 		m.termHeight = msg.Height
+		// Adjust BvB grid for new terminal width if in BvB gameplay
+		if m.screen == ScreenBvBGamePlay && m.bvbViewMode == BvBGridView {
+			m.adjustBvBGridForWidth()
+		}
 		return m, nil
 	case BvBTickMsg:
 		return m.handleBvBTick()
@@ -114,9 +118,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle 's' key globally for settings (only when not in text input mode)
+	// Exception: On BvB stats screen, 's' is used for export instead of settings
 	if msg.String() == "s" && !m.isInTextInputMode() {
-		// Don't trigger if already on settings
-		if m.screen != ScreenSettings {
+		// Don't trigger if already on settings or on BvB stats screen (where 's' means export)
+		if m.screen != ScreenSettings && m.screen != ScreenBvBStats {
 			m.pushScreen(ScreenSettings)
 			m.settingsSelection = 0
 			m.statusMsg = ""
@@ -1895,6 +1900,9 @@ func (m Model) handleBvBStatsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+	case "s", "S":
+		// Export statistics to JSON file
+		return m.handleBvBStatsExport()
 	case "enter":
 		return m.handleBvBStatsSelection()
 	case "esc":
@@ -1921,6 +1929,33 @@ func (m Model) handleBvBStatsSelection() (tea.Model, tea.Cmd) {
 		m.menuSelection = 0
 		m.bvbManager = nil
 	}
+	return m, nil
+}
+
+// handleBvBStatsExport exports the session statistics to a JSON file.
+func (m Model) handleBvBStatsExport() (tea.Model, tea.Cmd) {
+	if m.bvbManager == nil {
+		m.errorMsg = "No session data to export"
+		return m, nil
+	}
+
+	// Get bot difficulty names for the export
+	whiteBotName := botDifficultyName(m.bvbWhiteDiff)
+	blackBotName := botDifficultyName(m.bvbBlackDiff)
+
+	// Generate export data
+	export := m.bvbManager.ExportStats(whiteBotName, blackBotName)
+
+	// Save to file (empty string uses default directory)
+	filepath, err := bvb.SaveSessionExport(export, "")
+	if err != nil {
+		m.errorMsg = fmt.Sprintf("Failed to export: %v", err)
+		m.statusMsg = ""
+		return m, nil
+	}
+
+	m.statusMsg = fmt.Sprintf("Stats exported to: %s", filepath)
+	m.errorMsg = ""
 	return m, nil
 }
 
@@ -2184,4 +2219,45 @@ func (m Model) isInTextInputMode() bool {
 	}
 
 	return false
+}
+
+// adjustBvBGridForWidth adjusts the BvB grid layout based on terminal width.
+// If the terminal is too narrow for the current grid, it reduces columns or
+// switches to single view mode. This method modifies the model in place.
+func (m *Model) adjustBvBGridForWidth() {
+	if m.termWidth <= 0 {
+		return
+	}
+
+	// Calculate how many columns can fit in the current terminal width
+	// Each cell needs bvbCellWidth plus some margin
+	cellWidthWithMargin := bvbCellWidth + 2 // 2 chars for spacing between cells
+	maxCols := m.termWidth / cellWidthWithMargin
+
+	// Minimum 1 column
+	if maxCols < 1 {
+		maxCols = 1
+	}
+
+	// If current grid is too wide, adjust
+	if m.bvbGridCols > maxCols {
+		if maxCols >= 1 {
+			// Reduce to max possible columns
+			m.bvbGridCols = maxCols
+			// Recalculate rows to maintain game count per page
+			if m.bvbGameCount > 0 && m.bvbGridCols > 0 {
+				// Keep roughly the same number of boards visible
+				originalBoardsPerPage := m.bvbGridRows * (m.bvbGridCols + (maxCols - m.bvbGridCols))
+				m.bvbGridRows = (originalBoardsPerPage + m.bvbGridCols - 1) / m.bvbGridCols
+				if m.bvbGridRows < 1 {
+					m.bvbGridRows = 1
+				}
+			}
+		}
+	}
+
+	// If terminal is too narrow for even 1 column grid view, switch to single view
+	if m.termWidth < bvbCellWidth {
+		m.bvbViewMode = BvBSingleView
+	}
 }

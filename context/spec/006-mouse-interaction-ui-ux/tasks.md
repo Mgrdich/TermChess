@@ -235,45 +235,45 @@
 ## Slice 19: Bot vs Bot Statistics Export
 *Save session statistics and game data to file*
 
-- [ ] **Slice 19: Statistics Export**
-  - [ ] Create `internal/bvb/export.go` with `SessionExport` and `GameExport` structs
-  - [ ] Add move history tracking to `GameSession` (store moves as they're made)
-  - [ ] Add termination reason tracking when games end
-  - [ ] Implement `ExportStats()` method on `SessionManager` to gather all game data
-  - [ ] Implement `SaveSessionExport()` function to write JSON file
-  - [ ] Create stats directory (`~/.termchess/stats/`) if not exists
-  - [ ] Generate filename with timestamp (e.g., `bvb_session_2024-01-15_14-30-00.json`)
-  - [ ] Handle `s` key on BvB stats screen to trigger save
-  - [ ] Display success message with filepath after save
-  - [ ] Display error message if save fails
-  - [ ] Write unit tests for `ExportStats()` and `SaveSessionExport()`
-  - [ ] Verify exported JSON contains all session and game data
-  - [ ] Verify move history is in standard algebraic notation
+- [x] **Slice 19: Statistics Export**
+  - [x] Create `internal/bvb/export.go` with `SessionExport` and `GameExport` structs
+  - [x] Add move history tracking to `GameSession` (store moves as they're made)
+  - [x] Add termination reason tracking when games end
+  - [x] Implement `ExportStats()` method on `SessionManager` to gather all game data
+  - [x] Implement `SaveSessionExport()` function to write JSON file
+  - [x] Create stats directory (`~/.termchess/stats/`) if not exists
+  - [x] Generate filename with timestamp (e.g., `bvb_session_2024-01-15_14-30-00.json`)
+  - [x] Handle `s` key on BvB stats screen to trigger save
+  - [x] Display success message with filepath after save
+  - [x] Display error message if save fails
+  - [x] Write unit tests for `ExportStats()` and `SaveSessionExport()`
+  - [x] Verify exported JSON contains all session and game data
+  - [x] Verify move history is in standard algebraic notation
 
 ## Slice 20: Terminal Resize and Responsive Layout
 *Ensure UI adapts to terminal size changes*
 
-- [ ] **Slice 20: Terminal Resize Handling**
-  - [ ] Verify `termWidth` and `termHeight` are updated on `tea.WindowSizeMsg`
-  - [ ] Define constants: `minTerminalWidth` (40), `minTerminalHeight` (20), `bvbCellWidth`
-  - [ ] Create `renderMinSizeWarning()` function for small terminal warning
-  - [ ] Update `View()` to check terminal size and show warning if too small
-  - [ ] Create `adjustBvBGridForWidth()` function to auto-adjust grid columns
-  - [ ] Call `adjustBvBGridForWidth()` on resize during BvB gameplay
-  - [ ] Auto-switch to single view if terminal too narrow for grid
-  - [ ] Ensure menus truncate gracefully on narrow terminals
-  - [ ] Ensure stats panel adjusts to available width
-  - [ ] Test resize during active BvB session
-  - [ ] Test resize during gameplay and menu screens
-  - [ ] Verify no crashes or rendering issues on resize
+- [x] **Slice 20: Terminal Resize Handling**
+  - [x] Verify `termWidth` and `termHeight` are updated on `tea.WindowSizeMsg`
+  - [x] Define constants: `minTerminalWidth` (40), `minTerminalHeight` (20), `bvbCellWidth`
+  - [x] Create `renderMinSizeWarning()` function for small terminal warning
+  - [x] Update `View()` to check terminal size and show warning if too small
+  - [x] Create `adjustBvBGridForWidth()` function to auto-adjust grid columns
+  - [x] Call `adjustBvBGridForWidth()` on resize during BvB gameplay
+  - [x] Auto-switch to single view if terminal too narrow for grid
+  - [x] Ensure menus truncate gracefully on narrow terminals
+  - [x] Ensure stats panel adjusts to available width
+  - [x] Test resize during active BvB session
+  - [x] Test resize during gameplay and menu screens
+  - [x] Verify no crashes or rendering issues on resize
 
 ## Slice 21: Final Polish and Accessibility Verification
 *Ensure WCAG compliance and keyboard accessibility*
 
-- [ ] **Slice 21: Accessibility and Final Polish**
-  - [ ] Verify all three themes meet WCAG AA contrast standards using contrast checker
-  - [ ] Verify every interactive element is reachable via keyboard
-  - [ ] Verify focus indicators are visible throughout the app
-  - [ ] Verify mouse interaction has keyboard equivalents (algebraic notation still works)
-  - [ ] Run full manual test suite across all features
-  - [ ] Fix any remaining visual or interaction issues
+- [x] **Slice 21: Accessibility and Final Polish**
+  - [x] Verify all three themes meet WCAG AA contrast standards using contrast checker
+  - [x] Verify every interactive element is reachable via keyboard
+  - [x] Verify focus indicators are visible throughout the app
+  - [x] Verify mouse interaction has keyboard equivalents (algebraic notation still works)
+  - [x] Run full manual test suite across all features
+  - [x] Fix any remaining visual or interaction issues

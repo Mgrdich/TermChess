@@ -3255,3 +3255,135 @@ func TestParsePositiveInt(t *testing.T) {
 		}
 	}
 }
+
+// TestRenderMinSizeWarning tests that the min size warning renders correctly.
+func TestRenderMinSizeWarning(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.termWidth = 30
+	m.termHeight = 15
+
+	output := m.renderMinSizeWarning()
+
+	if !strings.Contains(output, "Terminal too small") {
+		t.Error("Expected 'Terminal too small' in warning output")
+	}
+	if !strings.Contains(output, "30x15") {
+		t.Error("Expected current size '30x15' in warning output")
+	}
+	if !strings.Contains(output, "40x20") {
+		t.Error("Expected minimum size '40x20' in warning output")
+	}
+}
+
+// TestViewShowsMinSizeWarning tests that View() shows warning when terminal is too small.
+func TestViewShowsMinSizeWarning(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.termWidth = 30
+	m.termHeight = 15
+	m.screen = ScreenMainMenu
+
+	output := m.View()
+
+	if !strings.Contains(output, "Terminal too small") {
+		t.Error("Expected min size warning when terminal is too small")
+	}
+}
+
+// TestViewNoWarningWhenLargeEnough tests that View() renders normally when terminal is large enough.
+func TestViewNoWarningWhenLargeEnough(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.termWidth = 80
+	m.termHeight = 24
+	m.screen = ScreenMainMenu
+	m.menuOptions = buildMainMenuOptions()
+
+	output := m.View()
+
+	if strings.Contains(output, "Terminal too small") {
+		t.Error("Should not show warning when terminal is large enough")
+	}
+	if !strings.Contains(output, "TermChess") {
+		t.Error("Expected normal menu content")
+	}
+}
+
+// TestAdjustBvBGridForWidth tests grid column adjustment based on terminal width.
+func TestAdjustBvBGridForWidth(t *testing.T) {
+	tests := []struct {
+		name         string
+		termWidth    int
+		initialCols  int
+		initialRows  int
+		expectedCols int
+		expectSingle bool
+	}{
+		{
+			name:         "wide terminal - no adjustment",
+			termWidth:    200,
+			initialCols:  4,
+			initialRows:  2,
+			expectedCols: 4,
+			expectSingle: false,
+		},
+		{
+			name:         "narrow terminal - reduce columns",
+			termWidth:    50,
+			initialCols:  4,
+			initialRows:  2,
+			expectedCols: 2, // 50 / (22+2) = 2
+			expectSingle: false,
+		},
+		{
+			name:         "very narrow terminal - switch to single",
+			termWidth:    15,
+			initialCols:  2,
+			initialRows:  2,
+			expectedCols: 2, // adjusted but then switched to single
+			expectSingle: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewModel(DefaultConfig())
+			m.termWidth = tt.termWidth
+			m.bvbGridCols = tt.initialCols
+			m.bvbGridRows = tt.initialRows
+			m.bvbViewMode = BvBGridView
+			m.bvbGameCount = 8
+
+			m.adjustBvBGridForWidth()
+
+			if tt.expectSingle {
+				if m.bvbViewMode != BvBSingleView {
+					t.Errorf("Expected switch to single view, got view mode %d", m.bvbViewMode)
+				}
+			} else {
+				if m.bvbGridCols > tt.expectedCols {
+					t.Errorf("Expected cols <= %d, got %d", tt.expectedCols, m.bvbGridCols)
+				}
+			}
+		})
+	}
+}
+
+// TestWindowSizeMsgAdjustsGridDuringBvB tests that resize adjusts grid during BvB gameplay.
+func TestWindowSizeMsgAdjustsGridDuringBvB(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBGamePlay
+	m.bvbViewMode = BvBGridView
+	m.bvbGridCols = 4
+	m.bvbGridRows = 2
+	m.bvbGameCount = 8
+
+	// Simulate resize to narrow terminal
+	msg := tea.WindowSizeMsg{Width: 50, Height: 30}
+	result, _ := m.Update(msg)
+	m = result.(Model)
+
+	// Grid should have been adjusted
+	maxCols := 50 / (bvbCellWidth + 2) // 50 / 24 = 2
+	if m.bvbGridCols > maxCols {
+		t.Errorf("Expected grid cols <= %d after resize, got %d", maxCols, m.bvbGridCols)
+	}
+}
