@@ -277,3 +277,29 @@
   - [x] Verify mouse interaction has keyboard equivalents (algebraic notation still works)
   - [x] Run full manual test suite across all features
   - [x] Fix any remaining visual or interaction issues
+
+## Slice 22: Bot vs Bot Concurrency Selection Screen
+*Allow users to choose recommended or custom concurrency with no upper limit*
+
+- [ ] **Slice 22: Concurrency Selection Screen**
+  - [ ] Add `ScreenBvBConcurrencySelect` constant to Screen type in `model.go`
+  - [ ] Add `bvbConcurrencySelection`, `bvbCustomConcurrency`, `bvbInputtingConcurrency` fields to Model
+  - [ ] Create `renderBvBConcurrencySelect()` function in `view.go`
+  - [ ] Display two options: "Recommended (X concurrent)" and "Custom"
+  - [ ] Show CPU core count info with recommended option
+  - [ ] Implement `handleBvBConcurrencySelectKeys()` in `update.go`
+  - [ ] Handle arrow key navigation between Recommended/Custom
+  - [ ] Handle Enter to select Recommended (use auto-calculated value)
+  - [ ] Handle Enter on Custom to switch to text input mode
+  - [ ] Implement text input for custom concurrency value (digits only)
+  - [ ] Validate custom input: positive integer, minimum 1, NO upper limit
+  - [ ] Display warning when custom value > 50: "High concurrency may cause lag. Consider Stats Only mode."
+  - [ ] Handle ESC to return to game count screen
+  - [ ] Update BvB flow: ScreenBvBGridConfig → ScreenBvBConcurrencySelect → ScreenBvBViewModeSelect
+  - [ ] Remove or make `maxConcurrentGames` cap optional in `manager.go`
+  - [ ] Pass user-selected concurrency to `NewSessionManager()`
+  - [ ] Add help text showing navigation options
+  - [ ] Write unit tests for concurrency selection navigation
+  - [ ] Write unit tests for custom input validation (no upper limit)
+  - [ ] Test high concurrency (100+) with Stats Only mode
+  - [ ] Verify session starts correctly with both recommended and custom values

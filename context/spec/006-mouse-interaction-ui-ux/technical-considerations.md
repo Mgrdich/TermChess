@@ -647,6 +647,142 @@ func (m Model) renderMinSizeWarning() string {
 - Stats panel: Collapse to narrower format if needed
 - Help text: Wrap or hide on very narrow terminals
 
+**Bot vs Bot Concurrency Selection Screen** (`internal/ui/model.go` and `internal/ui/update.go`):
+
+This screen allows users to choose between auto-detected concurrency or enter a custom value with no upper limit.
+
+**New Screen** (`internal/ui/model.go`):
+```go
+const (
+    // ... existing screens
+    ScreenBvBConcurrencySelect  // New: Select concurrency before view mode
+)
+```
+
+**Model Fields**:
+```go
+type Model struct {
+    // ... existing fields
+    bvbConcurrencySelection int  // 0 = Recommended, 1 = Custom
+    bvbCustomConcurrency    string  // Text input for custom value
+    bvbInputtingConcurrency bool    // True when typing custom value
+}
+```
+
+**Updated Bot vs Bot Flow**:
+```
+ScreenBvBBotSelect (select White/Black bot difficulties)
+    ↓
+ScreenBvBGameMode (single game or multi-game)
+    ↓ (if multi-game)
+ScreenBvBGridConfig (select game count)
+    ↓
+ScreenBvBConcurrencySelect (NEW: select Recommended or Custom concurrency)
+    ↓
+ScreenBvBViewModeSelect (select Grid/Single/Stats Only)
+    ↓
+ScreenBvBGamePlay (session starts)
+```
+
+**Concurrency Selection Screen Rendering** (`internal/ui/view.go`):
+```go
+func (m Model) renderBvBConcurrencySelect() string {
+    // Title: "Select Concurrency"
+    //
+    // Options:
+    //   > Recommended (X concurrent games)
+    //     Based on your CPU (Y cores)
+    //
+    //     Custom
+    //     Enter your own value (may cause lag)
+    //
+    // If Custom selected and inputting:
+    //   Enter concurrency: [input field]
+    //
+    // If custom value > 50:
+    //   ⚠ High concurrency may cause lag. Consider using Stats Only view mode.
+    //
+    // Help: arrows: navigate | enter: select | esc: back
+}
+```
+
+**Key Handler** (`internal/ui/update.go`):
+```go
+func (m Model) handleBvBConcurrencySelectKeys(msg tea.KeyMsg) (Model, tea.Cmd) {
+    if m.bvbInputtingConcurrency {
+        // Handle text input for custom value
+        switch msg.String() {
+        case "enter":
+            concurrency, err := parsePositiveInt(m.bvbCustomConcurrency)
+            if err != nil {
+                m.statusMessage = "Please enter a valid positive number"
+                return m, nil
+            }
+            m.bvbConcurrency = concurrency
+            m.bvbInputtingConcurrency = false
+            return m.transitionToViewModeSelect()
+        case "esc":
+            m.bvbInputtingConcurrency = false
+            m.bvbCustomConcurrency = ""
+            return m, nil
+        default:
+            // Append digits only
+            if isDigit(msg.String()) {
+                m.bvbCustomConcurrency += msg.String()
+            }
+            // Handle backspace
+            if msg.String() == "backspace" && len(m.bvbCustomConcurrency) > 0 {
+                m.bvbCustomConcurrency = m.bvbCustomConcurrency[:len(m.bvbCustomConcurrency)-1]
+            }
+        }
+        return m, nil
+    }
+
+    // Menu navigation
+    switch msg.String() {
+    case "up", "k":
+        m.bvbConcurrencySelection = 0  // Recommended
+    case "down", "j":
+        m.bvbConcurrencySelection = 1  // Custom
+    case "enter":
+        if m.bvbConcurrencySelection == 0 {
+            // Use recommended (auto-calculated)
+            m.bvbConcurrency = calculateDefaultConcurrency()
+            return m.transitionToViewModeSelect()
+        } else {
+            // Switch to custom input mode
+            m.bvbInputtingConcurrency = true
+            m.bvbCustomConcurrency = ""
+        }
+    case "esc":
+        return m.popScreen()
+    }
+    return m, nil
+}
+```
+
+**Removing the Hard Cap**:
+```go
+// In internal/bvb/manager.go
+
+// Remove or make configurable:
+// const maxConcurrentGames = 50
+
+// Update NewSessionManager to accept any concurrency value:
+func NewSessionManager(..., concurrency int) *SessionManager {
+    // No longer cap at 50 - user chose this value knowingly
+    if concurrency < 1 {
+        concurrency = 1
+    }
+    // ... rest of initialization
+}
+```
+
+**Warning Display Logic**:
+- If user enters custom value > 50, show amber warning text
+- Warning suggests using Stats Only mode but doesn't prevent proceeding
+- Warning disappears if user changes to value <= 50
+
 ### 2.5 Accessibility
 
 **WCAG AA Compliance**:
@@ -673,6 +809,7 @@ func (m Model) renderMinSizeWarning() string {
 | BvB Improvements | `SessionManager`, `Config`, UI | Medium - Changes to existing feature |
 | BvB Stats-Only Mode | `Model`, `View`, `Config` | Low - New view mode, additive change |
 | Terminal Resize | `Model`, `Update`, `View` | Medium - Affects all screen rendering |
+| BvB Concurrency Select | `Model`, `Update`, `View`, `SessionManager` | Medium - New screen, removes hard cap |
 
 ### Potential Risks & Mitigations
 
@@ -686,6 +823,7 @@ func (m Model) renderMinSizeWarning() string {
 | Memory leaks from undestroyed engines | High (if not addressed) | High | Implement `cleanup()` with defer pattern; nil out engine references; add `io.Closer` interface support |
 | Stats-only mode missing critical info | Low | Low | Include all essential statistics; allow toggling back to board view |
 | Layout breaks on small terminals | Medium | Medium | Define minimum size, show warning, auto-adjust grid columns |
+| User sets very high concurrency (100+) | Medium | Medium | Show warning, recommend Stats Only mode; user accepts responsibility |
 
 ---
 
@@ -707,6 +845,8 @@ func (m Model) renderMinSizeWarning() string {
 | `SaveSessionExport()` | Creates file with correct JSON format |
 | `adjustBvBGridForWidth()` | Grid columns reduce when terminal narrows |
 | `renderMinSizeWarning()` | Warning displays for small terminals |
+| `handleBvBConcurrencySelectKeys()` | Navigation, selection, custom input validation |
+| Custom concurrency input | Accepts any positive integer, no upper limit |
 
 ### Integration Tests
 
@@ -733,6 +873,7 @@ func (m Model) renderMinSizeWarning() string {
 | BvB grid layout stability | Boards don't shift when games end, consistent cell heights across all states |
 | BvB statistics export | Save works, file contains all data, move history is correct |
 | Terminal resize | Grid adjusts on resize, warning shows for small terminals, no crashes |
+| BvB concurrency selection | Recommended works, custom input works, warning shows for >50, high values with Stats Only mode |
 
 ### Benchmarks
 
@@ -744,3 +885,4 @@ func (m Model) renderMinSizeWarning() string {
 | Memory profiling during BvB | Verify no leaks after cleanup |
 | BvB 100-game session stats-only mode | Verify high concurrency stability |
 | Stats-only vs Grid view terminal I/O | Compare rendering overhead |
+| BvB 200-game session with custom concurrency | Test extreme concurrency with Stats Only mode |

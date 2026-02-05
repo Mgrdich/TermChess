@@ -200,6 +200,23 @@
 - [ ] No horizontal scrolling required at reasonable terminal sizes (80+ columns)
 - [ ] Content remains readable after resize without requiring restart
 
+### 2.14 Bot vs Bot Concurrency Selection Screen
+
+**As a** user starting a multi-game Bot vs Bot session, **I want** to choose between recommended concurrency or enter my own custom value, **so that** I can run as many concurrent games as I want even if it may cause lag (especially when using stats-only mode).
+
+**Acceptance Criteria:**
+- [ ] After selecting game count in multi-game mode, a concurrency selection screen appears (before view mode selection)
+- [ ] Two options are presented: "Recommended (X concurrent)" and "Custom"
+- [ ] Recommended option shows the auto-calculated value based on CPU cores
+- [ ] Selecting Custom allows text input for a custom concurrency value
+- [ ] Custom input validates: must be positive integer, minimum 1
+- [ ] Custom input has NO upper limit (user accepts responsibility for lag)
+- [ ] If custom value exceeds 50, show warning: "High concurrency may cause lag. Consider using Stats Only view mode."
+- [ ] ESC returns to previous screen (game count input)
+- [ ] Enter confirms selection and proceeds to view mode selection
+- [ ] Selected concurrency is used when starting the session
+- [ ] Help text shows navigation options
+
 ---
 
 ## 3. Scope and Boundaries
@@ -217,6 +234,7 @@
 - Bot vs Bot comprehensive live statistics panel
 - Bot vs Bot speed simplification (Normal/Instant only)
 - Bot vs Bot concurrency control with auto-detection
+- Bot vs Bot concurrency selection screen (recommended vs custom with no upper limit)
 - Bot vs Bot stats-only mode for high-concurrency sessions
 - Bot vs Bot grid layout stability (fixed cell heights)
 - Bot vs Bot statistics export to file
