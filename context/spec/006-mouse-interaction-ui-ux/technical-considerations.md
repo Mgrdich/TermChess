@@ -795,6 +795,313 @@ func NewSessionManager(..., concurrency int) *SessionManager {
 - Focus indicators via distinct styling for selected items
 - Tab order follows logical UI flow
 
+### 2.6 Navigation Stack and Linear Back-Navigation
+
+This section addresses the requirement for consistent, mobile-like back navigation across all screens.
+
+**Problem Statement:**
+Currently, navigation is inconsistent:
+- Some screens use `pushScreen()`/`popScreen()` (GameTypeSelect, BotSelect, ColorSelect, FENInput, Settings)
+- BvB screens use direct assignment (`m.screen = ScreenXYZ`)
+- ESC handlers are mixed - some use `popScreen()`, others hardcode targets
+- `ScreenResumePrompt` is dead code (deprecated but still in codebase)
+
+**Solution: Unified Stack-Based Navigation**
+
+All screen transitions will use the navigation stack, ensuring ESC always returns to the previous screen in exact order.
+
+**Navigation Stack Implementation** (already exists in `internal/ui/navigation.go`):
+```go
+func (m *Model) pushScreen(screen Screen) {
+    if m.screen == screen {
+        return // Don't push if already on same screen
+    }
+    m.navStack = append(m.navStack, m.screen)
+    m.screen = screen
+}
+
+func (m *Model) popScreen() Screen {
+    if len(m.navStack) == 0 {
+        m.screen = ScreenMainMenu
+        return ScreenMainMenu
+    }
+    lastIndex := len(m.navStack) - 1
+    previousScreen := m.navStack[lastIndex]
+    m.navStack = m.navStack[:lastIndex]
+    m.screen = previousScreen
+    return previousScreen
+}
+```
+
+**Screen Transition Changes** (`internal/ui/update.go`):
+
+| Location | Current Code | New Code |
+|----------|--------------|----------|
+| Line 395 (GameType→BvBBotSelect) | `m.screen = ScreenBvBBotSelect` | `m.pushScreen(ScreenBvBBotSelect)` |
+| Line 1236 (BvBBot→GameMode) | `m.screen = ScreenBvBGameMode` | `m.pushScreen(ScreenBvBGameMode)` |
+| Line 1334 (GameMode→GridConfig) | `m.screen = ScreenBvBGridConfig` | `m.pushScreen(ScreenBvBGridConfig)` |
+| Line 1474 (GridConfig→ViewMode) | `m.screen = ScreenBvBViewModeSelect` | `m.pushScreen(ScreenBvBViewModeSelect)` |
+| NEW (GridConfig→ConcurrencySelect) | N/A | `m.pushScreen(ScreenBvBConcurrencySelect)` |
+| NEW (ConcurrencySelect→ViewMode) | N/A | `m.pushScreen(ScreenBvBViewModeSelect)` |
+
+**ESC Handler Changes** (`internal/ui/update.go`):
+
+Replace all hardcoded ESC handlers with `popScreen()`:
+
+```go
+// Before (example from handleBvBViewModeSelectKeys):
+case "esc":
+    m.screen = ScreenBvBGridConfig  // Hardcoded!
+    m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+    m.menuSelection = 0
+
+// After:
+case "esc":
+    m.popScreen()
+    // Menu options will be set by the screen's init/render logic
+```
+
+**Screens requiring ESC handler updates:**
+- `handleBvBBotSelectKeys()` - Line 1190-1204
+- `handleBvBGameModeKeys()` - Line 1275-1282
+- `handleBvBGridConfigKeys()` - Line 1399-1404
+- `handleBvBViewModeSelectKeys()` - Line 1516-1523
+- NEW: `handleBvBConcurrencySelectKeys()`
+
+**BvB Bot Select Special Case:**
+The BvB Bot Select screen has internal state (`bvbSelectingWhite` flag) for White/Black selection. This remains a single screen:
+
+```go
+func (m Model) handleBvBBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+    // ...
+    case "esc":
+        if m.bvbSelectingWhite {
+            // At White selection - go back to previous screen
+            m.popScreen()
+        } else {
+            // At Black selection - go back to White selection (same screen)
+            m.bvbSelectingWhite = true
+            m.menuSelection = 0
+        }
+    // ...
+}
+```
+
+**Updated BvB Multi-Game Flow with Stack:**
+
+```
+Main Menu
+  ↓ pushScreen(GameTypeSelect)
+Game Type Select
+  ↓ pushScreen(BvBBotSelect)
+BvB Bot Select (White → Black internal toggle)
+  ↓ pushScreen(BvBGameMode)
+BvB Game Mode
+  ↓ pushScreen(BvBGridConfig)  [if multi-game]
+BvB Grid Config
+  ↓ pushScreen(BvBConcurrencySelect)
+BvB Concurrency Select
+  ↓ pushScreen(BvBViewModeSelect)
+BvB View Mode Select
+  ↓ clearNavStack() + startBvBSession()
+BvB Game Play (stack cleared - terminal destination)
+```
+
+**Gameplay as Terminal Destination:**
+When entering gameplay (PvP, PvBot, or BvB), the stack is cleared:
+
+```go
+func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
+    // ... session setup ...
+    m.clearNavStack()  // Gameplay is terminal - no back navigation
+    m.screen = ScreenBvBGamePlay
+    // ...
+}
+```
+
+**Save/Quit Dialog Changes:**
+
+Current behavior: ESC during gameplay shows Save Prompt, "No" returns to gameplay.
+
+New behavior per spec:
+- ESC during gameplay shows Save/Quit dialog
+- "Yes" = Save game and return to Main Menu
+- "No" = Return to Main Menu WITHOUT saving
+- ESC on dialog = Cancel and return to gameplay
+
+```go
+func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+    switch msg.String() {
+    case "enter":
+        if m.savePromptSelection == 0 { // "Yes"
+            // Save the game
+            err := config.SaveGame(m.board)
+            if err != nil {
+                m.errorMsg = fmt.Sprintf("Failed to save: %v", err)
+                return m, nil
+            }
+        }
+        // Both Yes and No go to Main Menu
+        m.cleanupGame()
+        m.screen = ScreenMainMenu
+        m.menuOptions = buildMainMenuOptions()
+        m.menuSelection = 0
+
+    case "esc":
+        // Cancel - return to gameplay
+        m.screen = ScreenGamePlay
+        m.errorMsg = ""
+    }
+    return m, nil
+}
+```
+
+**BvB Abort Confirmation Dialog:**
+
+New dialog when ESC pressed during active BvB multi-game session:
+
+```go
+type Model struct {
+    // ... existing fields
+    bvbShowAbortConfirm bool
+    bvbAbortSelection   int  // 0 = Cancel, 1 = Abort
+}
+
+func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+    // If abort dialog is showing, handle it
+    if m.bvbShowAbortConfirm {
+        return m.handleBvBAbortConfirmKeys(msg)
+    }
+
+    switch msg.String() {
+    case "esc":
+        // Check if session is still running
+        if m.bvbManager != nil && !m.bvbManager.AllFinished() {
+            // Show abort confirmation
+            m.bvbShowAbortConfirm = true
+            m.bvbAbortSelection = 0  // Default to Cancel
+            return m, nil
+        }
+        // Session finished - go directly to stats or menu
+        m.screen = ScreenBvBStats
+    // ...
+    }
+}
+
+func (m Model) handleBvBAbortConfirmKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+    switch msg.String() {
+    case "up", "down", "k", "j":
+        m.bvbAbortSelection = 1 - m.bvbAbortSelection  // Toggle 0/1
+
+    case "enter":
+        if m.bvbAbortSelection == 1 { // "Abort"
+            m.bvbManager.Abort()
+            m.bvbManager = nil
+            m.bvbShowAbortConfirm = false
+            m.screen = ScreenMainMenu
+            m.menuOptions = buildMainMenuOptions()
+        } else { // "Cancel"
+            m.bvbShowAbortConfirm = false
+        }
+
+    case "esc":
+        // ESC on dialog = Cancel
+        m.bvbShowAbortConfirm = false
+    }
+    return m, nil
+}
+```
+
+**Abort Confirmation Renderer** (`internal/ui/view.go`):
+```go
+func (m Model) renderBvBAbortConfirm() string {
+    // Overlay dialog:
+    // ┌─────────────────────────────┐
+    // │     Abort Session?          │
+    // │                             │
+    // │  Games in progress will     │
+    // │  be lost.                   │
+    // │                             │
+    // │  > Cancel                   │
+    // │    Abort Session            │
+    // │                             │
+    // │  esc: cancel | enter: select│
+    // └─────────────────────────────┘
+}
+```
+
+**ScreenResumePrompt Removal:**
+
+Remove all references to the deprecated `ScreenResumePrompt`:
+
+| File | Changes |
+|------|---------|
+| `internal/ui/model.go` | Remove `ScreenResumePrompt` from Screen constants |
+| `internal/ui/update.go` | Remove `case ScreenResumePrompt:` from `handleKeyPress()` |
+| `internal/ui/update.go` | Delete `handleResumePromptKeys()` function (~100 lines) |
+| `internal/ui/view.go` | Remove `case ScreenResumePrompt:` from `View()` |
+| `internal/ui/view.go` | Delete `renderResumePrompt()` function |
+| `internal/ui/navigation.go` | Remove `case ScreenResumePrompt:` from `screenName()` |
+| Test files | Update tests that reference ScreenResumePrompt |
+
+**Breadcrumb Consistency:**
+
+With all screens using `pushScreen()`, breadcrumbs will automatically reflect the navigation path:
+
+```go
+func (m Model) breadcrumb() string {
+    if m.screen == ScreenMainMenu || len(m.navStack) == 0 {
+        return ""
+    }
+    // Show: "Parent > Current"
+    if len(m.navStack) > 0 {
+        parent := m.navStack[len(m.navStack)-1]
+        return screenName(parent) + " > " + screenName(m.screen)
+    }
+    return screenName(m.screen)
+}
+```
+
+**Menu State Restoration:**
+
+When using `popScreen()`, the previous screen's menu state needs restoration. Options:
+
+1. **Store menu state in stack** (complex, more memory)
+2. **Rebuild menu on screen entry** (simpler, recommended)
+
+Recommended approach - each screen handler rebuilds its menu options:
+
+```go
+func (m *Model) popScreen() Screen {
+    // ... existing pop logic ...
+
+    // Restore menu state based on returned screen
+    switch m.screen {
+    case ScreenGameTypeSelect:
+        m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+    case ScreenBvBBotSelect:
+        m.menuOptions = []string{"Easy", "Medium", "Hard"}
+    case ScreenBvBGameMode:
+        m.menuOptions = []string{"Single Game", "Multi-Game"}
+    case ScreenBvBGridConfig:
+        m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+    case ScreenBvBConcurrencySelect:
+        m.menuOptions = []string{
+            fmt.Sprintf("Recommended (%d concurrent)", bvb.CalculateDefaultConcurrency()),
+            "Custom",
+        }
+    case ScreenBvBViewModeSelect:
+        m.menuOptions = []string{"Grid View", "Single Board", "Stats Only"}
+    case ScreenMainMenu:
+        m.menuOptions = buildMainMenuOptions()
+    }
+    m.menuSelection = 0
+    m.errorMsg = ""
+
+    return m.screen
+}
+```
+
 ---
 
 ## 3. Impact and Risk Analysis
@@ -810,6 +1117,10 @@ func NewSessionManager(..., concurrency int) *SessionManager {
 | BvB Stats-Only Mode | `Model`, `View`, `Config` | Low - New view mode, additive change |
 | Terminal Resize | `Model`, `Update`, `View` | Medium - Affects all screen rendering |
 | BvB Concurrency Select | `Model`, `Update`, `View`, `SessionManager` | Medium - New screen, removes hard cap |
+| Navigation Stack Refactor | All screen handlers, `navigation.go` | High - Touches all ESC handlers and screen transitions |
+| ScreenResumePrompt Removal | `model.go`, `update.go`, `view.go`, tests | Low - Removing dead code |
+| BvB Abort Confirmation | `Model`, `View`, `SessionManager` | Low - New dialog, additive |
+| Save/Quit Dialog Changes | `update.go` (SavePrompt handler) | Medium - Changes existing behavior |
 
 ### Potential Risks & Mitigations
 
@@ -824,6 +1135,11 @@ func NewSessionManager(..., concurrency int) *SessionManager {
 | Stats-only mode missing critical info | Low | Low | Include all essential statistics; allow toggling back to board view |
 | Layout breaks on small terminals | Medium | Medium | Define minimum size, show warning, auto-adjust grid columns |
 | User sets very high concurrency (100+) | Medium | Medium | Show warning, recommend Stats Only mode; user accepts responsibility |
+| Navigation stack refactor breaks existing flows | Medium | High | Comprehensive regression tests for all screen transitions; test ESC from every screen |
+| Menu state not restored on popScreen | Medium | Medium | Implement menu restoration in `popScreen()` for all screen types |
+| ScreenResumePrompt removal breaks tests | Low | Low | Update all test files that reference ScreenResumePrompt |
+| Save/Quit behavior change confuses users | Low | Medium | Clear dialog text explaining "No" goes to menu without saving |
+| BvB abort dialog interrupts spectating | Low | Low | Make dialog dismissible with ESC; only show when games are in progress |
 
 ---
 
@@ -847,6 +1163,11 @@ func NewSessionManager(..., concurrency int) *SessionManager {
 | `renderMinSizeWarning()` | Warning displays for small terminals |
 | `handleBvBConcurrencySelectKeys()` | Navigation, selection, custom input validation |
 | Custom concurrency input | Accepts any positive integer, no upper limit |
+| `popScreen()` menu restoration | Each screen type gets correct menu options restored |
+| `handleSavePromptKeys()` | Yes saves + goes to menu, No goes to menu without saving, ESC returns to game |
+| `handleBvBAbortConfirmKeys()` | Cancel returns to session, Abort stops session + goes to menu |
+| Navigation stack linear flow | ESC from each BvB screen returns to correct previous screen |
+| ScreenResumePrompt removal | No references to ScreenResumePrompt in production code |
 
 ### Integration Tests
 
@@ -856,6 +1177,10 @@ func NewSessionManager(..., concurrency int) *SessionManager {
 | BvB with concurrency | Run multi-game session, verify games complete correctly |
 | Config file migration | Old config files load without errors, new defaults applied |
 | BvB memory cleanup | Run session, exit, verify no memory growth |
+| Full BvB navigation flow | Navigate MainMenu → ... → ViewModeSelect, ESC back through entire flow to MainMenu |
+| Full PvBot navigation flow | Navigate MainMenu → GameType → BotSelect → ColorSelect, ESC back to MainMenu |
+| Save/Quit flow | During gameplay, press ESC, select No, verify at MainMenu without save |
+| BvB abort flow | During multi-game session, press ESC, select Abort, verify session stopped |
 
 ### Manual Testing
 
@@ -874,6 +1199,12 @@ func NewSessionManager(..., concurrency int) *SessionManager {
 | BvB statistics export | Save works, file contains all data, move history is correct |
 | Terminal resize | Grid adjusts on resize, warning shows for small terminals, no crashes |
 | BvB concurrency selection | Recommended works, custom input works, warning shows for >50, high values with Stats Only mode |
+| Navigation stack - BvB flow | ESC from each BvB screen returns to previous; multiple ESC presses reach MainMenu |
+| Navigation stack - PvP/PvBot | ESC from setup screens returns correctly; ESC during game shows Save dialog |
+| Save/Quit dialog | Yes saves game, No doesn't save, both go to MainMenu; ESC cancels |
+| BvB abort dialog | Shows only when games running; Cancel returns to session; Abort stops all games |
+| Breadcrumb accuracy | Breadcrumb shows correct path at every screen in BvB flow |
+| Settings from multiple screens | Press 's' from different screens, ESC returns to correct origin |
 
 ### Benchmarks
 

@@ -217,6 +217,76 @@
 - [ ] Selected concurrency is used when starting the session
 - [ ] Help text shows navigation options
 
+### 2.15 Navigation Stack and Linear Back-Navigation
+
+**As a** user navigating through the application, **I want** pressing ESC to always return me to the previous screen in the exact order I navigated, **so that** I can predictably backtrack through the app like mobile navigation.
+
+**Acceptance Criteria:**
+
+**Core Stack Behavior:**
+- [ ] All screen transitions push the current screen onto a navigation stack before navigating forward
+- [ ] Pressing ESC pops the stack and returns to the previous screen
+- [ ] Pressing ESC multiple times in succession navigates back through the entire history until reaching Main Menu
+- [ ] At Main Menu, ESC has no effect (Main Menu is the navigation root)
+- [ ] The navigation stack is cleared when entering gameplay (gameplay is a terminal destination)
+- [ ] The breadcrumb display reflects the current navigation stack path
+
+**Bot vs Bot Multi-Step Flow:**
+- [ ] The complete BvB multi-game setup flow maintains linear back-navigation:
+  ```
+  Main Menu → Game Type Select → BvB Bot Select (White) → BvB Bot Select (Black)
+  → Game Mode → Game Count Input → Concurrency Select → View Mode Select → Gameplay
+  ```
+- [ ] ESC from any BvB setup screen returns to the immediately previous screen in this flow
+- [ ] ESC from BvB Bot Select (Black) returns to BvB Bot Select (White)
+- [ ] ESC from Game Count Input returns to Game Mode selection
+- [ ] ESC from Concurrency Select returns to Game Count Input
+- [ ] ESC from View Mode Select returns to Concurrency Select
+
+**Bot vs Bot Single Game Flow:**
+- [ ] Single game BvB skips Game Count, Concurrency, and View Mode screens:
+  ```
+  Main Menu → Game Type Select → BvB Bot Select (White) → BvB Bot Select (Black)
+  → Game Mode → Gameplay
+  ```
+
+**Player vs Bot Flow:**
+- [ ] The PvBot setup flow maintains linear back-navigation:
+  ```
+  Main Menu → Game Type Select → Bot Difficulty Select → Color Select → Gameplay
+  ```
+- [ ] ESC from Color Select returns to Bot Difficulty Select
+- [ ] ESC from Bot Difficulty Select returns to Game Type Select
+
+**Player vs Player Flow:**
+- [ ] PvP has minimal setup:
+  ```
+  Main Menu → Game Type Select → Gameplay
+  ```
+
+**Settings Flow:**
+- [ ] Settings follows the navigation stack
+- [ ] ESC from Settings returns to whatever screen the user navigated from
+- [ ] Settings can be accessed from multiple screens via 's' shortcut; ESC always returns to the originating screen
+
+**During Active Gameplay:**
+- [ ] ESC during an active game (PvP, PvBot, or single BvB) shows the Save/Quit confirmation dialog
+- [ ] If user confirms "Yes" on the save prompt, game is saved and user returns to Main Menu
+- [ ] If user selects "No", user returns to Main Menu without saving
+- [ ] ESC on the Save/Quit dialog cancels the dialog and returns to the active game
+- [ ] ESC during BvB multi-game session shows an "Abort session?" confirmation dialog
+- [ ] If user confirms abort, session is terminated and user returns to Main Menu
+- [ ] If user cancels abort, user returns to the running session
+
+**Dialog Behavior:**
+- [ ] Dialogs (Save Prompt, Draw Offer) overlay the current screen and do not push to the navigation stack
+- [ ] ESC on any dialog dismisses the dialog without taking action
+- [ ] After dialog dismissal, user remains on the screen they were on before the dialog appeared
+
+**Deprecations:**
+- [ ] Remove `ScreenResumePrompt` - saved games are handled via "Resume Game" menu option on Main Menu
+- [ ] All direct screen assignments in ESC handlers are replaced with `popScreen()` calls
+
 ---
 
 ## 3. Scope and Boundaries
@@ -241,6 +311,8 @@
 - Terminal resize handling and responsive layout
 - WCAG AA color contrast compliance
 - Full keyboard navigation as mouse alternative
+- Navigation stack for consistent linear back-navigation across all screens
+- Confirmation dialogs for aborting active games/sessions
 
 ### Out-of-Scope
 
@@ -254,3 +326,4 @@
 - Right-click context menus
 - More than three themes
 - Theme switching during active gameplay
+- ScreenResumePrompt (deprecated - saved games handled via Main Menu "Resume Game" option)
