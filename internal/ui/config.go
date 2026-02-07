@@ -32,5 +32,9 @@ var GetConfigPath = config.GetConfigPath
 // If the file doesn't exist or cannot be parsed, it returns the default configuration.
 var LoadConfig = config.LoadConfig
 
+// LoadGameConfig reads the game configuration from ~/.termchess/config.toml.
+// If the file doesn't exist or cannot be parsed, it returns the default game configuration.
+var LoadGameConfig = config.LoadGameConfig
+
 // SaveConfig writes the configuration to ~/.termchess/config.toml.
 var SaveConfig = config.SaveConfig

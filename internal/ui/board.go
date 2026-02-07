@@ -12,12 +12,22 @@ import (
 // It uses the Config to determine how to display pieces and coordinates.
 type BoardRenderer struct {
 	config Config
+	theme  Theme
 }
 
 // NewBoardRenderer creates a new BoardRenderer with the given configuration.
 func NewBoardRenderer(config Config) *BoardRenderer {
 	return &BoardRenderer{
 		config: config,
+		theme:  GetTheme(ParseThemeName(config.Theme)),
+	}
+}
+
+// NewBoardRendererWithTheme creates a new BoardRenderer with the given configuration and theme.
+func NewBoardRendererWithTheme(config Config, theme Theme) *BoardRenderer {
+	return &BoardRenderer{
+		config: config,
+		theme:  theme,
 	}
 }
 
@@ -25,6 +35,14 @@ func NewBoardRenderer(config Config) *BoardRenderer {
 // The board is displayed from White's perspective (rank 8 at top, rank 1 at bottom).
 // If the board is nil, returns an error message.
 func (r *BoardRenderer) Render(b *engine.Board) string {
+	return r.RenderWithSelection(b, nil, nil, false)
+}
+
+// RenderWithSelection renders the chess board with optional selection highlighting.
+// selectedSquare is the currently selected piece's square (or nil if none).
+// validMoves are the valid destination squares for the selected piece.
+// blinkOn controls whether the highlight is visible (for blinking effect).
+func (r *BoardRenderer) RenderWithSelection(b *engine.Board, selectedSquare *engine.Square, validMoves []engine.Square, blinkOn bool) string {
 	if b == nil {
 		return "No board available"
 	}
@@ -44,6 +62,17 @@ func (r *BoardRenderer) Render(b *engine.Board) string {
 			piece := b.PieceAt(sq)
 			symbol := r.pieceSymbol(piece)
 
+			// Apply highlight if blinking is on and square matches selection state
+			if blinkOn {
+				if selectedSquare != nil && sq == *selectedSquare {
+					// Highlight the selected square
+					symbol = r.applyHighlight(symbol, r.theme.SelectedHighlight)
+				} else if r.isValidMove(sq, validMoves) {
+					// Highlight valid move destinations
+					symbol = r.applyHighlight(symbol, r.theme.ValidMoveHighlight)
+				}
+			}
+
 			// Add spacing between pieces for readability
 			if file > 0 {
 				result.WriteString(" ")
@@ -62,6 +91,22 @@ func (r *BoardRenderer) Render(b *engine.Board) string {
 	}
 
 	return result.String()
+}
+
+// isValidMove checks if a square is in the list of valid moves.
+func (r *BoardRenderer) isValidMove(sq engine.Square, validMoves []engine.Square) bool {
+	for _, vm := range validMoves {
+		if sq == vm {
+			return true
+		}
+	}
+	return false
+}
+
+// applyHighlight applies a background highlight color to a symbol.
+func (r *BoardRenderer) applyHighlight(symbol string, color lipgloss.Color) string {
+	style := lipgloss.NewStyle().Background(color)
+	return style.Render(symbol)
 }
 
 // pieceSymbol returns the symbol to use for the given piece.

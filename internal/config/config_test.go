@@ -178,6 +178,9 @@ func TestDefaultConfigFile(t *testing.T) {
 	if cf.Display.ShowMoveHistory != false {
 		t.Error("Default ShowMoveHistory should be false")
 	}
+	if cf.Display.Theme != DefaultTheme {
+		t.Errorf("Default Theme should be %q", DefaultTheme)
+	}
 
 	// Verify game defaults
 	if cf.Game.DefaultGameType != "pvp" {
@@ -185,5 +188,64 @@ func TestDefaultConfigFile(t *testing.T) {
 	}
 	if cf.Game.DefaultBotDifficulty != "medium" {
 		t.Error("Default DefaultBotDifficulty should be 'medium'")
+	}
+}
+
+// TestThemeSaveAndLoad tests that theme setting is saved and loaded correctly
+func TestThemeSaveAndLoad(t *testing.T) {
+	// Create a config with a specific theme
+	customConfig := Config{
+		UseUnicode:      false,
+		ShowCoords:      true,
+		UseColors:       true,
+		ShowMoveHistory: false,
+		ShowHelpText:    true,
+		Theme:           DefaultTheme,
+	}
+
+	// Save the config
+	if err := SaveConfig(customConfig); err != nil {
+		t.Fatalf("SaveConfig failed: %v", err)
+	}
+
+	// Load the config
+	loadedConfig := LoadConfig()
+
+	// Verify the theme was loaded correctly
+	if loadedConfig.Theme != customConfig.Theme {
+		t.Errorf("Theme mismatch: got %q, want %q", loadedConfig.Theme, customConfig.Theme)
+	}
+}
+
+// TestThemeDefaultOnEmpty tests that empty theme in config file defaults to DefaultTheme
+func TestThemeDefaultOnEmpty(t *testing.T) {
+	cf := ConfigFile{
+		Display: DisplayConfig{
+			UseUnicode:      false,
+			ShowCoordinates: true,
+			UseColors:       true,
+			ShowMoveHistory: false,
+			Theme:           "", // Empty theme
+		},
+		Game: GameConfig{
+			DefaultGameType:      "pvp",
+			DefaultBotDifficulty: "medium",
+		},
+	}
+
+	config := configFileToConfig(cf)
+
+	// Empty theme should default to DefaultTheme
+	if config.Theme != DefaultTheme {
+		t.Errorf("Expected empty theme to default to %q, got %q", DefaultTheme, config.Theme)
+	}
+}
+
+// TestDefaultConfig_HasTheme tests that DefaultConfig includes theme field
+func TestDefaultConfig_HasTheme(t *testing.T) {
+	config := DefaultConfig()
+
+	if config.Theme != DefaultTheme {
+		t.Errorf("Expected default theme to be %q, got %q", DefaultTheme, config.Theme)
 	}
 }

@@ -498,9 +498,9 @@ This task list breaks down the Bot vs Bot Mode feature into small, incremental v
 - [x] Run all existing minimax tests: `go test ./internal/bot/ -run TestMinimax`
 - [x] Run `go vet ./...`
 - [x] Verify no performance regression (minimax tests complete in similar time)
-- [ ] Run a BvB session manually: Medium vs Hard, 5 games at Instant speed
-- [ ] Verify: Fewer draws than before, Hard bot wins more consistently
-- [ ] Run a BvB session: Easy vs Medium, verify Medium dominates
+- [x] Run a BvB session manually: Medium vs Hard, 5 games at Instant speed
+- [x] Verify: Fewer draws than before, Hard bot wins more consistently
+- [x] Run a BvB session: Easy vs Medium, verify Medium dominates
 - [x] All tests pass: `go test ./internal/bot/ ./internal/bvb/ ./internal/ui/` (excluding pre-existing timeout in TestDifficulty_HardVsMedium)
 
 **Deliverable:** Evaluation improvement validated. More decisive games.
