@@ -71,18 +71,13 @@ type SessionManager struct {
 
 // NewSessionManager creates a new manager configured for the given matchup.
 // The concurrency parameter controls how many games run in parallel.
-// If concurrency is 0, it auto-detects based on CPU count.
-// If concurrency exceeds maxConcurrentGames, it is capped.
+// If concurrency is 0, it auto-detects based on CPU count (capped at maxConcurrentGames).
+// If concurrency is explicitly provided by the user, it is NOT capped (user accepts responsibility).
 func NewSessionManager(whiteDiff, blackDiff bot.Difficulty, whiteName, blackName string, gameCount, concurrency int) *SessionManager {
 	// Auto-detect if concurrency is 0
 	effectiveConcurrency := concurrency
 	if effectiveConcurrency == 0 {
 		effectiveConcurrency = CalculateDefaultConcurrency()
-	}
-
-	// Cap at maxConcurrentGames
-	if effectiveConcurrency > maxConcurrentGames {
-		effectiveConcurrency = maxConcurrentGames
 	}
 
 	// Ensure at least 1

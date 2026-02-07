@@ -40,6 +40,8 @@ func screenName(s Screen) string {
 		return "Statistics"
 	case ScreenBvBViewModeSelect:
 		return "View Mode"
+	case ScreenBvBConcurrencySelect:
+		return "Concurrency Select"
 	default:
 		return "Unknown"
 	}

@@ -249,12 +249,14 @@ func TestNewSessionManagerExplicitConcurrency(t *testing.T) {
 	}
 }
 
-// TestNewSessionManagerConcurrencyCap verifies that concurrency is capped at maxConcurrentGames.
-func TestNewSessionManagerConcurrencyCap(t *testing.T) {
+// TestNewSessionManagerConcurrencyNoCap verifies that explicit concurrency values are NOT capped.
+// Users can specify any value and accept responsibility for potential lag.
+func TestNewSessionManagerConcurrencyNoCap(t *testing.T) {
 	m := NewSessionManager(bot.Easy, bot.Easy, "White", "Black", 10, 100)
 
-	if m.Concurrency() != maxConcurrentGames {
-		t.Errorf("Concurrency() = %d, want %d (capped at max)", m.Concurrency(), maxConcurrentGames)
+	// When user explicitly provides concurrency, it should NOT be capped
+	if m.Concurrency() != 100 {
+		t.Errorf("Concurrency() = %d, want 100 (no cap for explicit values)", m.Concurrency())
 	}
 }
 

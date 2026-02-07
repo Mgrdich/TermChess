@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -259,6 +260,8 @@ func (m Model) View() string {
 		return m.renderBvBStats()
 	case ScreenBvBViewModeSelect:
 		return m.renderBvBViewModeSelect()
+	case ScreenBvBConcurrencySelect:
+		return m.renderBvBConcurrencySelect()
 	default:
 		return "Unknown screen"
 	}
@@ -2630,4 +2633,140 @@ func (m Model) renderShortcutsOverlay() string {
 	b.WriteString(hintStyle.Render("Press any key to close"))
 
 	return b.String()
+}
+
+// renderBvBConcurrencySelect renders the Bot vs Bot concurrency selection screen.
+// Shows two options: Recommended (auto-calculated based on CPU) and Custom.
+func (m Model) renderBvBConcurrencySelect() string {
+	var b strings.Builder
+
+	title := m.titleStyle().Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Concurrency:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Show session info
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+	sessionInfo := fmt.Sprintf("%d game(s) | %s Bot (White) vs %s Bot (Black)",
+		m.bvbGameCount, botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
+	b.WriteString(infoStyle.Render(sessionInfo))
+	b.WriteString("\n\n")
+
+	// Get recommended concurrency and CPU count
+	recommendedConcurrency := bvb.CalculateDefaultConcurrency()
+	numCPU := getCPUCount()
+
+	// Define options
+	type concurrencyOption struct {
+		name        string
+		description string
+	}
+	options := []concurrencyOption{
+		{
+			name:        fmt.Sprintf("Recommended (%d concurrent games)", recommendedConcurrency),
+			description: fmt.Sprintf("Based on your CPU (%d cores)", numCPU),
+		},
+		{
+			name:        "Custom",
+			description: "Enter your own value (may cause lag)",
+		},
+	}
+
+	descStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true).
+		Padding(0, 4)
+
+	// If inputting custom value, show input field instead of menu
+	if m.bvbInputtingConcurrency {
+		// Show input prompt
+		inputStyle := lipgloss.NewStyle().
+			Foreground(m.theme.TitleText).
+			Padding(0, 2)
+		b.WriteString(inputStyle.Render("Enter concurrency: "))
+
+		// Show the input with cursor
+		inputValueStyle := lipgloss.NewStyle().
+			Foreground(m.theme.MenuSelected).
+			Bold(true)
+		inputText := m.bvbCustomConcurrency + "_"
+		b.WriteString(inputValueStyle.Render(inputText))
+		b.WriteString("\n")
+
+		// Show warning if value exceeds 50
+		if val := parseConcurrencyValue(m.bvbCustomConcurrency); val > 50 {
+			warnStyle := lipgloss.NewStyle().
+				Foreground(m.theme.ErrorText).
+				Bold(true).
+				Padding(0, 2)
+			b.WriteString("\n")
+			b.WriteString(warnStyle.Render("Warning: High concurrency may cause lag. Consider using Stats Only view mode."))
+			b.WriteString("\n")
+		}
+
+		helpText := m.renderHelpText("enter: confirm | esc: cancel")
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
+	} else {
+		// Show menu options
+		for i, opt := range options {
+			cursor := "  "
+			var optionText string
+
+			if i == m.bvbConcurrencySelection {
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(opt.name)
+			} else {
+				optionText = m.menuPrimaryStyle().Render(opt.name)
+			}
+
+			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+			b.WriteString(descStyle.Render(opt.description))
+			b.WriteString("\n")
+		}
+
+		helpText := m.renderHelpText("arrows/jk: navigate | enter: select | esc: back")
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
+	}
+
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// parseConcurrencyValue parses a string into an integer, returning 0 if invalid.
+func parseConcurrencyValue(s string) int {
+	if s == "" {
+		return 0
+	}
+	var val int
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			val = val*10 + int(r-'0')
+		}
+	}
+	return val
+}
+
+// getCPUCount returns the number of CPUs available.
+func getCPUCount() int {
+	return runtime.NumCPU()
 }

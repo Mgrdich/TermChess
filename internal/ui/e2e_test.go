@@ -1316,7 +1316,7 @@ func TestRenderBvBGameMode_InputView(t *testing.T) {
 }
 
 // TestBvBGridConfig_PresetSelection tests selecting grid presets.
-// After grid selection, the flow now goes to view mode selection.
+// After grid selection, the flow now goes to concurrency selection.
 func TestBvBGridConfig_PresetSelection(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1349,13 +1349,13 @@ func TestBvBGridConfig_PresetSelection(t *testing.T) {
 			if m.bvbGridCols != tt.wantCols {
 				t.Errorf("Expected bvbGridCols=%d, got %d", tt.wantCols, m.bvbGridCols)
 			}
-			// After grid selection, should go to view mode selection screen
-			if m.screen != ScreenBvBViewModeSelect {
-				t.Errorf("Expected screen to be ScreenBvBViewModeSelect, got %v", m.screen)
+			// After grid selection, should go to concurrency selection screen
+			if m.screen != ScreenBvBConcurrencySelect {
+				t.Errorf("Expected screen to be ScreenBvBConcurrencySelect, got %v", m.screen)
 			}
 			// bvbManager should NOT be initialized yet - it happens after view mode selection
 			if m.bvbManager != nil {
-				t.Error("Expected bvbManager to be nil at view mode selection")
+				t.Error("Expected bvbManager to be nil at concurrency selection")
 				m.bvbManager.Abort()
 			}
 		})
@@ -1397,13 +1397,13 @@ func TestBvBGridConfig_CustomInputValid(t *testing.T) {
 	if m.bvbGridRows != 2 || m.bvbGridCols != 3 {
 		t.Errorf("Expected grid 2x3, got %dx%d", m.bvbGridRows, m.bvbGridCols)
 	}
-	// After grid input, should go to view mode selection screen
-	if m.screen != ScreenBvBViewModeSelect {
-		t.Errorf("Expected screen to be ScreenBvBViewModeSelect, got %v", m.screen)
+	// After grid input, should go to concurrency selection screen
+	if m.screen != ScreenBvBConcurrencySelect {
+		t.Errorf("Expected screen to be ScreenBvBConcurrencySelect, got %v", m.screen)
 	}
 	// bvbManager should NOT be initialized yet
 	if m.bvbManager != nil {
-		t.Error("Expected bvbManager to be nil at view mode selection")
+		t.Error("Expected bvbManager to be nil at concurrency selection")
 		m.bvbManager.Abort()
 	}
 }
@@ -3385,5 +3385,252 @@ func TestWindowSizeMsgAdjustsGridDuringBvB(t *testing.T) {
 	maxCols := 50 / (bvbCellWidth + 2) // 50 / 24 = 2
 	if m.bvbGridCols > maxCols {
 		t.Errorf("Expected grid cols <= %d after resize, got %d", maxCols, m.bvbGridCols)
+	}
+}
+
+// TestBvBConcurrencySelect_RecommendedSelection tests selecting Recommended concurrency.
+func TestBvBConcurrencySelect_RecommendedSelection(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbConcurrencySelection = 0 // Recommended
+	m.bvbGameCount = 10
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotHard
+
+	// Press Enter to select Recommended
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBConcurrencySelectKeys(msg)
+	m = result.(Model)
+
+	// Should have set concurrency to the calculated default
+	if m.bvbConcurrency < 1 {
+		t.Errorf("Expected bvbConcurrency >= 1, got %d", m.bvbConcurrency)
+	}
+	// Should navigate to view mode selection
+	if m.screen != ScreenBvBViewModeSelect {
+		t.Errorf("Expected screen to be ScreenBvBViewModeSelect, got %v", m.screen)
+	}
+}
+
+// TestBvBConcurrencySelect_CustomSelection tests selecting Custom shows input mode.
+func TestBvBConcurrencySelect_CustomSelection(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbConcurrencySelection = 1 // Custom
+
+	// Press Enter to select Custom
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBConcurrencySelectKeys(msg)
+	m = result.(Model)
+
+	// Should switch to input mode
+	if !m.bvbInputtingConcurrency {
+		t.Error("Expected bvbInputtingConcurrency to be true")
+	}
+	// Should stay on concurrency select screen
+	if m.screen != ScreenBvBConcurrencySelect {
+		t.Errorf("Expected to stay on ScreenBvBConcurrencySelect, got %v", m.screen)
+	}
+}
+
+// TestBvBConcurrencySelect_CustomInputValid tests valid custom concurrency input.
+func TestBvBConcurrencySelect_CustomInputValid(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbInputtingConcurrency = true
+	m.bvbCustomConcurrency = "25"
+	m.bvbGameCount = 100
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBConcurrencyInput(msg)
+	m = result.(Model)
+
+	if m.bvbConcurrency != 25 {
+		t.Errorf("Expected bvbConcurrency=25, got %d", m.bvbConcurrency)
+	}
+	// Should navigate to view mode selection
+	if m.screen != ScreenBvBViewModeSelect {
+		t.Errorf("Expected screen to be ScreenBvBViewModeSelect, got %v", m.screen)
+	}
+}
+
+// TestBvBConcurrencySelect_CustomInputHighValue tests that high values are accepted (no cap).
+func TestBvBConcurrencySelect_CustomInputHighValue(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbInputtingConcurrency = true
+	m.bvbCustomConcurrency = "100"
+	m.bvbGameCount = 200
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBConcurrencyInput(msg)
+	m = result.(Model)
+
+	// High values should be accepted (no cap)
+	if m.bvbConcurrency != 100 {
+		t.Errorf("Expected bvbConcurrency=100 (no cap), got %d", m.bvbConcurrency)
+	}
+}
+
+// TestBvBConcurrencySelect_CustomInputInvalid tests invalid custom input.
+func TestBvBConcurrencySelect_CustomInputInvalid(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbInputtingConcurrency = true
+	m.bvbCustomConcurrency = ""
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	result, _ := m.handleBvBConcurrencyInput(msg)
+	m = result.(Model)
+
+	// Should show error and stay in input mode
+	if m.errorMsg == "" {
+		t.Error("Expected error message for empty input")
+	}
+	if !m.bvbInputtingConcurrency {
+		t.Error("Expected to stay in input mode after invalid input")
+	}
+}
+
+// TestBvBConcurrencySelect_Navigation tests navigation keys.
+func TestBvBConcurrencySelect_Navigation(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbConcurrencySelection = 0
+
+	// Press down to go to Custom
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	result, _ := m.handleBvBConcurrencySelectKeys(msg)
+	m = result.(Model)
+
+	if m.bvbConcurrencySelection != 1 {
+		t.Errorf("Expected selection=1 after down, got %d", m.bvbConcurrencySelection)
+	}
+
+	// Press up to go back to Recommended
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	result, _ = m.handleBvBConcurrencySelectKeys(msg)
+	m = result.(Model)
+
+	if m.bvbConcurrencySelection != 0 {
+		t.Errorf("Expected selection=0 after up, got %d", m.bvbConcurrencySelection)
+	}
+}
+
+// TestBvBConcurrencySelect_EscGoesBack tests ESC returns to grid config.
+func TestBvBConcurrencySelect_EscGoesBack(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	// Push grid config to nav stack to simulate proper navigation
+	m.navStack = []Screen{ScreenBvBGridConfig}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBConcurrencySelectKeys(msg)
+	m = result.(Model)
+
+	// Should go back to grid config
+	if m.screen != ScreenBvBGridConfig {
+		t.Errorf("Expected screen to be ScreenBvBGridConfig, got %v", m.screen)
+	}
+}
+
+// TestBvBConcurrencySelect_RenderView tests the render function.
+func TestBvBConcurrencySelect_RenderView(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbGameCount = 50
+	m.bvbWhiteDiff = BotEasy
+	m.bvbBlackDiff = BotHard
+	m.bvbConcurrencySelection = 0
+
+	view := m.renderBvBConcurrencySelect()
+
+	// Check for key elements
+	if !strings.Contains(view, "Select Concurrency:") {
+		t.Error("Expected view to contain 'Select Concurrency:'")
+	}
+	if !strings.Contains(view, "Recommended") {
+		t.Error("Expected view to contain 'Recommended'")
+	}
+	if !strings.Contains(view, "Custom") {
+		t.Error("Expected view to contain 'Custom'")
+	}
+	if !strings.Contains(view, "50 game(s)") {
+		t.Error("Expected view to show game count")
+	}
+}
+
+// TestBvBConcurrencySelect_RenderViewInputMode tests the render function in input mode.
+func TestBvBConcurrencySelect_RenderViewInputMode(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbInputtingConcurrency = true
+	m.bvbCustomConcurrency = "75"
+	m.bvbGameCount = 100
+
+	view := m.renderBvBConcurrencySelect()
+
+	// Check for input prompt
+	if !strings.Contains(view, "Enter concurrency:") {
+		t.Error("Expected view to contain 'Enter concurrency:'")
+	}
+	if !strings.Contains(view, "75") {
+		t.Error("Expected view to show current input")
+	}
+	// Should show warning for high values
+	if !strings.Contains(view, "Warning") {
+		t.Error("Expected warning for high concurrency value")
+	}
+}
+
+// TestBvBConcurrencySelect_RenderViewNoWarningForLowValue tests no warning for low values.
+func TestBvBConcurrencySelect_RenderViewNoWarningForLowValue(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbInputtingConcurrency = true
+	m.bvbCustomConcurrency = "25"
+	m.bvbGameCount = 100
+
+	view := m.renderBvBConcurrencySelect()
+
+	// Should NOT show warning for values <= 50
+	if strings.Contains(view, "Warning") {
+		t.Error("Should not show warning for concurrency <= 50")
+	}
+}
+
+// TestBvBViewModeSelect_EscGoesBackToConcurrency tests ESC from view mode returns to concurrency.
+func TestBvBViewModeSelect_EscGoesBackToConcurrency(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBViewModeSelect
+	// Push concurrency select to nav stack to simulate proper navigation
+	m.navStack = []Screen{ScreenBvBConcurrencySelect}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	result, _ := m.handleBvBViewModeSelectKeys(msg)
+	m = result.(Model)
+
+	// Should go back to concurrency select
+	if m.screen != ScreenBvBConcurrencySelect {
+		t.Errorf("Expected screen to be ScreenBvBConcurrencySelect, got %v", m.screen)
+	}
+}
+
+// TestIsInTextInputMode_ConcurrencyInput tests that concurrency input is detected as text input mode.
+func TestIsInTextInputMode_ConcurrencyInput(t *testing.T) {
+	m := NewModel(DefaultConfig())
+	m.screen = ScreenBvBConcurrencySelect
+	m.bvbInputtingConcurrency = true
+
+	if !m.isInTextInputMode() {
+		t.Error("Expected isInTextInputMode() to return true for concurrency input")
+	}
+}
+
+// TestScreenName_ConcurrencySelect tests the screen name for concurrency select.
+func TestScreenName_ConcurrencySelect(t *testing.T) {
+	name := screenName(ScreenBvBConcurrencySelect)
+	if name != "Concurrency Select" {
+		t.Errorf("Expected screen name 'Concurrency Select', got '%s'", name)
 	}
 }

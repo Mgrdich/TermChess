@@ -47,6 +47,8 @@ const (
 	ScreenBvBStats
 	// ScreenBvBViewModeSelect allows the user to select view mode before starting session
 	ScreenBvBViewModeSelect
+	// ScreenBvBConcurrencySelect allows the user to choose concurrency for multi-game BvB sessions
+	ScreenBvBConcurrencySelect
 )
 
 // GameType represents the type of chess game being played.
@@ -188,6 +190,14 @@ type Model struct {
 	bvbViewModeSelection int
 	// bvbRecentCompletions stores the last 5 game completion results for stats-only view
 	bvbRecentCompletions []string
+	// bvbConcurrencySelection tracks the selected option (0 = Recommended, 1 = Custom)
+	bvbConcurrencySelection int
+	// bvbCustomConcurrency holds the text input for custom concurrency value
+	bvbCustomConcurrency string
+	// bvbInputtingConcurrency indicates whether we're in text input mode for custom concurrency
+	bvbInputtingConcurrency bool
+	// bvbConcurrency stores the selected concurrency value for the session
+	bvbConcurrency int
 
 	// Overlay state
 	// showShortcutsOverlay indicates whether the keyboard shortcuts help overlay is displayed

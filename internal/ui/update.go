@@ -196,6 +196,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBvBStatsKeys(msg)
 	case ScreenBvBViewModeSelect:
 		return m.handleBvBViewModeSelectKeys(msg)
+	case ScreenBvBConcurrencySelect:
+		return m.handleBvBConcurrencySelectKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -1427,8 +1429,8 @@ func (m Model) handleBvBGridSelection() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Navigate to view mode selection screen
-	return m.navigateToViewModeSelect()
+	// Navigate to concurrency selection screen
+	return m.navigateToConcurrencySelect()
 }
 
 // handleBvBGridInput handles text input for custom grid dimensions.
@@ -1454,8 +1456,8 @@ func (m Model) handleBvBGridInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.bvbGridRows = rows
 		m.bvbGridCols = cols
 		m.bvbInputtingGrid = false
-		// Navigate to view mode selection screen
-		return m.navigateToViewModeSelect()
+		// Navigate to concurrency selection screen
+		return m.navigateToConcurrencySelect()
 
 	case tea.KeyRunes:
 		for _, r := range msg.Runes {
@@ -1468,10 +1470,22 @@ func (m Model) handleBvBGridInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// navigateToConcurrencySelect transitions to the concurrency selection screen.
+// This is called after grid configuration is complete in multi-game mode.
+func (m Model) navigateToConcurrencySelect() (tea.Model, tea.Cmd) {
+	m.pushScreen(ScreenBvBConcurrencySelect)
+	m.bvbConcurrencySelection = 0 // Default to Recommended
+	m.bvbInputtingConcurrency = false
+	m.bvbCustomConcurrency = ""
+	m.statusMsg = ""
+	m.errorMsg = ""
+	return m, nil
+}
+
 // navigateToViewModeSelect transitions to the view mode selection screen.
-// This is called after grid configuration is complete.
+// This is called after concurrency selection is complete.
 func (m Model) navigateToViewModeSelect() (tea.Model, tea.Cmd) {
-	m.screen = ScreenBvBViewModeSelect
+	m.pushScreen(ScreenBvBViewModeSelect)
 	m.bvbViewModeSelection = 0 // Default to Grid View
 	m.statusMsg = ""
 	m.errorMsg = ""
@@ -1514,12 +1528,94 @@ func (m Model) handleBvBViewModeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) 
 		return m.startBvBSession()
 
 	case "esc":
+		// Go back to concurrency select
+		m.popScreen()
+		m.bvbConcurrencySelection = 0
+		m.bvbInputtingConcurrency = false
+		m.bvbCustomConcurrency = ""
+		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBConcurrencySelectKeys handles keyboard input for the BvB concurrency selection screen.
+// Supports arrow keys for navigation, Enter to select, and Esc to go back.
+func (m Model) handleBvBConcurrencySelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.errorMsg = ""
+
+	if m.bvbInputtingConcurrency {
+		return m.handleBvBConcurrencyInput(msg)
+	}
+
+	numOptions := 2 // Recommended, Custom
+
+	switch msg.String() {
+	case "up", "k":
+		if m.bvbConcurrencySelection > 0 {
+			m.bvbConcurrencySelection--
+		} else {
+			m.bvbConcurrencySelection = numOptions - 1
+		}
+
+	case "down", "j":
+		if m.bvbConcurrencySelection < numOptions-1 {
+			m.bvbConcurrencySelection++
+		} else {
+			m.bvbConcurrencySelection = 0
+		}
+
+	case "enter":
+		switch m.bvbConcurrencySelection {
+		case 0: // Recommended
+			m.bvbConcurrency = bvb.CalculateDefaultConcurrency()
+			return m.navigateToViewModeSelect()
+		case 1: // Custom
+			m.bvbInputtingConcurrency = true
+			m.bvbCustomConcurrency = ""
+		}
+
+	case "esc":
 		// Go back to grid config
-		m.screen = ScreenBvBGridConfig
+		m.popScreen()
 		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
 		m.menuSelection = 0
 		m.bvbInputtingGrid = false
 		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBConcurrencyInput handles text input for custom concurrency value.
+func (m Model) handleBvBConcurrencyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.bvbInputtingConcurrency = false
+		m.bvbCustomConcurrency = ""
+		m.errorMsg = ""
+
+	case tea.KeyBackspace:
+		if len(m.bvbCustomConcurrency) > 0 {
+			m.bvbCustomConcurrency = m.bvbCustomConcurrency[:len(m.bvbCustomConcurrency)-1]
+		}
+
+	case tea.KeyEnter:
+		concurrency, err := parsePositiveInt(m.bvbCustomConcurrency)
+		if err != nil {
+			m.errorMsg = "Must be a positive integer (minimum 1)"
+			return m, nil
+		}
+		m.bvbConcurrency = concurrency
+		m.bvbInputtingConcurrency = false
+		return m.navigateToViewModeSelect()
+
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			if r >= '0' && r <= '9' {
+				m.bvbCustomConcurrency += string(r)
+			}
+		}
 	}
 
 	return m, nil
@@ -1564,10 +1660,10 @@ func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
 	whiteName := botDifficultyName(m.bvbWhiteDiff) + " Bot"
 	blackName := botDifficultyName(m.bvbBlackDiff) + " Bot"
 
-	// Load game config to get concurrency setting
-	// 0 means auto-detect in NewSessionManager
-	gameConfig := LoadGameConfig()
-	concurrency := gameConfig.BvBConcurrency
+	// Use the concurrency value selected by the user
+	// For single-game mode, bvbConcurrency will be 0 (auto-detect)
+	// For multi-game mode, it's set by the concurrency selection screen
+	concurrency := m.bvbConcurrency
 
 	manager := bvb.NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, m.bvbGameCount, concurrency)
 	if err := manager.Start(); err != nil {
@@ -2215,6 +2311,11 @@ func (m Model) isInTextInputMode() bool {
 
 	// BvB game jump input mode
 	if m.screen == ScreenBvBGamePlay && m.bvbShowJumpPrompt {
+		return true
+	}
+
+	// BvB custom concurrency input mode
+	if m.screen == ScreenBvBConcurrencySelect && m.bvbInputtingConcurrency {
 		return true
 	}
 
