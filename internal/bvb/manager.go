@@ -154,7 +154,18 @@ func (m *SessionManager) coordinateGames() {
 					atomic.AddInt32(&m.activeCount, -1)
 					<-m.semaphore // release slot when done
 				}()
-				m.sessions[idx].Run()
+
+				// Safely get the session while holding the lock
+				// This prevents race with Stop() which sets m.sessions = nil
+				m.mu.Lock()
+				if m.sessions == nil || idx >= len(m.sessions) || m.sessions[idx] == nil {
+					m.mu.Unlock()
+					return
+				}
+				session := m.sessions[idx]
+				m.mu.Unlock()
+
+				session.Run()
 			}(i)
 		case <-m.abortCh:
 			// Aborted, stop starting new games
