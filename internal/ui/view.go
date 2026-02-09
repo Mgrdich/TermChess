@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -10,62 +11,220 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Define lipgloss styles for consistent UI rendering across the application.
-// These styles use colors that work well on both light and dark terminals.
-var (
-	// titleStyle is used for the main application title
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Align(lipgloss.Center).
-			Padding(1, 0)
+// Terminal size and Bot vs Bot grid constants.
+const (
+	// minTerminalWidth is the minimum terminal width for the UI to render properly.
+	minTerminalWidth = 40
 
-	// menuItemStyle is used for regular (unselected) menu items
-	menuItemStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
-			Padding(0, 2)
+	// minTerminalHeight is the minimum terminal height for the UI to render properly.
+	minTerminalHeight = 20
 
-	// selectedItemStyle is used for the currently selected menu item
-	selectedItemStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#7D56F4")).
-				Bold(true).
-				Padding(0, 2)
+	// bvbCellHeight is the fixed height for each grid cell in lines.
+	// Breakdown: header (1) + board (8) + status (1) + result (1) + spacing (1) = 12 lines
+	bvbCellHeight = 12
 
-	// helpStyle is used for help text and instructions
-	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#626262")).
-			Padding(1, 0)
-
-	// errorStyle is used for error messages
-	errorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF5555")).
-			Bold(true).
-			Padding(1, 0)
-
-	// statusStyle is used for status messages
-	statusStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#50FA7B")).
-			Padding(1, 0)
-
-	// cursorStyle is used for the cursor indicator
-	cursorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
-			Bold(true)
+	// bvbCellWidth is the fixed width for each grid cell in characters.
+	// Board width without coords is 15 chars (8 pieces + 7 spaces).
+	// Adding padding and margin gives us 22 characters.
+	bvbCellWidth = 22
 )
+
+// Style helper methods that use the theme colors.
+// These methods return lipgloss styles based on the model's current theme.
+
+// titleStyle returns the style for the main application title.
+func (m Model) titleStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+}
+
+// menuItemStyle returns the style for regular (unselected) menu items.
+func (m Model) menuItemStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal).
+		Padding(0, 2)
+}
+
+// selectedItemStyle returns the style for the currently selected menu item.
+func (m Model) selectedItemStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true).
+		Padding(0, 2)
+}
+
+// helpStyle returns the style for help text and instructions.
+func (m Model) helpStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Padding(1, 0)
+}
+
+// errorStyle returns the style for error messages.
+func (m Model) errorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.ErrorText).
+		Bold(true).
+		Padding(1, 0)
+}
+
+// statusStyle returns the style for status messages.
+func (m Model) statusStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(1, 0)
+}
+
+// cursorStyle returns the style for the cursor indicator.
+func (m Model) cursorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true)
+}
+
+// whiteTurnStyle returns the style for white's turn indicator.
+func (m Model) whiteTurnStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.WhiteTurnText).
+		Bold(true)
+}
+
+// blackTurnStyle returns the style for black's turn indicator.
+func (m Model) blackTurnStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.BlackTurnText).
+		Bold(true)
+}
+
+// turnStyle returns the appropriate style for the current turn.
+func (m Model) turnStyle() lipgloss.Style {
+	if m.board != nil && m.board.ActiveColor == 1 { // Black
+		return m.blackTurnStyle()
+	}
+	return m.whiteTurnStyle()
+}
+
+// breadcrumbStyle returns the style for navigation breadcrumbs.
+func (m Model) breadcrumbStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true)
+}
+
+// menuPrimaryStyle returns the style for primary menu items (New Game, Start, Resume).
+func (m Model) menuPrimaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuPrimary).
+		Bold(true).
+		Padding(0, 2)
+}
+
+// menuSecondaryStyle returns the style for secondary menu items (Settings, Load Game, Exit).
+func (m Model) menuSecondaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSecondary).
+		Padding(0, 2)
+}
+
+// selectedPrimaryStyle returns the style for selected primary menu items.
+func (m Model) selectedPrimaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true).
+		Padding(0, 2)
+}
+
+// selectedSecondaryStyle returns the style for selected secondary menu items.
+func (m Model) selectedSecondaryStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Padding(0, 2)
+}
+
+// menuSeparatorStyle returns the style for menu separators.
+func (m Model) menuSeparatorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Foreground(m.theme.MenuSeparator)
+}
+
+// renderMenuSeparator returns a styled horizontal separator line for menus.
+func (m Model) renderMenuSeparator() string {
+	separator := "  ────────────────"
+	return m.menuSeparatorStyle().Render(separator)
+}
+
+// isPrimaryAction returns true if the menu option is a primary action.
+// Primary actions: New Game, Resume Game, Start, Play Again, New Session
+func isPrimaryAction(option string) bool {
+	switch option {
+	case "New Game", "Resume Game", "Start", "Play Again", "New Session":
+		return true
+	default:
+		return false
+	}
+}
+
+// renderBreadcrumb renders the navigation breadcrumb if present.
+// Returns an empty string if there's no breadcrumb to display.
+func (m Model) renderBreadcrumb() string {
+	bc := m.breadcrumb()
+	if bc == "" {
+		return ""
+	}
+	return m.breadcrumbStyle().Render(bc) + "\n\n"
+}
 
 // renderHelpText conditionally renders help text based on config.
 // Returns empty string if help text is disabled.
-func renderHelpText(text string, config Config) string {
-	if !config.ShowHelpText {
+func (m Model) renderHelpText(text string) string {
+	if !m.config.ShowHelpText {
 		return ""
 	}
-	return helpStyle.Render(text)
+	return m.helpStyle().Render(text)
+}
+
+// renderMinSizeWarning renders a warning when the terminal is too small.
+func (m Model) renderMinSizeWarning() string {
+	var b strings.Builder
+
+	warnStyle := lipgloss.NewStyle().
+		Foreground(m.theme.ErrorText).
+		Bold(true)
+
+	b.WriteString(warnStyle.Render("Terminal too small"))
+	b.WriteString("\n\n")
+
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText)
+
+	b.WriteString(infoStyle.Render(fmt.Sprintf("Current: %dx%d", m.termWidth, m.termHeight)))
+	b.WriteString("\n")
+	b.WriteString(infoStyle.Render(fmt.Sprintf("Minimum: %dx%d", minTerminalWidth, minTerminalHeight)))
+	b.WriteString("\n\n")
+	b.WriteString(infoStyle.Render("Please resize your terminal."))
+
+	return b.String()
 }
 
 // View renders the UI based on the current model state.
 // This function is called by Bubbletea on every update to generate
 // the string that will be displayed in the terminal.
 func (m Model) View() string {
+	// Check if terminal is too small to render properly
+	if m.termWidth > 0 && m.termHeight > 0 {
+		if m.termWidth < minTerminalWidth || m.termHeight < minTerminalHeight {
+			return m.renderMinSizeWarning()
+		}
+	}
+
+	// If the shortcuts overlay is active, render it over the current view
+	if m.showShortcutsOverlay {
+		return m.renderShortcutsOverlay()
+	}
+
 	switch m.screen {
 	case ScreenMainMenu:
 		return m.renderMainMenu()
@@ -85,8 +244,6 @@ func (m Model) View() string {
 		return m.renderSettings()
 	case ScreenSavePrompt:
 		return m.renderSavePrompt()
-	case ScreenResumePrompt:
-		return m.renderResumePrompt()
 	case ScreenDrawPrompt:
 		return m.renderDrawPrompt()
 	case ScreenBvBBotSelect:
@@ -99,6 +256,10 @@ func (m Model) View() string {
 		return m.renderBvBGamePlay()
 	case ScreenBvBStats:
 		return m.renderBvBStats()
+	case ScreenBvBViewModeSelect:
+		return m.renderBvBViewModeSelect()
+	case ScreenBvBConcurrencySelect:
+		return m.renderBvBConcurrencySelect()
 	default:
 		return "Unknown screen"
 	}
@@ -107,47 +268,68 @@ func (m Model) View() string {
 // renderMainMenu renders the main menu screen with title, menu options,
 // cursor indicator, help text, and any error or status messages.
 // The "Resume Game" option (if present) is visually distinct with a special indicator and color.
+// Menu is organized with visual separators between primary actions (game-related) and
+// secondary actions (settings/exit).
 func (m Model) renderMainMenu() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
+	// Track when separator has been inserted
+	// Main menu structure: [Resume Game], New Game, Load Game | Settings, Exit
+	// Primary: Resume Game, New Game
+	// Secondary: Load Game, Settings, Exit
+	separatorInserted := false
+
 	// Render menu options with cursor indicator for selected item
 	for i, option := range m.menuOptions {
+		// Check if we need to insert a separator before this item
+		// Insert separator before "Settings" to separate game actions from app actions
+		if option == "Settings" && !separatorInserted {
+			b.WriteString(m.renderMenuSeparator())
+			b.WriteString("\n")
+			separatorInserted = true
+		}
+
 		cursor := "  " // Two spaces for non-selected items
 		optionText := option
 
 		// Check if this is the "Resume Game" option
 		isResumeGame := option == "Resume Game"
+		isPrimary := isPrimaryAction(option)
 
 		if i == m.menuSelection {
-			// Highlight the selected item
+			// Highlight the selected item with focus indicator
 			if isResumeGame {
 				// Special styling for selected Resume Game option
-				cursor = cursorStyle.Render("▶ ")
+				cursor = m.cursorStyle().Render(">> ")
 				resumeStyle := lipgloss.NewStyle().
-					Foreground(lipgloss.Color("#50FA7B")).
+					Foreground(m.theme.StatusText).
 					Bold(true).
 					Padding(0, 2)
 				optionText = resumeStyle.Render(option)
+			} else if isPrimary {
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(option)
 			} else {
-				cursor = cursorStyle.Render("> ")
-				optionText = selectedItemStyle.Render(option)
+				cursor = m.cursorStyle().Render(" > ")
+				optionText = m.selectedSecondaryStyle().Render(option)
 			}
 		} else {
 			// Regular menu item styling
 			if isResumeGame {
 				// Special styling for unselected Resume Game option
 				resumeStyle := lipgloss.NewStyle().
-					Foreground(lipgloss.Color("#50FA7B")).
+					Foreground(m.theme.StatusText).
 					Padding(0, 2)
-				optionText = resumeStyle.Render("▶ " + option)
-				cursor = "" // No cursor needed, indicator is part of the text
+				optionText = resumeStyle.Render(option)
+			} else if isPrimary {
+				optionText = m.menuPrimaryStyle().Render(option)
 			} else {
-				optionText = menuItemStyle.Render(option)
+				optionText = m.menuSecondaryStyle().Render(option)
 			}
 		}
 
@@ -155,7 +337,7 @@ func (m Model) renderMainMenu() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("arrows/jk: navigate | enter: select | q: quit", m.config)
+	helpText := m.renderHelpText("arrows/jk: navigate | enter: select | q: quit")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -164,14 +346,14 @@ func (m Model) renderMainMenu() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -180,42 +362,47 @@ func (m Model) renderMainMenu() string {
 
 // renderGameTypeSelect renders the GameTypeSelect screen with title, game type options,
 // cursor indicator, help text, and any error or status messages.
+// Game type options are styled with visual hierarchy - game modes are primary actions.
 func (m Model) renderGameTypeSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Game Type:")
 	b.WriteString(header)
 	b.WriteString("\n")
 
 	// Render menu options with cursor indicator for selected item
+	// All game type options are primary actions
 	for i, option := range m.menuOptions {
 		cursor := "  " // Two spaces for non-selected items
 		optionText := option
 
 		if i == m.menuSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			// Highlight the selected item with prominent focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			// Primary styling for all game type options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back to menu | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back to menu | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -224,14 +411,14 @@ func (m Model) renderGameTypeSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -244,14 +431,17 @@ func (m Model) renderBotSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Bot Difficulty:")
 	b.WriteString(header)
@@ -263,19 +453,19 @@ func (m Model) renderBotSelect() string {
 		optionText := option
 
 		if i == m.menuSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			// Primary styling for difficulty options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back to game type | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back to game type | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -284,14 +474,14 @@ func (m Model) renderBotSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -304,14 +494,17 @@ func (m Model) renderColorSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Your Color:")
 	b.WriteString(header)
@@ -323,19 +516,19 @@ func (m Model) renderColorSelect() string {
 		optionText := option
 
 		if i == m.menuSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			// Primary styling for color options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back to difficulty | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back to difficulty | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -344,14 +537,14 @@ func (m Model) renderColorSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -364,13 +557,13 @@ func (m Model) renderGamePlay() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
-	// Render the chess board
-	renderer := NewBoardRenderer(m.config)
-	boardStr := renderer.Render(m.board)
+	// Render the chess board with selection highlighting
+	renderer := NewBoardRendererWithTheme(m.config, m.theme)
+	boardStr := renderer.RenderWithSelection(m.board, m.selectedSquare, m.validMoves, m.blinkOn)
 	b.WriteString(boardStr)
 
 	// Render move history if enabled
@@ -378,35 +571,31 @@ func (m Model) renderGamePlay() string {
 		b.WriteString("\n\n")
 		moveHistoryText := m.formatMoveHistory()
 		moveHistoryStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
+			Foreground(m.theme.MenuNormal).
 			Padding(0, 2)
 		b.WriteString(moveHistoryStyle.Render(moveHistoryText))
 	}
 
-	// Render turn indicator
+	// Render turn indicator with turn-based color
 	b.WriteString("\n\n")
 	turnText := "White to move"
+	turnStyle := m.whiteTurnStyle()
 	if m.board.ActiveColor == 1 { // Black
 		turnText = "Black to move"
+		turnStyle = m.blackTurnStyle()
 	}
-	turnIndicator := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#7D56F4")).
-		Render(turnText)
-	b.WriteString(turnIndicator)
+	b.WriteString(turnStyle.Render(turnText))
 
-	// Render input prompt
+	// Render input prompt with turn-based color for the input text
 	b.WriteString("\n\n")
 	inputPrompt := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Render("Enter move: ")
-	inputText := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
-		Render(m.input)
+	inputText := turnStyle.Render(m.input)
 	b.WriteString(inputPrompt + inputText)
 
 	// Add help text
-	helpText := renderHelpText("ESC: menu (with save) | type move (e.g. e4, Nf3) | Commands: resign, offerdraw, showfen, menu", m.config)
+	helpText := m.renderHelpText("ESC: menu (with save) | type move (e.g. e4, Nf3) | Commands: resign, offerdraw, showfen, menu")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -415,14 +604,14 @@ func (m Model) renderGamePlay() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -433,7 +622,7 @@ func (m Model) renderGamePlay() string {
 		// Move history header
 		historyHeaderStyle := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA"))
+			Foreground(m.theme.TitleText)
 		historyHeader := historyHeaderStyle.Render("Move History:")
 		b.WriteString(historyHeader)
 		b.WriteString("\n")
@@ -441,7 +630,7 @@ func (m Model) renderGamePlay() string {
 		// Format and display move history
 		historyText := FormatMoveHistory(m.moveHistory)
 		historyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4"))
+			Foreground(m.theme.MenuSelected)
 		history := historyStyle.Render(historyText)
 		b.WriteString(history)
 		b.WriteString("\n")
@@ -505,7 +694,7 @@ func (m Model) renderGameOver() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -528,7 +717,7 @@ func (m Model) renderGameOver() string {
 	b.WriteString("\n\n")
 	moveCountMsg := fmt.Sprintf("Game ended after %d moves", m.board.FullMoveNum)
 	moveCountStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Align(lipgloss.Center)
 	b.WriteString(moveCountStyle.Render(moveCountMsg))
 
@@ -536,12 +725,12 @@ func (m Model) renderGameOver() string {
 	b.WriteString("\n\n")
 	optionsText := "Press 'n' for New Game  |  Press 'm' for Main Menu  |  Press 'q' to Quit"
 	optionsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Align(lipgloss.Center)
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := renderHelpText("ESC/m: menu | n: new game | q: quit", m.config)
+	helpText := m.renderHelpText("ESC/m: menu | n: new game | q: quit")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -552,38 +741,54 @@ func (m Model) renderGameOver() string {
 
 // renderSettings renders the Settings screen showing display configuration options.
 // Each option displays its current value and can be toggled by the user.
+// Settings are grouped with visual separators between display options and appearance options.
 func (m Model) renderSettings() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Settings")
 	b.WriteString(header)
 	b.WriteString("\n")
 
-	// Define settings options with their current values
-	// The order here determines the settingsSelection index
-	settingsOptions := []struct {
+	// Define toggle settings options with their current values
+	// The order here determines the settingsSelection index (0-4 for toggles)
+	// Group 1 (Display): Use Unicode, Show Coordinates, Use Colors
+	// Group 2 (Info): Show Move History, Show Help Text
+	toggleOptions := []struct {
 		label   string
 		enabled bool
+		group   int // 1 = display, 2 = info
 	}{
-		{"Use Unicode Pieces", m.config.UseUnicode},
-		{"Show Coordinates", m.config.ShowCoords},
-		{"Use Colors", m.config.UseColors},
-		{"Show Move History", m.config.ShowMoveHistory},
-		{"Show Help Text", m.config.ShowHelpText},
+		{"Use Unicode Pieces", m.config.UseUnicode, 1},
+		{"Show Coordinates", m.config.ShowCoords, 1},
+		{"Use Colors", m.config.UseColors, 1},
+		{"Show Move History", m.config.ShowMoveHistory, 2},
+		{"Show Help Text", m.config.ShowHelpText, 2},
 	}
 
-	// Render each setting option with its current state
-	for i, option := range settingsOptions {
+	currentGroup := 0
+
+	// Render each toggle option with its current state
+	for i, option := range toggleOptions {
+		// Insert separator when changing groups
+		if option.group != currentGroup && currentGroup != 0 {
+			b.WriteString(m.renderMenuSeparator())
+			b.WriteString("\n")
+		}
+		currentGroup = option.group
+
 		cursor := "  " // Two spaces for non-selected items
 
 		// Determine checkbox state
@@ -596,19 +801,37 @@ func (m Model) renderSettings() string {
 		optionText := fmt.Sprintf("%s %s", option.label, checkbox)
 
 		if i == m.settingsSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(optionText)
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedItemStyle().Render(optionText)
 		} else {
 			// Regular menu item styling
-			optionText = menuItemStyle.Render(optionText)
+			optionText = m.menuItemStyle().Render(optionText)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 	}
 
+	// Add separator before theme option
+	b.WriteString(m.renderMenuSeparator())
+	b.WriteString("\n")
+
+	// Render the Theme option (index 5)
+	// Get theme display name with proper capitalization
+	themeDisplayName := getThemeDisplayName(m.config.Theme)
+	themeCursor := "  "
+	themeText := fmt.Sprintf("Theme: %s", themeDisplayName)
+
+	if m.settingsSelection == 5 {
+		themeCursor = m.cursorStyle().Render(">> ")
+		themeText = m.selectedItemStyle().Render(themeText)
+	} else {
+		themeText = m.menuItemStyle().Render(themeText)
+	}
+	b.WriteString(fmt.Sprintf("%s%s\n", themeCursor, themeText))
+
 	// Render help text
-	helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle", m.config)
+	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle/cycle")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -617,14 +840,14 @@ func (m Model) renderSettings() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -637,7 +860,7 @@ func (m Model) renderSavePrompt() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -661,13 +884,13 @@ func (m Model) renderSavePrompt() string {
 
 	// Render options
 	optionsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Align(lipgloss.Center)
-	optionsText := "y: Yes  |  n: No  |  ESC: Cancel"
+	optionsText := "y: Save & Exit  |  n: Exit without saving  |  ESC: Cancel"
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := renderHelpText("y: save and exit | n: exit without saving | ESC: cancel", m.config)
+	helpText := m.renderHelpText("y: save & exit | n: exit without saving | ESC: cancel")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -676,51 +899,7 @@ func (m Model) renderSavePrompt() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
-		b.WriteString(errorText)
-	}
-
-	return b.String()
-}
-
-// renderResumePrompt renders the resume prompt screen when a saved game exists on startup.
-// It asks the user if they want to resume the saved game or go to the main menu.
-func (m Model) renderResumePrompt() string {
-	var b strings.Builder
-
-	// Render the application title
-	title := titleStyle.Render("TermChess")
-	b.WriteString(title)
-	b.WriteString("\n\n")
-
-	// Render the resume prompt message
-	promptStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FFD700")).
-		Align(lipgloss.Center).
-		Padding(1, 0)
-	promptMsg := "A saved game was found. Resume last game?"
-	b.WriteString(promptStyle.Render(promptMsg))
-	b.WriteString("\n\n")
-
-	// Render options
-	optionsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
-		Align(lipgloss.Center)
-	optionsText := "y: Yes  |  n: No"
-	b.WriteString(optionsStyle.Render(optionsText))
-
-	// Render help text
-	helpText := renderHelpText("y: resume game | n: go to main menu", m.config)
-	if helpText != "" {
-		b.WriteString("\n\n")
-		b.WriteString(helpText)
-	}
-
-	// Render error message if present
-	if m.errorMsg != "" {
-		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
@@ -733,14 +912,17 @@ func (m Model) renderFENInput() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
-	b.WriteString("\n\n")
+	b.WriteString("\n")
+
+	// Render breadcrumb navigation
+	b.WriteString(m.renderBreadcrumb())
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Load Game from FEN")
 	b.WriteString(header)
@@ -757,13 +939,13 @@ func (m Model) renderFENInput() string {
 
 	// Example
 	exampleStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#626262"))
+		Foreground(m.theme.HelpText)
 	example := exampleStyle.Render("Example: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	b.WriteString(example)
 	b.WriteString("\n\n")
 
 	// Help text
-	helpText := renderHelpText("ESC: back to menu | enter: load position", m.config)
+	helpText := m.renderHelpText("ESC: back to menu | enter: load position")
 	if helpText != "" {
 		b.WriteString(helpText)
 	}
@@ -771,7 +953,7 @@ func (m Model) renderFENInput() string {
 	// Error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
@@ -784,7 +966,7 @@ func (m Model) renderDrawPrompt() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -804,7 +986,7 @@ func (m Model) renderDrawPrompt() string {
 		offerMessage = "Black offers a draw. Accept?"
 	}
 	promptMessage := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Padding(0, 2).
 		Render(offerMessage)
 	b.WriteString(promptMessage)
@@ -819,12 +1001,12 @@ func (m Model) renderDrawPrompt() string {
 		optionText := option
 
 		if i == m.drawPromptSelection {
-			// Highlight the selected item
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			// Highlight the selected item with focus indicator
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			// Regular menu item styling
-			optionText = menuItemStyle.Render(option)
+			// Primary styling for options
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -832,20 +1014,20 @@ func (m Model) renderDrawPrompt() string {
 
 	// Render help text
 	b.WriteString("\n")
-	helpText := helpStyle.Render("Use arrow keys to select, Enter to confirm, ESC to cancel")
+	helpText := m.helpStyle().Render("Use arrow keys to select, Enter to confirm, ESC to cancel")
 	b.WriteString(helpText)
 
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -858,14 +1040,14 @@ func (m Model) renderBvBBotSelect() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header based on which bot we're selecting
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 
 	headerText := "Select White Bot Difficulty:"
@@ -882,10 +1064,10 @@ func (m Model) renderBvBBotSelect() string {
 		optionText := option
 
 		if i == m.menuSelection {
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(option)
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(option)
 		} else {
-			optionText = menuItemStyle.Render(option)
+			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
 		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
@@ -895,7 +1077,7 @@ func (m Model) renderBvBBotSelect() string {
 	if !m.bvbSelectingWhite {
 		b.WriteString("\n")
 		infoStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#50FA7B")).
+			Foreground(m.theme.StatusText).
 			Padding(0, 2)
 		diffName := botDifficultyName(m.bvbWhiteDiff)
 		b.WriteString(infoStyle.Render(fmt.Sprintf("White: %s Bot", diffName)))
@@ -903,7 +1085,7 @@ func (m Model) renderBvBBotSelect() string {
 	}
 
 	// Render help text
-	helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -912,14 +1094,14 @@ func (m Model) renderBvBBotSelect() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -932,14 +1114,14 @@ func (m Model) renderBvBGameMode() string {
 	var b strings.Builder
 
 	// Render the application title
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	// Render screen header
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Game Mode:")
 	b.WriteString(header)
@@ -947,7 +1129,7 @@ func (m Model) renderBvBGameMode() string {
 
 	// Show matchup info
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
 		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
@@ -957,22 +1139,22 @@ func (m Model) renderBvBGameMode() string {
 	if m.bvbInputtingCount {
 		// Show text input for game count
 		promptStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
+			Foreground(m.theme.MenuNormal).
 			Padding(0, 2)
 		b.WriteString(promptStyle.Render("Number of games:"))
 		b.WriteString("\n\n")
 
 		inputStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
+			Foreground(m.theme.MenuSelected).
 			Padding(0, 2)
 		inputDisplay := m.bvbCountInput
 		if inputDisplay == "" {
 			inputDisplay = "_"
 		}
-		b.WriteString(inputStyle.Render("> " + inputDisplay))
+		b.WriteString(inputStyle.Render(">> " + inputDisplay))
 		b.WriteString("\n")
 
-		helpText := renderHelpText("ESC: back | enter: confirm | type number", m.config)
+		helpText := m.renderHelpText("ESC: back | enter: confirm | type number")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -984,16 +1166,16 @@ func (m Model) renderBvBGameMode() string {
 			optionText := option
 
 			if i == m.menuSelection {
-				cursor = cursorStyle.Render("> ")
-				optionText = selectedItemStyle.Render(option)
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(option)
 			} else {
-				optionText = menuItemStyle.Render(option)
+				optionText = m.menuPrimaryStyle().Render(option)
 			}
 
 			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 		}
 
-		helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+		helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -1003,14 +1185,14 @@ func (m Model) renderBvBGameMode() string {
 	// Render error message if present
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
 	// Render status message if present
 	if m.statusMsg != "" {
 		b.WriteString("\n\n")
-		statusText := statusStyle.Render(m.statusMsg)
+		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
 	}
 
@@ -1021,7 +1203,7 @@ func (m Model) renderBvBGameMode() string {
 func (m Model) renderBvBGridView() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess - Bot vs Bot")
+	title := m.titleStyle().Render("TermChess - Bot vs Bot")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -1030,7 +1212,7 @@ func (m Model) renderBvBGridView() string {
 	minHeight := m.bvbGridRows*11 + 8 // 8 lines for header/footer
 	if m.termWidth > 0 && m.termHeight > 0 && (m.termWidth < minWidth || m.termHeight < minHeight) {
 		warnStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF5555")).
+			Foreground(m.theme.ErrorText).
 			Padding(0, 2)
 		b.WriteString(warnStyle.Render(fmt.Sprintf("Terminal too small for %dx%d grid (need %dx%d, have %dx%d)",
 			m.bvbGridRows, m.bvbGridCols, minWidth, minHeight, m.termWidth, m.termHeight)))
@@ -1061,7 +1243,7 @@ func (m Model) renderBvBGridView() string {
 
 	// Show matchup and progress info
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 
 	finished := 0
@@ -1072,11 +1254,19 @@ func (m Model) renderBvBGridView() string {
 	}
 	running := m.bvbManager.RunningCount()
 	queued := m.bvbManager.QueuedCount()
-	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black) | Completed: %d/%d | Running: %d | Queued: %d",
+	concurrency := m.bvbManager.Concurrency()
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black) | Completed: %d/%d | Running: %d | Queued: %d | Concurrency: %d",
 		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff),
-		finished, len(sessions), running, queued)
+		finished, len(sessions), running, queued, concurrency)
 	b.WriteString(infoStyle.Render(matchup))
 	b.WriteString("\n\n")
+
+	// Render live statistics panel
+	liveStats := m.renderBvBLiveStats()
+	if liveStats != "" {
+		b.WriteString(liveStats)
+		b.WriteString("\n\n")
+	}
 
 	// Render the grid
 	pageSessions := sessions[startIdx:endIdx]
@@ -1088,7 +1278,7 @@ func (m Model) renderBvBGridView() string {
 	if totalPages > 1 {
 		pageInfo := fmt.Sprintf("Page %d/%d", pageIdx+1, totalPages)
 		pageStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
+			Foreground(m.theme.MenuSelected).
 			Bold(true).
 			Padding(0, 2)
 		b.WriteString(pageStyle.Render(pageInfo))
@@ -1098,22 +1288,50 @@ func (m Model) renderBvBGridView() string {
 	// Speed/pause status
 	speedNames := map[bvb.PlaybackSpeed]string{
 		bvb.SpeedInstant: "Instant",
-		bvb.SpeedFast:    "Fast",
 		bvb.SpeedNormal:  "Normal",
-		bvb.SpeedSlow:    "Slow",
 	}
 	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
 	if m.bvbPaused {
 		controlStatus += " | PAUSED"
 	}
 	controlStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Padding(0, 2)
 	b.WriteString(controlStyle.Render(controlStatus))
 	b.WriteString("\n")
 
+	// Jump prompt (if showing)
+	if m.bvbShowJumpPrompt {
+		b.WriteString("\n")
+		jumpPromptStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(m.theme.MenuSelected).
+			Padding(0, 2)
+		inputDisplay := m.bvbJumpInput
+		if inputDisplay == "" {
+			inputDisplay = "_"
+		}
+		jumpPrompt := fmt.Sprintf("Jump to game (1-%d): %s", m.bvbGameCount, inputDisplay)
+		b.WriteString(jumpPromptStyle.Render(jumpPrompt))
+		b.WriteString("\n")
+
+		jumpHintStyle := lipgloss.NewStyle().
+			Foreground(m.theme.HelpText).
+			Italic(true).
+			Padding(0, 2)
+		b.WriteString(jumpHintStyle.Render("Enter: jump | Esc: cancel"))
+		b.WriteString("\n")
+	}
+
+	// Error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
 	// Help text
-	helpText := renderHelpText("Space: pause/resume | 1-4: speed | ←/→: pages | Tab: single view | f: FEN | ESC: abort", m.config)
+	helpText := m.renderHelpText("Space: pause/resume | t: toggle speed | ←/→: pages | g: jump to game | Tab: single view | f: FEN | ESC: abort")
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1123,18 +1341,19 @@ func (m Model) renderBvBGridView() string {
 }
 
 // renderBoardGrid renders a slice of sessions as a grid with the given number of columns.
+// Each cell has fixed dimensions to prevent layout shifts when games complete.
 func (m Model) renderBoardGrid(sessions []*bvb.GameSession, cols int) string {
 	if len(sessions) == 0 {
 		return ""
 	}
 
-	// Render each session as a compact board cell
+	// Render each session as a fixed-dimension compact board cell
 	cells := make([]string, len(sessions))
 	for i, session := range sessions {
 		cells[i] = m.renderCompactBoardCell(session)
 	}
 
-	// Arrange cells into rows
+	// Arrange cells into rows with consistent alignment
 	var rows []string
 	for i := 0; i < len(cells); i += cols {
 		end := i + cols
@@ -1149,22 +1368,38 @@ func (m Model) renderBoardGrid(sessions []*bvb.GameSession, cols int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, rows...)
 }
 
+// renderBvBGridCell renders a grid cell for the game at the given index.
+// Returns an empty string if the index is out of bounds or manager is nil.
+// The cell has fixed dimensions (bvbCellHeight x bvbCellWidth) to prevent layout shifts.
+func (m Model) renderBvBGridCell(gameIndex int) string {
+	if m.bvbManager == nil {
+		return ""
+	}
+
+	sessions := m.bvbManager.Sessions()
+	if gameIndex < 0 || gameIndex >= len(sessions) {
+		return ""
+	}
+
+	return m.renderCompactBoardCell(sessions[gameIndex])
+}
+
 // renderCompactBoardCell renders a single game session as a compact board cell for the grid.
 // Shows: game number, compact board, move count, and status.
+// The cell has fixed dimensions (bvbCellHeight x bvbCellWidth) to prevent layout shifts.
 func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
-	var b strings.Builder
-
 	board := session.CurrentBoard()
 	gameNum := session.GameNumber()
 	moveCount := len(session.CurrentMoveHistory())
 	isFinished := session.IsFinished()
 
-	// Game header
-	headerText := fmt.Sprintf("Game %d", gameNum)
-	b.WriteString(headerText)
-	b.WriteString("\n")
+	// Build cell content lines
+	var lines []string
 
-	// Render compact board (no coords, no color)
+	// Line 1: Game header
+	lines = append(lines, fmt.Sprintf("Game %d", gameNum))
+
+	// Lines 2-9: Board (8 lines)
 	compactConfig := Config{
 		UseUnicode: m.config.UseUnicode,
 		ShowCoords: false,
@@ -1172,45 +1407,89 @@ func (m Model) renderCompactBoardCell(session *bvb.GameSession) string {
 	}
 	renderer := NewBoardRenderer(compactConfig)
 	boardStr := renderer.Render(board)
-	b.WriteString(boardStr)
-	b.WriteString("\n")
+	boardLines := strings.Split(strings.TrimSuffix(boardStr, "\n"), "\n")
+	lines = append(lines, boardLines...)
 
-	// Status line
+	// Line 10: Status line (always shows move count)
+	lines = append(lines, fmt.Sprintf("Moves: %d", moveCount))
+
+	// Line 11: Result line (empty for in-progress, result for finished)
 	if isFinished {
 		result := session.Result()
 		if result != nil {
-			statusText := fmt.Sprintf("Moves: %d | %s", moveCount, result.Winner)
-			b.WriteString(statusText)
+			lines = append(lines, result.Winner)
+		} else {
+			lines = append(lines, "") // Empty placeholder
 		}
 	} else {
-		b.WriteString(fmt.Sprintf("Moves: %d", moveCount))
+		lines = append(lines, "") // Empty placeholder for in-progress games
 	}
-	b.WriteString("\n")
 
-	// Style the cell with border and padding
+	// Line 12: Spacing (empty line)
+	lines = append(lines, "")
+
+	// Pad or truncate to exactly bvbCellHeight lines
+	for len(lines) < bvbCellHeight {
+		lines = append(lines, "")
+	}
+	if len(lines) > bvbCellHeight {
+		lines = lines[:bvbCellHeight]
+	}
+
+	// Normalize each line to bvbCellWidth characters
+	for i, line := range lines {
+		lineWidth := lipgloss.Width(line)
+		if lineWidth < bvbCellWidth {
+			// Pad with spaces to reach target width
+			lines[i] = line + strings.Repeat(" ", bvbCellWidth-lineWidth)
+		} else if lineWidth > bvbCellWidth {
+			// Truncate to target width (keeping ANSI codes intact is tricky,
+			// but for our simple case we just truncate)
+			lines[i] = truncateToWidth(line, bvbCellWidth)
+		}
+	}
+
+	// Join lines and apply styling
+	content := strings.Join(lines, "\n")
+
+	// Style the cell with consistent dimensions
 	cellStyle := lipgloss.NewStyle().
-		Padding(0, 1).
+		Width(bvbCellWidth).
+		Height(bvbCellHeight).
 		Margin(0, 1)
 
 	if isFinished {
 		// Dimmed style for finished games
-		cellStyle = cellStyle.Foreground(lipgloss.Color("#626262"))
+		cellStyle = cellStyle.Foreground(m.theme.HelpText)
 	}
 
-	return cellStyle.Render(b.String())
+	return cellStyle.Render(content)
+}
+
+// truncateToWidth truncates a string to fit within the specified width.
+// This is a simple implementation that handles most common cases.
+func truncateToWidth(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	runes := []rune(s)
+	if len(runes) <= width {
+		return s
+	}
+	return string(runes[:width])
 }
 
 // renderBvBGridConfig renders the Bot vs Bot grid configuration screen.
 func (m Model) renderBvBGridConfig() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess")
+	title := m.titleStyle().Render("TermChess")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
 	headerStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
+		Foreground(m.theme.TitleText).
 		Padding(0, 0, 1, 0)
 	header := headerStyle.Render("Select Grid Layout:")
 	b.WriteString(header)
@@ -1218,7 +1497,7 @@ func (m Model) renderBvBGridConfig() string {
 
 	// Show game count info
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 	gameInfo := fmt.Sprintf("%d game(s) | %s Bot (White) vs %s Bot (Black)",
 		m.bvbGameCount, botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
@@ -1227,22 +1506,22 @@ func (m Model) renderBvBGridConfig() string {
 
 	if m.bvbInputtingGrid {
 		promptStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FFFDF5")).
+			Foreground(m.theme.MenuNormal).
 			Padding(0, 2)
 		b.WriteString(promptStyle.Render("Enter grid dimensions (RxC, max 8 total):"))
 		b.WriteString("\n\n")
 
 		inputStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
+			Foreground(m.theme.MenuSelected).
 			Padding(0, 2)
 		inputDisplay := m.bvbCustomGridInput
 		if inputDisplay == "" {
 			inputDisplay = "_"
 		}
-		b.WriteString(inputStyle.Render("> " + inputDisplay))
+		b.WriteString(inputStyle.Render(">> " + inputDisplay))
 		b.WriteString("\n")
 
-		helpText := renderHelpText("ESC: back | enter: confirm | e.g. 2x3", m.config)
+		helpText := m.renderHelpText("ESC: back | enter: confirm | e.g. 2x3")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -1253,16 +1532,16 @@ func (m Model) renderBvBGridConfig() string {
 			optionText := option
 
 			if i == m.menuSelection {
-				cursor = cursorStyle.Render("> ")
-				optionText = selectedItemStyle.Render(option)
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(option)
 			} else {
-				optionText = menuItemStyle.Render(option)
+				optionText = m.menuPrimaryStyle().Render(option)
 			}
 
 			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
 		}
 
-		helpText := renderHelpText("ESC: back | arrows/jk: navigate | enter: select", m.config)
+		helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
 		if helpText != "" {
 			b.WriteString("\n")
 			b.WriteString(helpText)
@@ -1271,7 +1550,7 @@ func (m Model) renderBvBGridConfig() string {
 
 	if m.errorMsg != "" {
 		b.WriteString("\n\n")
-		errorText := errorStyle.Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
 		b.WriteString(errorText)
 	}
 
@@ -1279,23 +1558,78 @@ func (m Model) renderBvBGridConfig() string {
 }
 
 // renderBvBGamePlay renders the Bot vs Bot gameplay screen.
-// Shows the current state of the running games in single-board or grid view.
+// Shows the current state of the running games in single-board, grid, or stats-only view.
 func (m Model) renderBvBGamePlay() string {
 	if m.bvbManager == nil {
 		return "No session running.\n"
 	}
 
-	if m.bvbViewMode == BvBSingleView {
-		return m.renderBvBSingleView()
+	// Render the abort confirmation dialog as an overlay if showing
+	if m.bvbShowAbortConfirm {
+		return m.renderBvBAbortConfirm()
 	}
-	return m.renderBvBGridView()
+
+	switch m.bvbViewMode {
+	case BvBSingleView:
+		return m.renderBvBSingleView()
+	case BvBStatsOnlyView:
+		return m.renderBvBStatsOnly()
+	default:
+		return m.renderBvBGridView()
+	}
+}
+
+// renderBvBAbortConfirm renders the abort confirmation dialog for BvB sessions.
+func (m Model) renderBvBAbortConfirm() string {
+	var b strings.Builder
+
+	// Title
+	title := m.titleStyle().Render("TermChess - Bot vs Bot")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Dialog box
+	dialogStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(m.theme.MenuSelected).
+		Padding(1, 2)
+
+	var dialogContent strings.Builder
+	dialogTitleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText)
+	dialogContent.WriteString(dialogTitleStyle.Render("  Abort Session?  "))
+	dialogContent.WriteString("\n\n")
+	dialogContent.WriteString("  Games in progress will be lost.\n\n")
+
+	// Options
+	normalStyle := m.menuItemStyle()
+	selectedStyle := m.selectedItemStyle()
+
+	if m.bvbAbortSelection == 0 {
+		dialogContent.WriteString(selectedStyle.Render("  > Cancel"))
+	} else {
+		dialogContent.WriteString(normalStyle.Render("    Cancel"))
+	}
+	dialogContent.WriteString("\n")
+	if m.bvbAbortSelection == 1 {
+		dialogContent.WriteString(selectedStyle.Render("  > Abort Session"))
+	} else {
+		dialogContent.WriteString(normalStyle.Render("    Abort Session"))
+	}
+	dialogContent.WriteString("\n\n")
+	dialogContent.WriteString(m.helpStyle().Render("  esc: cancel | enter: select"))
+
+	b.WriteString(dialogStyle.Render(dialogContent.String()))
+
+	return b.String()
 }
 
 // renderBvBStats renders the Bot vs Bot statistics screen after all games finish.
 func (m Model) renderBvBStats() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess - Bot vs Bot Results")
+	title := m.titleStyle().Render("TermChess - Bot vs Bot Results")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -1311,14 +1645,14 @@ func (m Model) renderBvBStats() string {
 	}
 
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 
 	statStyle := lipgloss.NewStyle().
 		Padding(0, 2)
 
 	dimStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#626262")).
+		Foreground(m.theme.HelpText).
 		Padding(0, 2)
 
 	if stats.TotalGames == 1 {
@@ -1394,27 +1728,55 @@ func (m Model) renderBvBStats() string {
 
 	b.WriteString("\n")
 
-	// Menu options
+	// Menu options with visual hierarchy
 	for i, opt := range m.menuOptions {
 		cursor := "  "
-		optionText := menuItemStyle.Render(opt)
+		var optionText string
+		isPrimary := isPrimaryAction(opt)
+
 		if i == m.bvbStatsSelection {
-			cursor = cursorStyle.Render("> ")
-			optionText = selectedItemStyle.Render(opt)
+			cursor = m.cursorStyle().Render(">> ")
+			if isPrimary {
+				optionText = m.selectedPrimaryStyle().Render(opt)
+			} else {
+				optionText = m.selectedSecondaryStyle().Render(opt)
+			}
+		} else {
+			if isPrimary {
+				optionText = m.menuPrimaryStyle().Render(opt)
+			} else {
+				optionText = m.menuSecondaryStyle().Render(opt)
+			}
 		}
 		b.WriteString(cursor + optionText)
 		b.WriteString("\n")
 	}
 
+	// Show status or error messages
+	if m.statusMsg != "" {
+		statusStyle := lipgloss.NewStyle().
+			Foreground(m.theme.StatusText).
+			Padding(0, 2)
+		b.WriteString("\n")
+		b.WriteString(statusStyle.Render(m.statusMsg))
+	}
+	if m.errorMsg != "" {
+		errorStyle := lipgloss.NewStyle().
+			Foreground(m.theme.ErrorText).
+			Padding(0, 2)
+		b.WriteString("\n")
+		b.WriteString(errorStyle.Render(m.errorMsg))
+	}
+
 	// Build help text, including pagination controls if multiple pages
-	helpStr := "↑/↓: navigate | Enter: select | ESC: menu"
+	helpStr := "up/down: navigate | s: export | Enter: select | ESC: menu"
 	if stats.TotalGames > 1 {
 		totalPages := (len(stats.IndividualResults) + 14) / 15 // resultsPerPage = 15
 		if totalPages > 1 {
-			helpStr = "↑/↓: navigate | ←/→: page | Enter: select | ESC: menu"
+			helpStr = "up/down: navigate | left/right: page | s: export | Enter: select | ESC: menu"
 		}
 	}
-	helpText := renderHelpText(helpStr, m.config)
+	helpText := m.renderHelpText(helpStr)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
@@ -1427,7 +1789,7 @@ func (m Model) renderBvBStats() string {
 func (m Model) renderBvBSingleView() string {
 	var b strings.Builder
 
-	title := titleStyle.Render("TermChess - Bot vs Bot")
+	title := m.titleStyle().Render("TermChess - Bot vs Bot")
 	b.WriteString(title)
 	b.WriteString("\n\n")
 
@@ -1446,7 +1808,7 @@ func (m Model) renderBvBSingleView() string {
 
 	// Show game info header
 	infoStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#50FA7B")).
+		Foreground(m.theme.StatusText).
 		Padding(0, 2)
 
 	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
@@ -1454,7 +1816,18 @@ func (m Model) renderBvBSingleView() string {
 	b.WriteString(infoStyle.Render(matchup))
 	b.WriteString("\n")
 
-	// Game number and progress
+	// Prominent "Game X of Y" indicator for multi-game mode
+	if len(sessions) > 1 {
+		gameIndicatorStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(m.theme.MenuSelected).
+			Padding(0, 2)
+		gameIndicator := fmt.Sprintf(">>> Game %d of %d <<<", selectedIdx+1, len(sessions))
+		b.WriteString(gameIndicatorStyle.Render(gameIndicator))
+		b.WriteString("\n")
+	}
+
+	// Game progress info
 	finished := 0
 	for _, s := range sessions {
 		if s.IsFinished() {
@@ -1463,15 +1836,23 @@ func (m Model) renderBvBSingleView() string {
 	}
 	running := m.bvbManager.RunningCount()
 	queued := m.bvbManager.QueuedCount()
+	concurrency := m.bvbManager.Concurrency()
 	var gameInfo string
 	if len(sessions) > 1 {
-		gameInfo = fmt.Sprintf("Game %d of %d | Completed: %d | Running: %d | Queued: %d",
-			selectedIdx+1, len(sessions), finished, running, queued)
+		gameInfo = fmt.Sprintf("Completed: %d/%d | Running: %d | Queued: %d | Concurrency: %d",
+			finished, len(sessions), running, queued, concurrency)
 	} else {
-		gameInfo = fmt.Sprintf("Game %d of %d", selectedIdx+1, len(sessions))
+		gameInfo = fmt.Sprintf("Game %d of %d | Concurrency: %d", selectedIdx+1, len(sessions), concurrency)
 	}
 	b.WriteString(infoStyle.Render(gameInfo))
 	b.WriteString("\n\n")
+
+	// Render live statistics panel
+	liveStats := m.renderBvBLiveStats()
+	if liveStats != "" {
+		b.WriteString(liveStats)
+		b.WriteString("\n\n")
+	}
 
 	// Render the chess board
 	board := session.CurrentBoard()
@@ -1499,7 +1880,7 @@ func (m Model) renderBvBSingleView() string {
 	}
 
 	statusLineStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7D56F4")).
+		Foreground(m.theme.MenuSelected).
 		Bold(true)
 	b.WriteString(statusLineStyle.Render(statusLine))
 	b.WriteString("\n")
@@ -1507,16 +1888,14 @@ func (m Model) renderBvBSingleView() string {
 	// Show pause/speed status
 	speedNames := map[bvb.PlaybackSpeed]string{
 		bvb.SpeedInstant: "Instant",
-		bvb.SpeedFast:    "Fast",
 		bvb.SpeedNormal:  "Normal",
-		bvb.SpeedSlow:    "Slow",
 	}
 	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
 	if m.bvbPaused {
 		controlStatus += " | PAUSED"
 	}
 	controlStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FFFDF5")).
+		Foreground(m.theme.MenuNormal).
 		Padding(0, 2)
 	b.WriteString(controlStyle.Render(controlStatus))
 	b.WriteString("\n")
@@ -1526,31 +1905,574 @@ func (m Model) renderBvBSingleView() string {
 		b.WriteString("\n")
 		historyHeader := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
+			Foreground(m.theme.TitleText).
 			Render("Move History:")
 		b.WriteString(historyHeader)
 		b.WriteString("\n")
 
 		historyText := FormatMoveHistory(moves)
 		historyStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4"))
+			Foreground(m.theme.MenuSelected)
 		b.WriteString(historyStyle.Render(historyText))
 		b.WriteString("\n")
 	}
 
+	// Jump prompt (if showing)
+	if m.bvbShowJumpPrompt {
+		b.WriteString("\n")
+		jumpPromptStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(m.theme.MenuSelected).
+			Padding(0, 2)
+		inputDisplay := m.bvbJumpInput
+		if inputDisplay == "" {
+			inputDisplay = "_"
+		}
+		jumpPrompt := fmt.Sprintf("Jump to game (1-%d): %s", m.bvbGameCount, inputDisplay)
+		b.WriteString(jumpPromptStyle.Render(jumpPrompt))
+		b.WriteString("\n")
+
+		jumpHintStyle := lipgloss.NewStyle().
+			Foreground(m.theme.HelpText).
+			Italic(true).
+			Padding(0, 2)
+		b.WriteString(jumpHintStyle.Render("Enter: jump | Esc: cancel"))
+		b.WriteString("\n")
+	}
+
+	// Error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
 	// Help text
-	helpStr := "Space: pause/resume | 1-4: speed | "
+	helpStr := "Space: pause/resume | t: toggle speed | "
 	if m.bvbGameCount > 1 {
-		helpStr += "←/→: games | "
+		helpStr += "left/right: games | g: jump to game | "
 	}
 	helpStr += "Tab: view | f: FEN | ESC: abort"
-	helpText := renderHelpText(helpStr, m.config)
+	helpText := m.renderHelpText(helpStr)
 	if helpText != "" {
 		b.WriteString("\n")
 		b.WriteString(helpText)
 	}
 
 	return b.String()
+}
+
+// renderBvBLiveStats renders a live statistics panel for Bot vs Bot gameplay.
+// Shows current score (White Wins / Black Wins / Draws) and progress (Completed / Total).
+// Also shows detailed statistics: average moves, longest/shortest games, current game duration,
+// last 10 moves, and captured pieces.
+// This panel updates on each BvBTickMsg as the manager's Stats() are recalculated.
+func (m Model) renderBvBLiveStats() string {
+	if m.bvbManager == nil {
+		return ""
+	}
+
+	stats := m.bvbManager.Stats()
+	sessions := m.bvbManager.Sessions()
+	totalGames := len(sessions)
+
+	if totalGames == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	// Stats panel header with box-drawing characters
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText)
+	sb.WriteString(headerStyle.Render("══════ Statistics ══════"))
+	sb.WriteString("\n")
+
+	// Score line: White Wins | Black Wins | Draws
+	scoreStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected)
+
+	whiteWins := 0
+	blackWins := 0
+	draws := 0
+	completed := 0
+
+	if stats != nil {
+		whiteWins = stats.WhiteWins
+		blackWins = stats.BlackWins
+		draws = stats.Draws
+		completed = stats.TotalGames
+	}
+
+	scoreLine := fmt.Sprintf("Score: White %d | Black %d | Draws %d", whiteWins, blackWins, draws)
+	sb.WriteString(scoreStyle.Render(scoreLine))
+	sb.WriteString("\n")
+
+	// Progress line: Games Completed / Total
+	progressStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText)
+	progressLine := fmt.Sprintf("Progress: %d / %d games", completed, totalGames)
+	sb.WriteString(progressStyle.Render(progressLine))
+	sb.WriteString("\n")
+
+	// Detailed stats (only show if we have completed games)
+	detailStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal)
+
+	if stats != nil && completed > 0 {
+		// Average moves per game
+		avgMovesLine := fmt.Sprintf("Avg Moves: %.1f", stats.AvgMoveCount)
+		sb.WriteString(detailStyle.Render(avgMovesLine))
+		sb.WriteString("\n")
+
+		// Longest and shortest games
+		longestShortestLine := fmt.Sprintf("Longest: %d moves | Shortest: %d moves",
+			stats.LongestGame.MoveCount, stats.ShortestGame.MoveCount)
+		sb.WriteString(detailStyle.Render(longestShortestLine))
+		sb.WriteString("\n")
+	}
+
+	// Current game info (selected game in single view or first running game in grid view)
+	currentSession := m.getCurrentBvBSession()
+	if currentSession != nil {
+		sb.WriteString(headerStyle.Render("─── Current Game ───"))
+		sb.WriteString("\n")
+
+		// Game duration timer
+		duration := currentSession.Duration()
+		durationStr := formatBvBDuration(duration)
+		durationLine := fmt.Sprintf("Duration: %s", durationStr)
+		sb.WriteString(detailStyle.Render(durationLine))
+		sb.WriteString("\n")
+
+		// Last 10 moves
+		moves := currentSession.CurrentMoveHistory()
+		if len(moves) > 0 {
+			lastMoves := formatLastMoves(moves, 10)
+			movesLine := fmt.Sprintf("Last moves: %s", lastMoves)
+			sb.WriteString(detailStyle.Render(movesLine))
+			sb.WriteString("\n")
+		}
+
+		// Captured pieces
+		board := currentSession.CurrentBoard()
+		if board != nil {
+			capturedWhite, capturedBlack := computeCapturedPieces(board)
+			if len(capturedWhite) > 0 || len(capturedBlack) > 0 {
+				capturedLine := fmt.Sprintf("Captured: %s | %s", capturedWhite, capturedBlack)
+				sb.WriteString(detailStyle.Render(capturedLine))
+				sb.WriteString("\n")
+			}
+		}
+	}
+
+	sb.WriteString(headerStyle.Render("═════════════════════════"))
+
+	return sb.String()
+}
+
+// getCurrentBvBSession returns the current session to display detailed stats for.
+// In single view mode, returns the selected game.
+// In grid view mode, returns the first non-finished game, or nil if all finished.
+func (m Model) getCurrentBvBSession() *bvb.GameSession {
+	if m.bvbManager == nil {
+		return nil
+	}
+
+	if m.bvbViewMode == BvBSingleView {
+		return m.bvbManager.GetSession(m.bvbSelectedGame)
+	}
+
+	// In grid view, find first running game
+	sessions := m.bvbManager.Sessions()
+	for _, s := range sessions {
+		if s != nil && !s.IsFinished() {
+			return s
+		}
+	}
+	return nil
+}
+
+// formatBvBDuration formats a duration as MM:SS for display.
+func formatBvBDuration(d time.Duration) string {
+	totalSeconds := int(d.Seconds())
+	minutes := totalSeconds / 60
+	seconds := totalSeconds % 60
+	return fmt.Sprintf("%d:%02d", minutes, seconds)
+}
+
+// formatLastMoves formats the last N moves from a move history as a comma-separated string.
+// Uses coordinate notation (e.g., "e2e4, e7e5, g1f3").
+func formatLastMoves(moves []engine.Move, n int) string {
+	if len(moves) == 0 {
+		return ""
+	}
+
+	start := 0
+	if len(moves) > n {
+		start = len(moves) - n
+	}
+
+	lastMoves := moves[start:]
+	moveStrs := make([]string, len(lastMoves))
+	for i, m := range lastMoves {
+		moveStrs[i] = m.String()
+	}
+
+	return strings.Join(moveStrs, ", ")
+}
+
+// computeCapturedPieces compares the current board state to a starting position
+// and returns strings representing captured pieces for each side.
+// Returns (whiteCaptured, blackCaptured) where whiteCaptured shows white pieces
+// that have been captured (displayed with white symbols) and blackCaptured shows
+// black pieces that have been captured (displayed with black symbols).
+func computeCapturedPieces(board *engine.Board) (string, string) {
+	// Starting piece counts for each side
+	// White: 8 pawns, 2 knights, 2 bishops, 2 rooks, 1 queen, 1 king
+	// Black: same
+	startingCounts := map[engine.PieceType]int{
+		engine.Pawn:   8,
+		engine.Knight: 2,
+		engine.Bishop: 2,
+		engine.Rook:   2,
+		engine.Queen:  1,
+		engine.King:   1,
+	}
+
+	// Count current pieces on board
+	whiteCounts := make(map[engine.PieceType]int)
+	blackCounts := make(map[engine.PieceType]int)
+
+	for sq := 0; sq < 64; sq++ {
+		piece := board.Squares[sq]
+		if piece.IsEmpty() {
+			continue
+		}
+		if piece.Color() == engine.White {
+			whiteCounts[piece.Type()]++
+		} else {
+			blackCounts[piece.Type()]++
+		}
+	}
+
+	// Unicode symbols for pieces
+	// White pieces (captured by black): ♙♘♗♖♕
+	// Black pieces (captured by white): ♟♞♝♜♛
+	whitePieceSymbols := map[engine.PieceType]rune{
+		engine.Pawn:   '♙',
+		engine.Knight: '♘',
+		engine.Bishop: '♗',
+		engine.Rook:   '♖',
+		engine.Queen:  '♕',
+	}
+	blackPieceSymbols := map[engine.PieceType]rune{
+		engine.Pawn:   '♟',
+		engine.Knight: '♞',
+		engine.Bishop: '♝',
+		engine.Rook:   '♜',
+		engine.Queen:  '♛',
+	}
+
+	// Build captured strings
+	// Order: Queen, Rook, Bishop, Knight, Pawn (most valuable first)
+	pieceOrder := []engine.PieceType{engine.Queen, engine.Rook, engine.Bishop, engine.Knight, engine.Pawn}
+
+	var whiteCaptured strings.Builder // White pieces captured (by black)
+	var blackCaptured strings.Builder // Black pieces captured (by white)
+
+	for _, pt := range pieceOrder {
+		// White pieces captured
+		whiteRemaining := whiteCounts[pt]
+		whiteMissing := startingCounts[pt] - whiteRemaining
+		for i := 0; i < whiteMissing; i++ {
+			whiteCaptured.WriteRune(whitePieceSymbols[pt])
+		}
+
+		// Black pieces captured
+		blackRemaining := blackCounts[pt]
+		blackMissing := startingCounts[pt] - blackRemaining
+		for i := 0; i < blackMissing; i++ {
+			blackCaptured.WriteRune(blackPieceSymbols[pt])
+		}
+	}
+
+	return whiteCaptured.String(), blackCaptured.String()
+}
+
+// renderBvBViewModeSelect renders the Bot vs Bot view mode selection screen.
+// Shows three options: Grid View, Single Board, Stats Only with descriptions.
+func (m Model) renderBvBViewModeSelect() string {
+	var b strings.Builder
+
+	title := m.titleStyle().Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select View Mode:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Show session info
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+	sessionInfo := fmt.Sprintf("%d game(s) | %s Bot (White) vs %s Bot (Black) | Grid: %dx%d",
+		m.bvbGameCount, botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff),
+		m.bvbGridRows, m.bvbGridCols)
+	b.WriteString(infoStyle.Render(sessionInfo))
+	b.WriteString("\n\n")
+
+	// Define view mode options with descriptions
+	type viewModeOption struct {
+		name        string
+		description string
+		hint        string
+	}
+	options := []viewModeOption{
+		{"Grid View", "Watch multiple games in a grid layout", ""},
+		{"Single Board", "Focus on one game at a time", ""},
+		{"Stats Only", "No boards, just statistics", "(Recommended for 50+ games)"},
+	}
+
+	descStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true).
+		Padding(0, 4)
+
+	hintStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Bold(true)
+
+	for i, opt := range options {
+		cursor := "  "
+		var optionText string
+
+		if i == m.bvbViewModeSelection {
+			cursor = m.cursorStyle().Render(">> ")
+			optionText = m.selectedPrimaryStyle().Render(opt.name)
+		} else {
+			optionText = m.menuPrimaryStyle().Render(opt.name)
+		}
+
+		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+
+		// Show description
+		descText := opt.description
+		if opt.hint != "" {
+			descText += " " + hintStyle.Render(opt.hint)
+		}
+		b.WriteString(descStyle.Render(descText))
+		b.WriteString("\n")
+	}
+
+	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// renderBvBStatsOnly renders the stats-only view for Bot vs Bot gameplay.
+// Displays progress bar, score summary, average moves, in-progress count, and recent completions.
+func (m Model) renderBvBStatsOnly() string {
+	var b strings.Builder
+
+	title := m.titleStyle().Render("TermChess - Bot vs Bot (Stats Only)")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	if m.bvbManager == nil {
+		b.WriteString("No session running.\n")
+		return b.String()
+	}
+
+	sessions := m.bvbManager.Sessions()
+	totalGames := len(sessions)
+	if totalGames == 0 {
+		b.WriteString("No games available.\n")
+		return b.String()
+	}
+
+	// Calculate stats
+	stats := m.bvbManager.Stats()
+	completed := 0
+	inProgress := 0
+	whiteWins := 0
+	blackWins := 0
+	draws := 0
+	totalMoves := 0
+
+	for _, s := range sessions {
+		if s.IsFinished() {
+			completed++
+			result := s.Result()
+			if result != nil {
+				totalMoves += result.MoveCount
+				switch result.Winner {
+				case "White":
+					whiteWins++
+				case "Black":
+					blackWins++
+				case "Draw":
+					draws++
+				}
+			}
+		} else {
+			inProgress++
+		}
+	}
+
+	// Override with stats from manager if available
+	if stats != nil {
+		whiteWins = stats.WhiteWins
+		blackWins = stats.BlackWins
+		draws = stats.Draws
+	}
+
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+
+	// Matchup header
+	matchup := fmt.Sprintf("%s Bot (White) vs %s Bot (Black)",
+		botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
+	b.WriteString(infoStyle.Render(matchup))
+	b.WriteString("\n\n")
+
+	// Progress bar
+	progressBar := renderProgressBar(completed, totalGames, 40)
+	progressStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.MenuSelected).
+		Padding(0, 2)
+	b.WriteString(progressStyle.Render(progressBar))
+	b.WriteString("\n\n")
+
+	// Score summary
+	statStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal).
+		Padding(0, 2)
+
+	scoreLine := fmt.Sprintf("Score:  White: %d  |  Black: %d  |  Draws: %d", whiteWins, blackWins, draws)
+	scoreStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 2)
+	b.WriteString(scoreStyle.Render(scoreLine))
+	b.WriteString("\n\n")
+
+	// Average moves per completed game
+	avgMoves := 0.0
+	if completed > 0 {
+		if stats != nil {
+			avgMoves = stats.AvgMoveCount
+		} else {
+			avgMoves = float64(totalMoves) / float64(completed)
+		}
+	}
+	avgLine := fmt.Sprintf("Average moves per game: %.1f", avgMoves)
+	b.WriteString(statStyle.Render(avgLine))
+	b.WriteString("\n")
+
+	// In-progress indicator
+	inProgressLine := fmt.Sprintf("%d game(s) in progress", inProgress)
+	inProgressStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+	b.WriteString(inProgressStyle.Render(inProgressLine))
+	b.WriteString("\n\n")
+
+	// Concurrency info
+	running := m.bvbManager.RunningCount()
+	queued := m.bvbManager.QueuedCount()
+	concurrency := m.bvbManager.Concurrency()
+	concurrencyLine := fmt.Sprintf("Running: %d | Queued: %d | Concurrency: %d", running, queued, concurrency)
+	b.WriteString(statStyle.Render(concurrencyLine))
+	b.WriteString("\n\n")
+
+	// Recent completions log (last 5 results)
+	recentHeader := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 2)
+	b.WriteString(recentHeader.Render("Recent Completions:"))
+	b.WriteString("\n")
+
+	recentStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Padding(0, 4)
+
+	if len(m.bvbRecentCompletions) == 0 {
+		b.WriteString(recentStyle.Render("(none yet)"))
+		b.WriteString("\n")
+	} else {
+		for _, entry := range m.bvbRecentCompletions {
+			b.WriteString(recentStyle.Render(entry))
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n")
+
+	// Speed/pause status
+	speedNames := map[bvb.PlaybackSpeed]string{
+		bvb.SpeedInstant: "Instant",
+		bvb.SpeedNormal:  "Normal",
+	}
+	controlStatus := fmt.Sprintf("Speed: %s", speedNames[m.bvbSpeed])
+	if m.bvbPaused {
+		controlStatus += " | PAUSED"
+	}
+	controlStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal).
+		Padding(0, 2)
+	b.WriteString(controlStyle.Render(controlStatus))
+	b.WriteString("\n")
+
+	// Error message if present
+	if m.errorMsg != "" {
+		b.WriteString("\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	// Help text
+	helpText := m.renderHelpText("[Space] Pause/Resume | [v] Change view | [t] Speed | [q/ESC] Quit")
+	if helpText != "" {
+		b.WriteString("\n")
+		b.WriteString(helpText)
+	}
+
+	return b.String()
+}
+
+// renderProgressBar creates a text-based progress bar.
+// Parameters: completed items, total items, width of the bar in characters.
+func renderProgressBar(completed, total, width int) string {
+	if total == 0 {
+		return "[" + strings.Repeat("░", width) + "] 0% (0/0)"
+	}
+	percent := float64(completed) / float64(total)
+	filled := int(percent * float64(width))
+	if filled > width {
+		filled = width
+	}
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
+	return fmt.Sprintf("[%s] %d%% (%d/%d)", bar, int(percent*100), completed, total)
 }
 
 // botDifficultyName returns the display name for a bot difficulty.
@@ -1577,10 +2499,10 @@ func (m Model) formatMoveHistory() string {
 
 	var b strings.Builder
 	b.WriteString("Move History: ")
-	
+
 	// We need to replay moves on a board to format them as SAN
 	board := engine.NewBoard()
-	
+
 	for i := 0; i < len(m.moveHistory); i += 2 {
 		moveNum := (i / 2) + 1
 
@@ -1603,6 +2525,253 @@ func (m Model) formatMoveHistory() string {
 			b.WriteString(fmt.Sprintf("%d. %s", moveNum, whiteSAN))
 		}
 	}
-	
+
 	return b.String()
+}
+
+// getThemeDisplayName returns a display-friendly name for a theme.
+// Converts the internal theme name string to a capitalized display name.
+func getThemeDisplayName(themeName string) string {
+	switch themeName {
+	case ThemeNameModern:
+		return "Modern"
+	case ThemeNameMinimalist:
+		return "Minimalist"
+	case ThemeNameClassic:
+		return "Classic"
+	default:
+		return "Classic"
+	}
+}
+
+// renderShortcutsOverlay renders a full-screen modal overlay displaying all keyboard shortcuts.
+// The overlay is organized by context (Global, Menu, Settings, Gameplay, Bot vs Bot).
+func (m Model) renderShortcutsOverlay() string {
+	var b strings.Builder
+
+	// Title style for the overlay
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Align(lipgloss.Center).
+		Padding(1, 0)
+
+	// Section header style
+	sectionStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.MenuSelected).
+		Padding(1, 0, 0, 0)
+
+	// Shortcut key style (left column)
+	keyStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuSelected).
+		Bold(true).
+		Width(15)
+
+	// Description style (right column)
+	descStyle := lipgloss.NewStyle().
+		Foreground(m.theme.MenuNormal)
+
+	// Hint style for the footer
+	hintStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true).
+		Padding(2, 0, 0, 0)
+
+	// Render title
+	b.WriteString(titleStyle.Render("Keyboard Shortcuts"))
+	b.WriteString("\n")
+
+	// Helper function to render a shortcut line
+	renderShortcut := func(key, description string) {
+		b.WriteString(keyStyle.Render(key))
+		b.WriteString(descStyle.Render(description))
+		b.WriteString("\n")
+	}
+
+	// Global shortcuts
+	b.WriteString(sectionStyle.Render("Global"))
+	b.WriteString("\n")
+	renderShortcut("?", "Show this help overlay")
+	renderShortcut("n", "Start new game")
+	renderShortcut("s", "Open settings")
+	renderShortcut("Ctrl+C", "Quit application")
+	renderShortcut("q", "Quit (or show save prompt in game)")
+	renderShortcut("Esc", "Go back / Cancel")
+
+	// Menu navigation
+	b.WriteString(sectionStyle.Render("Menu Navigation"))
+	b.WriteString("\n")
+	renderShortcut("Up / k", "Move selection up")
+	renderShortcut("Down / j", "Move selection down")
+	renderShortcut("Enter", "Select / Confirm")
+
+	// Settings
+	b.WriteString(sectionStyle.Render("Settings"))
+	b.WriteString("\n")
+	renderShortcut("Up / k", "Previous setting")
+	renderShortcut("Down / j", "Next setting")
+	renderShortcut("Enter/Space", "Toggle / Cycle setting")
+
+	// Gameplay
+	b.WriteString(sectionStyle.Render("Gameplay"))
+	b.WriteString("\n")
+	renderShortcut("Type move", "Enter move (e.g., e4, Nf3, O-O)")
+	renderShortcut("Enter", "Submit move")
+	renderShortcut("resign", "Resign the game")
+	renderShortcut("offerdraw", "Offer a draw")
+	renderShortcut("showfen", "Show/copy FEN position")
+	renderShortcut("menu", "Return to menu (with save)")
+
+	// Bot vs Bot
+	b.WriteString(sectionStyle.Render("Bot vs Bot"))
+	b.WriteString("\n")
+	renderShortcut("Space", "Pause / Resume")
+	renderShortcut("Left / h", "Previous game / page")
+	renderShortcut("Right / l", "Next game / page")
+	renderShortcut("g", "Jump to game (enter game number)")
+	renderShortcut("Tab", "Toggle grid / single view")
+	renderShortcut("t", "Toggle speed (Normal / Instant)")
+	renderShortcut("f", "Copy FEN of current game")
+
+	// Footer hint
+	b.WriteString(hintStyle.Render("Press any key to close"))
+
+	return b.String()
+}
+
+// renderBvBConcurrencySelect renders the Bot vs Bot concurrency selection screen.
+// Shows two options: Recommended (auto-calculated based on CPU) and Custom.
+func (m Model) renderBvBConcurrencySelect() string {
+	var b strings.Builder
+
+	title := m.titleStyle().Render("TermChess")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText).
+		Padding(0, 0, 1, 0)
+	header := headerStyle.Render("Select Concurrency:")
+	b.WriteString(header)
+	b.WriteString("\n")
+
+	// Show session info
+	infoStyle := lipgloss.NewStyle().
+		Foreground(m.theme.StatusText).
+		Padding(0, 2)
+	sessionInfo := fmt.Sprintf("%d game(s) | %s Bot (White) vs %s Bot (Black)",
+		m.bvbGameCount, botDifficultyName(m.bvbWhiteDiff), botDifficultyName(m.bvbBlackDiff))
+	b.WriteString(infoStyle.Render(sessionInfo))
+	b.WriteString("\n\n")
+
+	// Get recommended concurrency and CPU count
+	recommendedConcurrency := bvb.CalculateDefaultConcurrency()
+	numCPU := getCPUCount()
+
+	// Define options
+	type concurrencyOption struct {
+		name        string
+		description string
+	}
+	options := []concurrencyOption{
+		{
+			name:        fmt.Sprintf("Recommended (%d concurrent games)", recommendedConcurrency),
+			description: fmt.Sprintf("Based on your CPU (%d cores)", numCPU),
+		},
+		{
+			name:        "Custom",
+			description: "Enter your own value (may cause lag)",
+		},
+	}
+
+	descStyle := lipgloss.NewStyle().
+		Foreground(m.theme.HelpText).
+		Italic(true).
+		Padding(0, 4)
+
+	// If inputting custom value, show input field instead of menu
+	if m.bvbInputtingConcurrency {
+		// Show input prompt
+		inputStyle := lipgloss.NewStyle().
+			Foreground(m.theme.TitleText).
+			Padding(0, 2)
+		b.WriteString(inputStyle.Render("Enter concurrency: "))
+
+		// Show the input with cursor
+		inputValueStyle := lipgloss.NewStyle().
+			Foreground(m.theme.MenuSelected).
+			Bold(true)
+		inputText := m.bvbCustomConcurrency + "_"
+		b.WriteString(inputValueStyle.Render(inputText))
+		b.WriteString("\n")
+
+		// Show warning if value exceeds 50
+		if val := parseConcurrencyValue(m.bvbCustomConcurrency); val > 50 {
+			warnStyle := lipgloss.NewStyle().
+				Foreground(m.theme.ErrorText).
+				Bold(true).
+				Padding(0, 2)
+			b.WriteString("\n")
+			b.WriteString(warnStyle.Render("Warning: High concurrency may cause lag. Consider using Stats Only view mode."))
+			b.WriteString("\n")
+		}
+
+		helpText := m.renderHelpText("enter: confirm | esc: cancel")
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
+	} else {
+		// Show menu options
+		for i, opt := range options {
+			cursor := "  "
+			var optionText string
+
+			if i == m.bvbConcurrencySelection {
+				cursor = m.cursorStyle().Render(">> ")
+				optionText = m.selectedPrimaryStyle().Render(opt.name)
+			} else {
+				optionText = m.menuPrimaryStyle().Render(opt.name)
+			}
+
+			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+			b.WriteString(descStyle.Render(opt.description))
+			b.WriteString("\n")
+		}
+
+		helpText := m.renderHelpText("arrows/jk: navigate | enter: select | esc: back")
+		if helpText != "" {
+			b.WriteString("\n")
+			b.WriteString(helpText)
+		}
+	}
+
+	if m.errorMsg != "" {
+		b.WriteString("\n\n")
+		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
+		b.WriteString(errorText)
+	}
+
+	return b.String()
+}
+
+// parseConcurrencyValue parses a string into an integer, returning 0 if invalid.
+func parseConcurrencyValue(s string) int {
+	if s == "" {
+		return 0
+	}
+	var val int
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			val = val*10 + int(r-'0')
+		}
+	}
+	return val
+}
+
+// getCPUCount returns the number of CPUs available.
+func getCPUCount() int {
+	return runtime.NumCPU()
 }

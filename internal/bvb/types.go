@@ -13,12 +13,8 @@ type PlaybackSpeed int
 const (
 	// SpeedInstant applies no delay between moves.
 	SpeedInstant PlaybackSpeed = iota
-	// SpeedFast applies a 500ms delay between moves.
-	SpeedFast
-	// SpeedNormal applies a 1500ms delay between moves.
+	// SpeedNormal applies a 1 second delay between moves.
 	SpeedNormal
-	// SpeedSlow applies a 3000ms delay between moves.
-	SpeedSlow
 )
 
 // Duration returns the time delay associated with this playback speed.
@@ -26,12 +22,8 @@ func (s PlaybackSpeed) Duration() time.Duration {
 	switch s {
 	case SpeedInstant:
 		return 0
-	case SpeedFast:
-		return 500 * time.Millisecond
 	case SpeedNormal:
-		return 1500 * time.Millisecond
-	case SpeedSlow:
-		return 3000 * time.Millisecond
+		return time.Second
 	default:
 		return 0
 	}

@@ -10,20 +10,20 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// TestRenderHelpText tests the renderHelpText helper function
+// TestRenderHelpText tests the renderHelpText helper method
 func TestRenderHelpText(t *testing.T) {
 	testText := "test help text"
 
 	// Test with ShowHelpText enabled
-	config := Config{ShowHelpText: true}
-	result := renderHelpText(testText, config)
+	m := NewModel(Config{ShowHelpText: true, Theme: ThemeNameClassic})
+	result := m.renderHelpText(testText)
 	if result == "" {
 		t.Error("Expected non-empty result when ShowHelpText is true")
 	}
 
 	// Test with ShowHelpText disabled
-	config = Config{ShowHelpText: false}
-	result = renderHelpText(testText, config)
+	m.config.ShowHelpText = false
+	result = m.renderHelpText(testText)
 	if result != "" {
 		t.Errorf("Expected empty result when ShowHelpText is false, got %q", result)
 	}
@@ -313,27 +313,6 @@ func TestHelpTextVisibilitySavePrompt(t *testing.T) {
 	// Options should still be visible, but the help text at the bottom should be hidden
 	if strings.Contains(output, "y: save and exit | n: exit without saving | ESC: cancel") {
 		t.Error("Expected help text to be hidden on save prompt screen when ShowHelpText is false")
-	}
-}
-
-// TestHelpTextVisibilityResumePrompt tests that help text is shown/hidden on resume prompt screen
-func TestHelpTextVisibilityResumePrompt(t *testing.T) {
-	m := NewModel(DefaultConfig())
-	m.screen = ScreenResumePrompt
-
-	// Test with help text enabled
-	m.config.ShowHelpText = true
-	output := m.renderResumePrompt()
-	if !strings.Contains(output, "y:") || !strings.Contains(output, "n:") {
-		t.Error("Expected help text to be visible on resume prompt screen when ShowHelpText is true")
-	}
-
-	// Test with help text disabled
-	m.config.ShowHelpText = false
-	output = m.renderResumePrompt()
-	// Options should still be visible, but the help text at the bottom should be hidden
-	if strings.Contains(output, "y: resume game | n: go to main menu") {
-		t.Error("Expected help text to be hidden on resume prompt screen when ShowHelpText is false")
 	}
 }
 

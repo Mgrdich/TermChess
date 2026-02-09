@@ -31,8 +31,6 @@ const (
 	ScreenSettings
 	// ScreenSavePrompt is displayed when the user tries to quit during an active game
 	ScreenSavePrompt
-	// ScreenResumePrompt is displayed on startup when a saved game exists
-	ScreenResumePrompt
 	// ScreenDrawPrompt is displayed when one player offers a draw
 	ScreenDrawPrompt
 	// ScreenBvBBotSelect allows the user to choose bot difficulties for Bot vs Bot mode
@@ -45,6 +43,10 @@ const (
 	ScreenBvBGamePlay
 	// ScreenBvBStats is displayed after all Bot vs Bot games finish
 	ScreenBvBStats
+	// ScreenBvBViewModeSelect allows the user to select view mode before starting session
+	ScreenBvBViewModeSelect
+	// ScreenBvBConcurrencySelect allows the user to choose concurrency for multi-game BvB sessions
+	ScreenBvBConcurrencySelect
 )
 
 // GameType represents the type of chess game being played.
@@ -84,8 +86,12 @@ type Model struct {
 	// UI state
 	// screen tracks which screen is currently being displayed
 	screen Screen
+	// navStack tracks the navigation history for back navigation
+	navStack []Screen
 	// config holds display configuration options
 	config Config
+	// theme holds the current color theme for UI rendering
+	theme Theme
 	// termWidth holds the current terminal width in characters
 	termWidth int
 	// termHeight holds the current terminal height in lines
@@ -174,6 +180,41 @@ type Model struct {
 	bvbStatsSelection int
 	// bvbStatsResultsPage tracks the current page of individual results on the stats screen
 	bvbStatsResultsPage int
+	// bvbJumpInput holds the text input for game number entry during jump navigation
+	bvbJumpInput string
+	// bvbShowJumpPrompt indicates whether the jump prompt is visible
+	bvbShowJumpPrompt bool
+	// bvbViewModeSelection tracks the currently selected option in view mode selection screen
+	bvbViewModeSelection int
+	// bvbRecentCompletions stores the last 5 game completion results for stats-only view
+	bvbRecentCompletions []string
+	// bvbConcurrencySelection tracks the selected option (0 = Recommended, 1 = Custom)
+	bvbConcurrencySelection int
+	// bvbCustomConcurrency holds the text input for custom concurrency value
+	bvbCustomConcurrency string
+	// bvbInputtingConcurrency indicates whether we're in text input mode for custom concurrency
+	bvbInputtingConcurrency bool
+	// bvbConcurrency stores the selected concurrency value for the session
+	bvbConcurrency int
+	// bvbShowAbortConfirm indicates whether the abort confirmation dialog is displayed
+	bvbShowAbortConfirm bool
+	// bvbAbortSelection tracks the selected option in abort dialog (0 = Cancel, 1 = Abort)
+	bvbAbortSelection int
+
+	// Overlay state
+	// showShortcutsOverlay indicates whether the keyboard shortcuts help overlay is displayed
+	showShortcutsOverlay bool
+
+	// Mouse interaction state
+	// selectedSquare holds the currently selected piece's square for mouse interaction
+	// nil means no piece is currently selected
+	selectedSquare *engine.Square
+	// validMoves stores the valid destination squares for the currently selected piece
+	// This is computed when a piece is selected and used to validate move execution
+	validMoves []engine.Square
+	// blinkOn controls the blinking highlight state for selected squares
+	// Toggles every 500ms when a piece is selected to create a blinking effect
+	blinkOn bool
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.
@@ -184,6 +225,8 @@ const (
 	BvBGridView BvBViewMode = iota
 	// BvBSingleView shows a single board with full details
 	BvBSingleView
+	// BvBStatsOnlyView shows only statistics without board rendering
+	BvBStatsOnlyView
 )
 
 // NewModel creates and initializes a new Model with the provided configuration.
@@ -199,6 +242,9 @@ func NewModel(config Config) Model {
 	// Build menu options dynamically based on saved game existence
 	menuOptions := buildMainMenuOptions()
 
+	// Load theme based on config
+	theme := GetTheme(ParseThemeName(config.Theme))
+
 	return Model{
 		// Initialize with nil board (created when starting a new game)
 		board:       nil,
@@ -209,6 +255,9 @@ func NewModel(config Config) Model {
 
 		// Use the provided configuration
 		config: config,
+
+		// Use the loaded theme
+		theme: theme,
 
 		// Initialize input state
 		input:     "",

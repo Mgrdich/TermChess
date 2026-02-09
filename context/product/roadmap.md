@@ -61,22 +61,22 @@ _Automated gameplay for testing, entertainment, and analysis._
 
 _Enhanced user interaction and visual experience._
 
-- [ ] **Mouse Interaction & UI/UX Enhancements**
-  - [ ] **Click-to-Select Pieces:** Allow users to click on a piece to select it for moving.
-  - [ ] **Click-to-Move:** Allow users to click on a destination square to complete a move.
-  - [ ] **Visual Feedback:** Highlight selected pieces and valid move destinations on hover/click.
-  - [ ] **Make the Menu more intuitive** make sure the menu on the buttom is more intuitive.
-  - [ ] **Beautiful Board Themes:** Offer multiple color schemes and board styles and make sure the text of the user and the color match for the piece (classic, modern, minimalist, etc.).
-  - [ ] **Smooth Animations:** Add subtle animations for piece movement and board transitions.
-  - [ ] **Enhanced Typography:** Improve text rendering with better fonts and spacing for readability.
-  - [ ] **Visual Polish:** Refine borders, shadows, and spacing to create a polished, professional appearance.
-  - [ ] **Accessibility Features:** Ensure color contrast ratios meet standards and add screen reader support.
-  - [ ] **Make better pagination for Bot vs bot** it should give the user power to navigate to any game 
-  - [ ] **Go over all the paginated pages** it should give the user power to navigate to any game
-  - [ ] **add more navigations** add more intuitive navigations 
-  - [ ] **UI optimization during BOT VS BOT** make the UI navigation more smooth to avoid lags 
-  - [ ] **BOT vs BOT statistics** add statistics page to games while games are still running
-  - [ ] **BOT vs BOT** speed should only have 2 options normal vs instant 
+- [x] **Mouse Interaction & UI/UX Enhancements**
+  - [x] **Click-to-Select Pieces:** Allow users to click on a piece to select it for moving.
+  - [x] **Click-to-Move:** Allow users to click on a destination square to complete a move.
+  - [x] **Visual Feedback:** Highlight selected pieces and valid move destinations with blinking effect.
+  - [x] **Make the Menu more intuitive:** Reorganized menu with visual hierarchy and keyboard shortcuts.
+  - [x] **Beautiful Board Themes:** Three themes available (Classic, Modern, Minimalist) with turn-colored text.
+  - [x] **Accessibility Features:** WCAG AA color contrast compliance, full keyboard navigation.
+  - [x] **Make better pagination for Bot vs bot:** Jump to any game number with 'g' key.
+  - [x] **Add more navigations:** Navigation stack with breadcrumbs, consistent ESC back-navigation.
+  - [x] **UI optimization during BOT VS BOT:** Stats-only mode for high concurrency, configurable concurrency selection.
+  - [x] **BOT vs BOT statistics:** Live statistics panel with score, progress, move counts, and export to JSON.
+  - [x] **BOT vs BOT speed:** Simplified to Normal (1s) and Instant options.
+  - [x] **Grid Layout Stability:** Fixed-dimension cells prevent visual jumping when games complete.
+  - [x] **Terminal Resize Handling:** Responsive layout adapts to terminal size changes.
+  - [x] **Statistics Export:** Save session data to JSON file with move history.
+  - [x] **Abort Confirmation Dialog:** ESC during active session shows confirmation before aborting. 
 
 ---
 

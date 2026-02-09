@@ -1,6 +1,7 @@
 package bvb
 
 import (
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -17,6 +18,40 @@ func MaxConcurrentGames() int {
 	return maxConcurrentGames
 }
 
+// CalculateDefaultConcurrency returns the recommended concurrency based on CPU count.
+// It uses a tiered formula:
+//   - numCPU <= 2: use numCPU
+//   - numCPU <= 4: use numCPU * 1.5
+//   - numCPU > 4: use numCPU * 2
+//
+// The result is capped at maxConcurrentGames and has a minimum of 1.
+func CalculateDefaultConcurrency() int {
+	return calculateDefaultConcurrencyWithCPU(runtime.NumCPU())
+}
+
+// calculateDefaultConcurrencyWithCPU is the internal implementation that accepts
+// the CPU count as a parameter for testing purposes.
+func calculateDefaultConcurrencyWithCPU(numCPU int) int {
+	var concurrency int
+	switch {
+	case numCPU <= 2:
+		concurrency = numCPU
+	case numCPU <= 4:
+		concurrency = int(float64(numCPU) * 1.5)
+	default:
+		concurrency = numCPU * 2
+	}
+
+	// Cap at reasonable maximum
+	if concurrency > maxConcurrentGames {
+		concurrency = maxConcurrentGames
+	}
+	if concurrency < 1 {
+		concurrency = 1
+	}
+	return concurrency
+}
+
 // SessionManager orchestrates N parallel game sessions.
 type SessionManager struct {
 	mu          sync.Mutex
@@ -28,26 +63,42 @@ type SessionManager struct {
 	whiteName   string
 	blackName   string
 	gameCount   int
+	concurrency int           // effective concurrency (auto-detected or user-specified)
 	semaphore   chan struct{} // limits concurrent game execution
 	abortCh     chan struct{} // signals all waiting goroutines to abort
 	activeCount int32         // atomic counter for currently running games
 }
 
 // NewSessionManager creates a new manager configured for the given matchup.
-func NewSessionManager(whiteDiff, blackDiff bot.Difficulty, whiteName, blackName string, gameCount int) *SessionManager {
+// The concurrency parameter controls how many games run in parallel.
+// If concurrency is 0, it auto-detects based on CPU count (capped at maxConcurrentGames).
+// If concurrency is explicitly provided by the user, it is NOT capped (user accepts responsibility).
+func NewSessionManager(whiteDiff, blackDiff bot.Difficulty, whiteName, blackName string, gameCount, concurrency int) *SessionManager {
+	// Auto-detect if concurrency is 0
+	effectiveConcurrency := concurrency
+	if effectiveConcurrency == 0 {
+		effectiveConcurrency = CalculateDefaultConcurrency()
+	}
+
+	// Ensure at least 1
+	if effectiveConcurrency < 1 {
+		effectiveConcurrency = 1
+	}
+
 	return &SessionManager{
-		state:     StateRunning,
-		speed:     SpeedNormal,
-		whiteDiff: whiteDiff,
-		blackDiff: blackDiff,
-		whiteName: whiteName,
-		blackName: blackName,
-		gameCount: gameCount,
+		state:       StateRunning,
+		speed:       SpeedNormal,
+		whiteDiff:   whiteDiff,
+		blackDiff:   blackDiff,
+		whiteName:   whiteName,
+		blackName:   blackName,
+		gameCount:   gameCount,
+		concurrency: effectiveConcurrency,
 	}
 }
 
 // Start creates engine instances for each game and launches them via a coordinator.
-// Games are started in order (1, 2, 3, ...) with up to maxConcurrentGames running at once.
+// Games are started in order (1, 2, 3, ...) with up to concurrency running at once.
 func (m *SessionManager) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -55,11 +106,12 @@ func (m *SessionManager) Start() error {
 	m.sessions = make([]*GameSession, m.gameCount)
 
 	// Create semaphore to limit concurrent games
-	concurrency := maxConcurrentGames
-	if m.gameCount < concurrency {
-		concurrency = m.gameCount
+	// Use the smaller of concurrency and gameCount
+	semaphoreSize := m.concurrency
+	if m.gameCount < semaphoreSize {
+		semaphoreSize = m.gameCount
 	}
-	m.semaphore = make(chan struct{}, concurrency)
+	m.semaphore = make(chan struct{}, semaphoreSize)
 	m.abortCh = make(chan struct{})
 
 	// Pre-create all sessions and their engines
@@ -102,7 +154,18 @@ func (m *SessionManager) coordinateGames() {
 					atomic.AddInt32(&m.activeCount, -1)
 					<-m.semaphore // release slot when done
 				}()
-				m.sessions[idx].Run()
+
+				// Safely get the session while holding the lock
+				// This prevents race with Stop() which sets m.sessions = nil
+				m.mu.Lock()
+				if m.sessions == nil || idx >= len(m.sessions) || m.sessions[idx] == nil {
+					m.mu.Unlock()
+					return
+				}
+				session := m.sessions[idx]
+				m.mu.Unlock()
+
+				session.Run()
 			}(i)
 		case <-m.abortCh:
 			// Aborted, stop starting new games
@@ -170,6 +233,29 @@ func (m *SessionManager) Abort() {
 	m.abortSessions()
 }
 
+// Stop stops the session manager and cleans up all sessions and their resources.
+// This is the preferred method for graceful shutdown as it ensures all engines
+// are properly closed and resources are freed. It signals all goroutines to exit
+// via the abort channel and then cleans up each session.
+func (m *SessionManager) Stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.state = StateFinished
+
+	// Signal all waiting goroutines to stop
+	m.closeAbortChannel()
+
+	// Abort all running sessions
+	m.abortSessions()
+
+	// Cleanup all sessions (call cleanup on each to ensure engines are properly closed)
+	m.cleanupAllSessions()
+
+	// Nil out the sessions slice to allow garbage collection
+	m.sessions = nil
+}
+
 // closeAbortChannel safely closes the abort channel if not already closed.
 // Must be called with m.mu held.
 func (m *SessionManager) closeAbortChannel() {
@@ -188,6 +274,16 @@ func (m *SessionManager) abortSessions() {
 	for _, s := range m.sessions {
 		if s != nil && !s.IsFinished() {
 			s.Abort()
+		}
+	}
+}
+
+// cleanupAllSessions calls cleanup on all sessions to ensure engines are closed.
+// Must be called with m.mu held.
+func (m *SessionManager) cleanupAllSessions() {
+	for _, s := range m.sessions {
+		if s != nil {
+			s.cleanup()
 		}
 	}
 }
@@ -230,6 +326,14 @@ func (m *SessionManager) Speed() PlaybackSpeed {
 	return m.speed
 }
 
+// Concurrency returns the effective concurrency setting.
+// This is the number of games that can run in parallel.
+func (m *SessionManager) Concurrency() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.concurrency
+}
+
 // RunningCount returns the number of games currently executing.
 func (m *SessionManager) RunningCount() int {
 	return int(atomic.LoadInt32(&m.activeCount))
@@ -269,4 +373,23 @@ func (m *SessionManager) Stats() *AggregateStats {
 	}
 
 	return ComputeStats(results, m.whiteName, m.blackName)
+}
+
+// GetSession returns the session at the given index (0-indexed).
+// Returns nil if the index is out of bounds or sessions haven't been created yet.
+func (m *SessionManager) GetSession(index int) *GameSession {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if index < 0 || index >= len(m.sessions) {
+		return nil
+	}
+	return m.sessions[index]
+}
+
+// GameCount returns the total number of games configured for this session.
+func (m *SessionManager) GameCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.gameCount
 }

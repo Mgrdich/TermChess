@@ -36,20 +36,21 @@ func TestSettingsNavigation(t *testing.T) {
 		t.Errorf("Expected settingsSelection to be 1, got %d", m.settingsSelection)
 	}
 
-	// Test wrapping at bottom (should go from 4 to 0)
-	m.settingsSelection = 4
+	// Test wrapping at bottom (should go from 5 to 0)
+	// Note: 6 settings total (5 toggles + 1 theme)
+	m.settingsSelection = 5
 	model, _ = m.handleSettingsKeys(tea.KeyMsg{Type: tea.KeyDown})
 	m = model.(Model)
 	if m.settingsSelection != 0 {
 		t.Errorf("Expected settingsSelection to wrap to 0, got %d", m.settingsSelection)
 	}
 
-	// Test wrapping at top (should go from 0 to 4)
+	// Test wrapping at top (should go from 0 to 5)
 	m.settingsSelection = 0
 	model, _ = m.handleSettingsKeys(tea.KeyMsg{Type: tea.KeyUp})
 	m = model.(Model)
-	if m.settingsSelection != 4 {
-		t.Errorf("Expected settingsSelection to wrap to 4, got %d", m.settingsSelection)
+	if m.settingsSelection != 5 {
+		t.Errorf("Expected settingsSelection to wrap to 5, got %d", m.settingsSelection)
 	}
 }
 
@@ -107,6 +108,19 @@ func TestSettingsToggle(t *testing.T) {
 	m = model.(Model)
 	if m.config.ShowHelpText == initialValue {
 		t.Errorf("Expected ShowHelpText to toggle from %v to %v", initialValue, !initialValue)
+	}
+
+	// Test cycling Theme (option 5)
+	m.settingsSelection = 5
+	m.config.Theme = ThemeNameClassic
+	m.theme = GetTheme(ThemeClassic)
+	model, _ = m.handleSettingsKeys(tea.KeyMsg{Type: tea.KeyEnter})
+	m = model.(Model)
+	if m.config.Theme != ThemeNameModern {
+		t.Errorf("Expected Theme to cycle from classic to modern, got %s", m.config.Theme)
+	}
+	if m.theme.Name != ThemeNameModern {
+		t.Errorf("Expected theme object to be updated to modern, got %s", m.theme.Name)
 	}
 }
 
@@ -171,7 +185,7 @@ func TestSettingsRender(t *testing.T) {
 	}
 
 	// Check that output contains expected strings
-	expectedStrings := []string{"Settings", "Use Unicode Pieces", "Show Coordinates", "Use Colors", "Show Move History", "Show Help Text"}
+	expectedStrings := []string{"Settings", "Use Unicode Pieces", "Show Coordinates", "Use Colors", "Show Move History", "Show Help Text", "Theme:"}
 	for _, expected := range expectedStrings {
 		if !strings.Contains(output, expected) {
 			t.Errorf("Expected output to contain '%s'", expected)

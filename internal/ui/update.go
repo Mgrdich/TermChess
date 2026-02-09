@@ -18,6 +18,10 @@ import (
 // BvBTickMsg triggers a UI re-render for Bot vs Bot gameplay.
 type BvBTickMsg struct{}
 
+// BlinkTickMsg triggers the blink state toggle for selected square highlighting.
+// The blink effect runs at 500ms intervals while a piece is selected.
+type BlinkTickMsg time.Time
+
 // BotMoveMsg is sent when the bot has selected a move.
 type BotMoveMsg struct {
 	move engine.Move
@@ -26,6 +30,14 @@ type BotMoveMsg struct {
 // BotMoveErrorMsg is sent when the bot encounters an error during move selection.
 type BotMoveErrorMsg struct {
 	err error
+}
+
+// blinkTickCmd returns a command that sends a BlinkTickMsg after 500ms.
+// Used to create the blinking highlight effect for selected squares.
+func blinkTickCmd() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+		return BlinkTickMsg(t)
+	})
 }
 
 // Init initializes the model. Called once at program start.
@@ -45,6 +57,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.termWidth = msg.Width
 		m.termHeight = msg.Height
+		// Adjust BvB grid for new terminal width if in BvB gameplay
+		if m.screen == ScreenBvBGamePlay && m.bvbViewMode == BvBGridView {
+			m.adjustBvBGridForWidth()
+		}
 		return m, nil
 	case BvBTickMsg:
 		return m.handleBvBTick()
@@ -52,6 +68,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleBotMove(msg)
 	case BotMoveErrorMsg:
 		return m.handleBotMoveError(msg)
+	case tea.MouseMsg:
+		// Only handle mouse in interactive game modes (not Bot vs Bot)
+		if m.screen == ScreenGamePlay && m.gameType != GameTypeBvB {
+			return m.handleMouseEvent(msg)
+		}
+		return m, nil
+	case BlinkTickMsg:
+		// Only continue ticking if a piece is selected
+		if m.selectedSquare != nil {
+			m.blinkOn = !m.blinkOn
+			return m, blinkTickCmd()
+		}
+		m.blinkOn = false
+		return m, nil
 	}
 
 	return m, nil
@@ -61,6 +91,45 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // Global keys like quit are handled first, then screen-specific keys are delegated
 // to the current screen's handler.
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If shortcuts overlay is showing, any key dismisses it
+	if m.showShortcutsOverlay {
+		m.showShortcutsOverlay = false
+		return m, nil
+	}
+
+	// Handle '?' key to toggle shortcuts overlay (only when not in text input mode)
+	if msg.String() == "?" && !m.isInTextInputMode() {
+		m.showShortcutsOverlay = true
+		return m, nil
+	}
+
+	// Handle 'n' key globally for new game (only when not in text input mode)
+	if msg.String() == "n" && !m.isInTextInputMode() {
+		// Don't trigger if already on game type select, in active game, or game over
+		if m.screen != ScreenGameTypeSelect && m.screen != ScreenGamePlay && m.screen != ScreenGameOver &&
+			m.screen != ScreenBvBGamePlay && m.screen != ScreenBvBStats {
+			m.pushScreen(ScreenGameTypeSelect)
+			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+			m.menuSelection = 0
+			m.statusMsg = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+
+	// Handle 's' key globally for settings (only when not in text input mode)
+	// Exception: On BvB stats screen, 's' is used for export instead of settings
+	if msg.String() == "s" && !m.isInTextInputMode() {
+		// Don't trigger if already on settings or on BvB stats screen (where 's' means export)
+		if m.screen != ScreenSettings && m.screen != ScreenBvBStats {
+			m.pushScreen(ScreenSettings)
+			m.settingsSelection = 0
+			m.statusMsg = ""
+			m.errorMsg = ""
+			return m, nil
+		}
+	}
+
 	// Handle global quit keys (work from any screen except GamePlay where 'q' shows save prompt)
 	switch msg.String() {
 	case "ctrl+c":
@@ -111,8 +180,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSettingsKeys(msg)
 	case ScreenSavePrompt:
 		return m.handleSavePromptKeys(msg)
-	case ScreenResumePrompt:
-		return m.handleResumePromptKeys(msg)
 	case ScreenDrawPrompt:
 		return m.handleDrawPromptKeys(msg)
 	case ScreenBvBBotSelect:
@@ -125,6 +192,10 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBvBGamePlayKeys(msg)
 	case ScreenBvBStats:
 		return m.handleBvBStatsKeys(msg)
+	case ScreenBvBViewModeSelect:
+		return m.handleBvBViewModeSelectKeys(msg)
+	case ScreenBvBConcurrencySelect:
+		return m.handleBvBConcurrencySelectKeys(msg)
 	default:
 		// Other screens will be implemented in future tasks
 		return m, nil
@@ -183,6 +254,7 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		// Successfully loaded - start gameplay with loaded board
 		m.board = board
 		m.moveHistory = []engine.Move{}
+		m.clearNavStack() // Clear nav stack when starting game
 		m.screen = ScreenGamePlay
 		m.input = ""
 		m.errorMsg = ""
@@ -198,8 +270,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "New Game":
-		// Transition to game type selection screen
-		m.screen = ScreenGameTypeSelect
+		// Transition to game type selection screen using navigation stack
+		m.pushScreen(ScreenGameTypeSelect)
 		// Set up menu options for game type selection
 		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
 		m.menuSelection = 0
@@ -210,8 +282,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.input = ""
 
 	case "Load Game":
-		// Transition to FEN input screen
-		m.screen = ScreenFENInput
+		// Transition to FEN input screen using navigation stack
+		m.pushScreen(ScreenFENInput)
 		// Reset and focus the text input
 		m.fenInput.SetValue("")
 		m.fenInput.Focus()
@@ -220,8 +292,8 @@ func (m Model) handleMainMenuSelection() (tea.Model, tea.Cmd) {
 		m.errorMsg = ""
 
 	case "Settings":
-		// Transition to settings screen
-		m.screen = ScreenSettings
+		// Transition to settings screen using navigation stack
+		m.pushScreen(ScreenSettings)
 		m.settingsSelection = 0
 		// Clear any previous status messages
 		m.statusMsg = ""
@@ -262,11 +334,9 @@ func (m Model) handleGameTypeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleGameTypeSelection()
 
 	case "esc":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
-		m.menuSelection = 0
-		m.errorMsg = ""
+		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
+		m.popScreen()
 		m.statusMsg = ""
 	}
 
@@ -285,6 +355,8 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 		m.gameType = GameTypePvP
 		// Create a new board with the standard starting position
 		m.board = engine.NewBoard()
+		// Clear nav stack when starting game
+		m.clearNavStack()
 		// Switch to the GamePlay screen
 		m.screen = ScreenGamePlay
 		// Clear any previous status messages
@@ -303,8 +375,8 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 	case "Player vs Bot":
 		// Set game type to PvBot
 		m.gameType = GameTypePvBot
-		// Transition to bot difficulty selection screen
-		m.screen = ScreenBotSelect
+		// Transition to bot difficulty selection screen using navigation stack
+		m.pushScreen(ScreenBotSelect)
 		m.menuOptions = []string{"Easy", "Medium", "Hard"}
 		m.menuSelection = 0
 		m.statusMsg = ""
@@ -315,7 +387,7 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 		m.gameType = GameTypeBvB
 		// Start with selecting White bot difficulty
 		m.bvbSelectingWhite = true
-		m.screen = ScreenBvBBotSelect
+		m.pushScreen(ScreenBvBBotSelect)
 		m.menuOptions = []string{"Easy", "Medium", "Hard"}
 		m.menuSelection = 0
 		m.statusMsg = ""
@@ -433,15 +505,15 @@ func (m Model) handleGameOverKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleSettingsKeys handles keyboard input for the Settings screen.
-// Supports arrow keys and vi-style navigation (j/k), Space or Enter to toggle,
+// Supports arrow keys and vi-style navigation (j/k), Space or Enter to toggle/cycle,
 // ESC to return to main menu, and wraps around at top and bottom of the settings.
 func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Clear any previous error or status messages when user takes action
 	m.errorMsg = ""
 	m.statusMsg = ""
 
-	// Number of settings options
-	numSettings := 5 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText
+	// Number of settings options (5 toggles + 1 theme selector)
+	numSettings := 6 // UseUnicode, ShowCoords, UseColors, ShowMoveHistory, ShowHelpText, Theme
 
 	switch msg.String() {
 	case "up", "k":
@@ -467,11 +539,9 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.toggleSelectedSetting()
 
 	case "esc", "q", "b", "backspace":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
-		m.menuSelection = 0
-		m.errorMsg = ""
+		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
+		m.popScreen()
 		m.statusMsg = ""
 	}
 
@@ -479,8 +549,10 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // toggleSelectedSetting toggles the currently selected setting and saves the config.
+// For boolean settings, it toggles between true/false.
+// For the theme setting, it cycles through: Classic -> Modern -> Minimalist -> Classic.
 func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
-	// Toggle the selected setting based on settingsSelection index
+	// Toggle or cycle the selected setting based on settingsSelection index
 	switch m.settingsSelection {
 	case 0: // Use Unicode Pieces
 		m.config.UseUnicode = !m.config.UseUnicode
@@ -492,6 +564,11 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 		m.config.ShowMoveHistory = !m.config.ShowMoveHistory
 	case 4: // Show Help Text
 		m.config.ShowHelpText = !m.config.ShowHelpText
+	case 5: // Theme
+		// Cycle through themes: Classic -> Modern -> Minimalist -> Classic
+		m.config.Theme = cycleTheme(m.config.Theme)
+		// Update the theme in the model immediately for visual feedback
+		m.theme = GetTheme(ParseThemeName(m.config.Theme))
 	}
 
 	// Save the configuration immediately
@@ -503,6 +580,21 @@ func (m Model) toggleSelectedSetting() (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// cycleTheme cycles through theme names: classic -> modern -> minimalist -> classic.
+func cycleTheme(current string) string {
+	switch current {
+	case ThemeNameClassic:
+		return ThemeNameModern
+	case ThemeNameModern:
+		return ThemeNameMinimalist
+	case ThemeNameMinimalist:
+		return ThemeNameClassic
+	default:
+		// Unknown theme, reset to modern (next after classic)
+		return ThemeNameModern
+	}
 }
 
 // handleSavePromptKeys handles keyboard input for the Save Prompt screen.
@@ -532,190 +624,73 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "y", "Y":
-		// Direct "Yes" - save the game
+		// Direct "Yes" - save the game and exit to main menu
 		err := config.SaveGame(m.board)
 		if err != nil {
 			m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
 			return m, nil
 		}
-		// Clean up bot engine if it exists
-		if m.botEngine != nil {
-			_ = m.botEngine.Close()
-			m.botEngine = nil
-		}
-		// Save completed successfully, execute the action (exit or menu)
-		if m.savePromptAction == "exit" {
-			return m, tea.Quit
-		}
-		// Return to main menu
+		m.statusMsg = "Game saved!"
+		// Both Yes and No go to Main Menu
+		m.cleanupGame()
 		m.screen = ScreenMainMenu
-		m.board = nil
-		m.moveHistory = []engine.Move{}
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = ""
 		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
+		m.navStack = nil // Clear navigation stack
+		return m, nil
 
 	case "n", "N":
-		// Clean up bot engine if it exists
-		if m.botEngine != nil {
-			_ = m.botEngine.Close()
-			m.botEngine = nil
-		}
-		// Direct "No" - don't save, just execute the action
-		if m.savePromptAction == "exit" {
-			return m, tea.Quit
-		}
-		// Return to main menu without saving
+		// Direct "No" - exit to main menu without saving
+		m.cleanupGame()
 		m.screen = ScreenMainMenu
-		m.board = nil
-		m.moveHistory = []engine.Move{}
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = ""
 		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
+		m.navStack = nil // Clear navigation stack
+		return m, nil
 
 	case "enter":
 		// Execute the selected action
-		if m.savePromptSelection == 0 {
-			// User selected "Yes" - save the game
+		if m.savePromptSelection == 0 { // "Save & Exit"
+			// Save the game
 			err := config.SaveGame(m.board)
 			if err != nil {
-				m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
+				m.errorMsg = fmt.Sprintf("Failed to save: %v", err)
 				return m, nil
 			}
+			m.statusMsg = "Game saved!"
 		}
-		// Clean up bot engine if it exists
-		if m.botEngine != nil {
-			_ = m.botEngine.Close()
-			m.botEngine = nil
-		}
-		// User selected "No" or save completed successfully
-		// Execute the action (exit or menu)
-		if m.savePromptAction == "exit" {
-			return m, tea.Quit
-		}
-		// Return to main menu
+		// Both Save & Exit and Exit without saving go to Main Menu
+		m.cleanupGame()
 		m.screen = ScreenMainMenu
-		m.board = nil
-		m.moveHistory = []engine.Move{}
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = ""
 		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
+		m.navStack = nil // Clear navigation stack
+		return m, nil
 
 	case "esc":
-		// Cancel and return to game
+		// Cancel - return to gameplay
 		m.screen = ScreenGamePlay
 		m.errorMsg = ""
-		m.statusMsg = ""
 	}
 
 	return m, nil
 }
 
-// handleResumePromptKeys handles keyboard input for the Resume Prompt screen.
-// Supports arrow keys to navigate between Yes/No, Enter to confirm.
-// User can choose to resume the saved game or start from main menu.
-func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Clear any previous error or status messages when user takes action
+// cleanupGame cleans up game state when exiting a game.
+// This includes clearing the board, move history, input state, and bot engine.
+func (m *Model) cleanupGame() {
+	m.board = nil
+	m.moveHistory = nil
+	m.selectedSquare = nil
+	m.validMoves = nil
+	m.input = ""
 	m.errorMsg = ""
-	m.statusMsg = ""
-
-	switch msg.String() {
-	case "up", "k":
-		// Move selection up (toggle between Yes and No)
-		if m.resumePromptSelection > 0 {
-			m.resumePromptSelection--
-		} else {
-			// Wrap to bottom (only 2 options)
-			m.resumePromptSelection = 1
-		}
-
-	case "down", "j":
-		// Move selection down (toggle between Yes and No)
-		if m.resumePromptSelection < 1 {
-			m.resumePromptSelection++
-		} else {
-			// Wrap to top
-			m.resumePromptSelection = 0
-		}
-
-	case "y", "Y":
-		// Direct "Yes" - load the saved game
-		board, err := config.LoadGame()
-		if err != nil {
-			// Failed to load - show error and go to main menu
-			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
-			m.screen = ScreenMainMenu
-			m.menuOptions = buildMainMenuOptions()
-			m.menuSelection = 0
-			return m, nil
-		}
-
-		// Successfully loaded - start gameplay with loaded board
-		m.board = board
-		m.moveHistory = []engine.Move{}
-		m.screen = ScreenGamePlay
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = "Game resumed"
-		m.resignedBy = -1
-		// Reset draw offer state
-		m.drawOfferedBy = -1
-		m.drawOfferedByWhite = false
-		m.drawOfferedByBlack = false
-		m.drawByAgreement = false
-
-	case "n", "N":
-		// Direct "No" - go to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
-		m.menuSelection = 0
-		m.errorMsg = ""
-		m.statusMsg = ""
-
-	case "enter":
-		// Execute the selected action
-		if m.resumePromptSelection == 0 {
-			// User selected "Yes" - load the saved game
-			board, err := config.LoadGame()
-			if err != nil {
-				// Failed to load - show error and go to main menu
-				m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
-				m.screen = ScreenMainMenu
-				m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
-				m.menuSelection = 0
-				return m, nil
-			}
-
-			// Successfully loaded - start gameplay with loaded board
-			m.board = board
-			m.moveHistory = []engine.Move{}
-			m.screen = ScreenGamePlay
-			m.input = ""
-			m.errorMsg = ""
-			m.statusMsg = "Game resumed"
-			m.resignedBy = -1
-			// Reset draw offer state
-			m.drawOfferedBy = -1
-			m.drawOfferedByWhite = false
-			m.drawOfferedByBlack = false
-			m.drawByAgreement = false
-		} else {
-			// User selected "No" - go to main menu
-			m.screen = ScreenMainMenu
-			m.menuOptions = buildMainMenuOptions()
-			m.menuSelection = 0
-			m.errorMsg = ""
-			m.statusMsg = ""
-		}
+	m.blinkOn = false
+	// Clean up bot engine if it exists
+	if m.botEngine != nil {
+		_ = m.botEngine.Close()
+		m.botEngine = nil
 	}
-
-	return m, nil
 }
 
 // handleFENInputKeys handles keyboard input for the FEN Input screen.
@@ -726,11 +701,9 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "esc":
-		// Return to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
-		m.menuSelection = 0
-		m.errorMsg = ""
+		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
+		m.popScreen()
 		m.statusMsg = ""
 		m.fenInput.SetValue("")
 		return m, nil
@@ -754,6 +727,8 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Successfully loaded - start gameplay with loaded board
 		m.board = board
 		m.moveHistory = []engine.Move{}
+		// Clear nav stack when starting game
+		m.clearNavStack()
 		m.screen = ScreenGamePlay
 		m.gameType = GameTypePvP
 		m.input = ""
@@ -1039,11 +1014,9 @@ func (m Model) handleBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBotDifficultySelection()
 
 	case "esc":
-		// Return to game type selection
-		m.screen = ScreenGameTypeSelect
-		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
-		m.menuSelection = 0
-		m.errorMsg = ""
+		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
+		m.popScreen()
 		m.statusMsg = ""
 	}
 
@@ -1079,18 +1052,12 @@ func (m Model) handleBvBBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		if m.bvbSelectingWhite {
-			// Go back to game type selection
-			m.screen = ScreenGameTypeSelect
-			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
-			m.menuSelection = 0
-			m.errorMsg = ""
-			m.statusMsg = ""
+			// At White selection - go back to previous screen
+			m.popScreen()
 		} else {
-			// Go back to selecting White bot
+			// At Black selection - go back to White selection (same screen)
 			m.bvbSelectingWhite = true
 			m.menuSelection = 0
-			m.errorMsg = ""
-			m.statusMsg = ""
 		}
 	}
 
@@ -1123,7 +1090,7 @@ func (m Model) handleBvBBotDifficultySelection() (tea.Model, tea.Cmd) {
 	} else {
 		// Store Black difficulty and transition to game mode selection
 		m.bvbBlackDiff = diff
-		m.screen = ScreenBvBGameMode
+		m.pushScreen(ScreenBvBGameMode)
 		m.menuOptions = []string{"Single Game", "Multi-Game"}
 		m.menuSelection = 0
 		m.bvbInputtingCount = false
@@ -1164,11 +1131,8 @@ func (m Model) handleBvBGameModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Go back to BvB bot select (Black selection)
-		m.screen = ScreenBvBBotSelect
+		m.popScreen()
 		m.bvbSelectingWhite = false
-		m.menuOptions = []string{"Easy", "Medium", "Hard"}
-		m.menuSelection = 0
-		m.statusMsg = ""
 	}
 
 	return m, nil
@@ -1183,6 +1147,7 @@ func (m Model) handleBvBGameModeSelection() (tea.Model, tea.Cmd) {
 		m.bvbGameCount = 1
 		m.bvbGridRows = 1
 		m.bvbGridCols = 1
+		// For single game, go directly to gameplay with single view (no view mode selection needed)
 		m.bvbViewMode = BvBSingleView
 		return m.startBvBSession()
 
@@ -1220,7 +1185,7 @@ func (m Model) handleBvBCountInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.bvbGameCount = count
 		m.bvbInputtingCount = false
-		m.screen = ScreenBvBGridConfig
+		m.pushScreen(ScreenBvBGridConfig)
 		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
 		m.menuSelection = 0
 		m.bvbInputtingGrid = false
@@ -1287,11 +1252,8 @@ func (m Model) handleBvBGridConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Go back to game mode selection
-		m.screen = ScreenBvBGameMode
-		m.menuOptions = []string{"Single Game", "Multi-Game"}
-		m.menuSelection = 0
+		m.popScreen()
 		m.bvbInputtingGrid = false
-		m.statusMsg = ""
 	}
 
 	return m, nil
@@ -1316,7 +1278,8 @@ func (m Model) handleBvBGridSelection() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	return m.startBvBSession()
+	// Navigate to concurrency selection screen
+	return m.navigateToConcurrencySelect()
 }
 
 // handleBvBGridInput handles text input for custom grid dimensions.
@@ -1342,12 +1305,164 @@ func (m Model) handleBvBGridInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.bvbGridRows = rows
 		m.bvbGridCols = cols
 		m.bvbInputtingGrid = false
-		return m.startBvBSession()
+		// Navigate to concurrency selection screen
+		return m.navigateToConcurrencySelect()
 
 	case tea.KeyRunes:
 		for _, r := range msg.Runes {
 			if (r >= '0' && r <= '9') || r == 'x' || r == 'X' {
 				m.bvbCustomGridInput += string(r)
+			}
+		}
+	}
+
+	return m, nil
+}
+
+// navigateToConcurrencySelect transitions to the concurrency selection screen.
+// This is called after grid configuration is complete in multi-game mode.
+func (m Model) navigateToConcurrencySelect() (tea.Model, tea.Cmd) {
+	m.pushScreen(ScreenBvBConcurrencySelect)
+	m.bvbConcurrencySelection = 0 // Default to Recommended
+	m.bvbInputtingConcurrency = false
+	m.bvbCustomConcurrency = ""
+	m.statusMsg = ""
+	m.errorMsg = ""
+	return m, nil
+}
+
+// navigateToViewModeSelect transitions to the view mode selection screen.
+// This is called after concurrency selection is complete.
+func (m Model) navigateToViewModeSelect() (tea.Model, tea.Cmd) {
+	m.pushScreen(ScreenBvBViewModeSelect)
+	m.bvbViewModeSelection = 0 // Default to Grid View
+	m.statusMsg = ""
+	m.errorMsg = ""
+	return m, nil
+}
+
+// handleBvBViewModeSelectKeys handles keyboard input for the BvB view mode selection screen.
+// Supports arrow keys for navigation, Enter to select, and Esc to go back.
+func (m Model) handleBvBViewModeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.errorMsg = ""
+
+	numOptions := 3 // Grid View, Single Board, Stats Only
+
+	switch msg.String() {
+	case "up", "k":
+		if m.bvbViewModeSelection > 0 {
+			m.bvbViewModeSelection--
+		} else {
+			m.bvbViewModeSelection = numOptions - 1
+		}
+
+	case "down", "j":
+		if m.bvbViewModeSelection < numOptions-1 {
+			m.bvbViewModeSelection++
+		} else {
+			m.bvbViewModeSelection = 0
+		}
+
+	case "enter":
+		// Set view mode based on selection
+		switch m.bvbViewModeSelection {
+		case 0:
+			m.bvbViewMode = BvBGridView
+		case 1:
+			m.bvbViewMode = BvBSingleView
+		case 2:
+			m.bvbViewMode = BvBStatsOnlyView
+		}
+		// Start the session with the selected view mode
+		return m.startBvBSession()
+
+	case "esc":
+		// Go back to concurrency select
+		// popScreen() handles menu state restoration
+		m.popScreen()
+		m.bvbConcurrencySelection = 0
+		m.bvbInputtingConcurrency = false
+		m.bvbCustomConcurrency = ""
+		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBConcurrencySelectKeys handles keyboard input for the BvB concurrency selection screen.
+// Supports arrow keys for navigation, Enter to select, and Esc to go back.
+func (m Model) handleBvBConcurrencySelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.errorMsg = ""
+
+	if m.bvbInputtingConcurrency {
+		return m.handleBvBConcurrencyInput(msg)
+	}
+
+	numOptions := 2 // Recommended, Custom
+
+	switch msg.String() {
+	case "up", "k":
+		if m.bvbConcurrencySelection > 0 {
+			m.bvbConcurrencySelection--
+		} else {
+			m.bvbConcurrencySelection = numOptions - 1
+		}
+
+	case "down", "j":
+		if m.bvbConcurrencySelection < numOptions-1 {
+			m.bvbConcurrencySelection++
+		} else {
+			m.bvbConcurrencySelection = 0
+		}
+
+	case "enter":
+		switch m.bvbConcurrencySelection {
+		case 0: // Recommended
+			m.bvbConcurrency = bvb.CalculateDefaultConcurrency()
+			return m.navigateToViewModeSelect()
+		case 1: // Custom
+			m.bvbInputtingConcurrency = true
+			m.bvbCustomConcurrency = ""
+		}
+
+	case "esc":
+		// Go back to grid config
+		// popScreen() handles menu state restoration
+		m.popScreen()
+		m.bvbInputtingGrid = false
+		m.statusMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBConcurrencyInput handles text input for custom concurrency value.
+func (m Model) handleBvBConcurrencyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.bvbInputtingConcurrency = false
+		m.bvbCustomConcurrency = ""
+		m.errorMsg = ""
+
+	case tea.KeyBackspace:
+		if len(m.bvbCustomConcurrency) > 0 {
+			m.bvbCustomConcurrency = m.bvbCustomConcurrency[:len(m.bvbCustomConcurrency)-1]
+		}
+
+	case tea.KeyEnter:
+		concurrency, err := parsePositiveInt(m.bvbCustomConcurrency)
+		if err != nil {
+			m.errorMsg = "Must be a positive integer (minimum 1)"
+			return m, nil
+		}
+		m.bvbConcurrency = concurrency
+		m.bvbInputtingConcurrency = false
+		return m.navigateToViewModeSelect()
+
+	case tea.KeyRunes:
+		for _, r := range msg.Runes {
+			if r >= '0' && r <= '9' {
+				m.bvbCustomConcurrency += string(r)
 			}
 		}
 	}
@@ -1394,7 +1509,12 @@ func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
 	whiteName := botDifficultyName(m.bvbWhiteDiff) + " Bot"
 	blackName := botDifficultyName(m.bvbBlackDiff) + " Bot"
 
-	manager := bvb.NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, m.bvbGameCount)
+	// Use the concurrency value selected by the user
+	// For single-game mode, bvbConcurrency will be 0 (auto-detect)
+	// For multi-game mode, it's set by the concurrency selection screen
+	concurrency := m.bvbConcurrency
+
+	manager := bvb.NewSessionManager(whiteDiff, blackDiff, whiteName, blackName, m.bvbGameCount, concurrency)
 	if err := manager.Start(); err != nil {
 		// Engine creation failed - stay on game mode screen and show error
 		m.errorMsg = "Failed to start bot session: " + err.Error()
@@ -1406,8 +1526,10 @@ func (m Model) startBvBSession() (tea.Model, tea.Cmd) {
 	m.bvbManager = manager
 	m.bvbSpeed = bvb.SpeedNormal
 	m.bvbSelectedGame = 0
-	m.bvbViewMode = BvBSingleView
+	// Note: bvbViewMode is set by the view mode selection screen or single game handler
+	// Don't override it here
 	m.bvbPaused = false
+	m.bvbRecentCompletions = nil // Reset recent completions for new session
 	m.screen = ScreenBvBGamePlay
 	m.statusMsg = ""
 	m.errorMsg = ""
@@ -1429,20 +1551,41 @@ func uiBotDiffToBvB(d BotDifficulty) bot.Difficulty {
 }
 
 // handleBvBGamePlayKeys handles keyboard input during BvB game viewing.
-// Supports pause/resume, speed changes, view toggle, game navigation, and abort.
+// Supports pause/resume, speed changes, view toggle, game navigation, jump to game, and abort.
 func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If abort dialog is showing, handle it
+	if m.bvbShowAbortConfirm {
+		return m.handleBvBAbortConfirmKeys(msg)
+	}
+
+	// If jump prompt is showing, handle jump input
+	if m.bvbShowJumpPrompt {
+		return m.handleBvBJumpInput(msg)
+	}
+
 	switch msg.String() {
-	case "esc":
-		// Abort the session and return to menu
-		if m.bvbManager != nil {
-			m.bvbManager.Abort()
-			m.bvbManager = nil
+	case "g", "G":
+		// Show jump prompt (only if multi-game mode)
+		if m.bvbManager != nil && m.bvbGameCount > 1 {
+			m.bvbShowJumpPrompt = true
+			m.bvbJumpInput = ""
+			m.errorMsg = ""
 		}
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
-		m.menuSelection = 0
-		m.statusMsg = ""
-		m.errorMsg = ""
+		return m, nil
+
+	case "esc":
+		// Check if session is still running (has active games)
+		if m.bvbManager != nil && !m.bvbManager.AllFinished() {
+			// Show abort confirmation
+			m.bvbShowAbortConfirm = true
+			m.bvbAbortSelection = 0 // Default to Cancel
+			return m, nil
+		}
+		// Session finished - go to stats screen
+		m.screen = ScreenBvBStats
+		m.bvbStatsSelection = 0
+		m.bvbStatsResultsPage = 0
+		m.menuOptions = []string{"New Session", "Return to Menu"}
 		return m, nil
 
 	case " ":
@@ -1457,32 +1600,25 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-	case "1":
-		m.bvbSpeed = bvb.SpeedInstant
-		if m.bvbManager != nil {
-			m.bvbManager.SetSpeed(m.bvbSpeed)
+	case "t", "T":
+		// Toggle between Normal and Instant speed
+		if m.bvbSpeed == bvb.SpeedNormal {
+			m.bvbSpeed = bvb.SpeedInstant
+		} else {
+			m.bvbSpeed = bvb.SpeedNormal
 		}
-	case "2":
-		m.bvbSpeed = bvb.SpeedFast
-		if m.bvbManager != nil {
-			m.bvbManager.SetSpeed(m.bvbSpeed)
-		}
-	case "3":
-		m.bvbSpeed = bvb.SpeedNormal
-		if m.bvbManager != nil {
-			m.bvbManager.SetSpeed(m.bvbSpeed)
-		}
-	case "4":
-		m.bvbSpeed = bvb.SpeedSlow
 		if m.bvbManager != nil {
 			m.bvbManager.SetSpeed(m.bvbSpeed)
 		}
 
-	case "tab":
-		// Toggle view mode
-		if m.bvbViewMode == BvBGridView {
+	case "tab", "v", "V":
+		// Cycle view mode: Grid -> Single -> StatsOnly -> Grid
+		switch m.bvbViewMode {
+		case BvBGridView:
 			m.bvbViewMode = BvBSingleView
-		} else {
+		case BvBSingleView:
+			m.bvbViewMode = BvBStatsOnlyView
+		case BvBStatsOnlyView:
 			m.bvbViewMode = BvBGridView
 		}
 
@@ -1560,6 +1696,97 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleBvBJumpInput handles text input for the game jump prompt.
+// Allows the user to type a game number and press Enter to jump to it.
+func (m Model) handleBvBJumpInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		// Cancel jump prompt
+		m.bvbShowJumpPrompt = false
+		m.bvbJumpInput = ""
+		m.errorMsg = ""
+
+	case tea.KeyBackspace:
+		// Remove last character
+		if len(m.bvbJumpInput) > 0 {
+			m.bvbJumpInput = m.bvbJumpInput[:len(m.bvbJumpInput)-1]
+		}
+		m.errorMsg = ""
+
+	case tea.KeyEnter:
+		// Validate and submit the game number
+		m.handleBvBJumpSubmit()
+
+	case tea.KeyRunes:
+		// Only allow digits
+		for _, r := range msg.Runes {
+			if r >= '0' && r <= '9' {
+				m.bvbJumpInput += string(r)
+			}
+		}
+		m.errorMsg = ""
+	}
+
+	return m, nil
+}
+
+// handleBvBJumpSubmit validates the jump input and navigates to the specified game.
+func (m *Model) handleBvBJumpSubmit() {
+	if m.bvbJumpInput == "" {
+		m.errorMsg = fmt.Sprintf("Enter a game number (1-%d)", m.bvbGameCount)
+		return
+	}
+
+	gameNum, err := parsePositiveInt(m.bvbJumpInput)
+	if err != nil || gameNum < 1 || gameNum > m.bvbGameCount {
+		m.errorMsg = fmt.Sprintf("Invalid game number. Enter 1-%d", m.bvbGameCount)
+		m.bvbShowJumpPrompt = false
+		m.bvbJumpInput = ""
+		return
+	}
+
+	// Navigate to the specified game (convert to 0-indexed)
+	m.bvbSelectedGame = gameNum - 1
+	m.bvbShowJumpPrompt = false
+	m.bvbJumpInput = ""
+	m.errorMsg = ""
+
+	// If in grid view, also update the page index to show the selected game
+	if m.bvbViewMode == BvBGridView {
+		boardsPerPage := m.bvbGridRows * m.bvbGridCols
+		m.bvbPageIndex = m.bvbSelectedGame / boardsPerPage
+	}
+}
+
+// handleBvBAbortConfirmKeys handles keyboard input for the BvB abort confirmation dialog.
+// Supports navigation between Cancel/Abort options, Enter to confirm, and ESC to cancel.
+func (m Model) handleBvBAbortConfirmKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "down", "k", "j":
+		// Toggle between Cancel (0) and Abort (1)
+		m.bvbAbortSelection = 1 - m.bvbAbortSelection
+	case "enter":
+		if m.bvbAbortSelection == 1 { // "Abort Session"
+			if m.bvbManager != nil {
+				m.bvbManager.Stop()
+				m.bvbManager = nil
+			}
+			m.bvbShowAbortConfirm = false
+			m.screen = ScreenMainMenu
+			m.menuOptions = buildMainMenuOptions()
+			m.menuSelection = 0
+			m.navStack = nil
+		} else { // "Cancel"
+			m.bvbShowAbortConfirm = false
+		}
+		return m, nil
+	case "esc":
+		// ESC on dialog = Cancel
+		m.bvbShowAbortConfirm = false
+	}
+	return m, nil
+}
+
 // bvbTickCmd returns a command that sends a BvBTickMsg after a delay based on speed.
 func bvbTickCmd(speed bvb.PlaybackSpeed) tea.Cmd {
 	delay := speed.Duration()
@@ -1578,6 +1805,9 @@ func (m Model) handleBvBTick() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Update recent completions for stats-only view
+	m.updateRecentCompletions()
+
 	if m.bvbManager.AllFinished() {
 		m.screen = ScreenBvBStats
 		m.bvbStatsSelection = 0
@@ -1588,6 +1818,40 @@ func (m Model) handleBvBTick() (tea.Model, tea.Cmd) {
 
 	// Schedule next tick
 	return m, bvbTickCmd(m.bvbSpeed)
+}
+
+// updateRecentCompletions updates the list of recent game completions for stats-only view.
+// Keeps track of the last 5 completed games with their results.
+func (m *Model) updateRecentCompletions() {
+	if m.bvbManager == nil {
+		return
+	}
+
+	stats := m.bvbManager.Stats()
+	if stats == nil || len(stats.IndividualResults) == 0 {
+		return
+	}
+
+	// Get the most recent completions (up to 5)
+	results := stats.IndividualResults
+	maxRecent := 5
+	startIdx := 0
+	if len(results) > maxRecent {
+		startIdx = len(results) - maxRecent
+	}
+
+	// Build recent completions list (most recent first)
+	m.bvbRecentCompletions = make([]string, 0, maxRecent)
+	for i := len(results) - 1; i >= startIdx; i-- {
+		r := results[i]
+		var entry string
+		if r.Winner == "Draw" {
+			entry = fmt.Sprintf("Game %d: Draw (%d moves)", r.GameNumber, r.MoveCount)
+		} else {
+			entry = fmt.Sprintf("Game %d: %s wins (%d moves)", r.GameNumber, r.Winner, r.MoveCount)
+		}
+		m.bvbRecentCompletions = append(m.bvbRecentCompletions, entry)
+	}
 }
 
 // handleBvBStatsKeys handles keyboard input on the BvB statistics screen.
@@ -1617,6 +1881,9 @@ func (m Model) handleBvBStatsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+	case "s", "S":
+		// Export statistics to JSON file
+		return m.handleBvBStatsExport()
 	case "enter":
 		return m.handleBvBStatsSelection()
 	case "esc":
@@ -1643,6 +1910,33 @@ func (m Model) handleBvBStatsSelection() (tea.Model, tea.Cmd) {
 		m.menuSelection = 0
 		m.bvbManager = nil
 	}
+	return m, nil
+}
+
+// handleBvBStatsExport exports the session statistics to a JSON file.
+func (m Model) handleBvBStatsExport() (tea.Model, tea.Cmd) {
+	if m.bvbManager == nil {
+		m.errorMsg = "No session data to export"
+		return m, nil
+	}
+
+	// Get bot difficulty names for the export
+	whiteBotName := botDifficultyName(m.bvbWhiteDiff)
+	blackBotName := botDifficultyName(m.bvbBlackDiff)
+
+	// Generate export data
+	export := m.bvbManager.ExportStats(whiteBotName, blackBotName)
+
+	// Save to file (empty string uses default directory)
+	filepath, err := bvb.SaveSessionExport(export, "")
+	if err != nil {
+		m.errorMsg = fmt.Sprintf("Failed to export: %v", err)
+		m.statusMsg = ""
+		return m, nil
+	}
+
+	m.statusMsg = fmt.Sprintf("Stats exported to: %s", filepath)
+	m.errorMsg = ""
 	return m, nil
 }
 
@@ -1677,11 +1971,9 @@ func (m Model) handleColorSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleColorSelection()
 
 	case "esc":
-		// Return to bot difficulty selection
-		m.screen = ScreenBotSelect
-		m.menuOptions = []string{"Easy", "Medium", "Hard"}
-		m.menuSelection = 0
-		m.errorMsg = ""
+		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
+		m.popScreen()
 		m.statusMsg = ""
 	}
 
@@ -1703,6 +1995,8 @@ func (m Model) handleColorSelection() (tea.Model, tea.Cmd) {
 
 	// Create a new board with the standard starting position
 	m.board = engine.NewBoard()
+	// Clear nav stack when starting game
+	m.clearNavStack()
 	// Switch to the GamePlay screen
 	m.screen = ScreenGamePlay
 	// Clear any previous status messages
@@ -1740,8 +2034,8 @@ func (m Model) handleBotDifficultySelection() (tea.Model, tea.Cmd) {
 		m.botDifficulty = BotHard
 	}
 
-	// Transition to color selection screen
-	m.screen = ScreenColorSelect
+	// Transition to color selection screen using navigation stack
+	m.pushScreen(ScreenColorSelect)
 	m.menuOptions = []string{"Play as White", "Play as Black"}
 	m.menuSelection = 0
 	m.statusMsg = ""
@@ -1870,4 +2164,81 @@ func (m Model) handleBotMoveError(msg BotMoveErrorMsg) (tea.Model, tea.Cmd) {
 	m.errorMsg = fmt.Sprintf("Bot error: %v", msg.err)
 	m.statusMsg = ""
 	return m, nil
+}
+
+// isInTextInputMode returns true if the user is currently in a text input mode
+// where the '?' key should be typed rather than triggering the shortcuts overlay.
+func (m Model) isInTextInputMode() bool {
+	// FEN input screen uses text input
+	if m.screen == ScreenFENInput {
+		return true
+	}
+
+	// GamePlay screen uses text input for moves
+	if m.screen == ScreenGamePlay {
+		return true
+	}
+
+	// BvB game count input mode
+	if m.screen == ScreenBvBGameMode && m.bvbInputtingCount {
+		return true
+	}
+
+	// BvB custom grid input mode
+	if m.screen == ScreenBvBGridConfig && m.bvbInputtingGrid {
+		return true
+	}
+
+	// BvB game jump input mode
+	if m.screen == ScreenBvBGamePlay && m.bvbShowJumpPrompt {
+		return true
+	}
+
+	// BvB custom concurrency input mode
+	if m.screen == ScreenBvBConcurrencySelect && m.bvbInputtingConcurrency {
+		return true
+	}
+
+	return false
+}
+
+// adjustBvBGridForWidth adjusts the BvB grid layout based on terminal width.
+// If the terminal is too narrow for the current grid, it reduces columns or
+// switches to single view mode. This method modifies the model in place.
+func (m *Model) adjustBvBGridForWidth() {
+	if m.termWidth <= 0 {
+		return
+	}
+
+	// Calculate how many columns can fit in the current terminal width
+	// Each cell needs bvbCellWidth plus some margin
+	cellWidthWithMargin := bvbCellWidth + 2 // 2 chars for spacing between cells
+	maxCols := m.termWidth / cellWidthWithMargin
+
+	// Minimum 1 column
+	if maxCols < 1 {
+		maxCols = 1
+	}
+
+	// If current grid is too wide, adjust
+	if m.bvbGridCols > maxCols {
+		if maxCols >= 1 {
+			// Reduce to max possible columns
+			m.bvbGridCols = maxCols
+			// Recalculate rows to maintain game count per page
+			if m.bvbGameCount > 0 && m.bvbGridCols > 0 {
+				// Keep roughly the same number of boards visible
+				originalBoardsPerPage := m.bvbGridRows * (m.bvbGridCols + (maxCols - m.bvbGridCols))
+				m.bvbGridRows = (originalBoardsPerPage + m.bvbGridCols - 1) / m.bvbGridCols
+				if m.bvbGridRows < 1 {
+					m.bvbGridRows = 1
+				}
+			}
+		}
+	}
+
+	// If terminal is too narrow for even 1 column grid view, switch to single view
+	if m.termWidth < bvbCellWidth {
+		m.bvbViewMode = BvBSingleView
+	}
 }

@@ -257,7 +257,7 @@ func TestComputeStatsIndividualResults(t *testing.T) {
 }
 
 func TestSessionManagerStats(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "Easy White", "Easy Black", 3)
+	m := NewSessionManager(bot.Easy, bot.Easy, "Easy White", "Easy Black", 3, 0)
 	m.speed = SpeedInstant
 	err := m.Start()
 	if err != nil {
@@ -339,7 +339,7 @@ func TestSessionManagerStats(t *testing.T) {
 }
 
 func TestSessionManagerStatsBeforeStart(t *testing.T) {
-	m := NewSessionManager(bot.Easy, bot.Easy, "W", "B", 3)
+	m := NewSessionManager(bot.Easy, bot.Easy, "W", "B", 3, 0)
 
 	stats := m.Stats()
 	if stats == nil {
