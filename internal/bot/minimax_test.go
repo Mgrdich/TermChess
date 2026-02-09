@@ -422,6 +422,10 @@ func TestMinimaxEngine_Depth2Search(t *testing.T) {
 }
 
 func TestMinimaxEngine_AlphaBetaPruning(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping timing-sensitive test in short mode")
+	}
+
 	// This test verifies that the engine completes within reasonable time
 	// which indicates alpha-beta pruning is working (vs. plain minimax)
 	board := engine.NewBoard()

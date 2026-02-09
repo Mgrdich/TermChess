@@ -527,9 +527,10 @@ func TestBotMoveDelay(t *testing.T) {
 	}{
 		// Note: Total time = minimum delay (1-2s) + computation time
 		// CI environments may be slower, so we allow extra time
-		{"Easy bot has 1-2s delay", BotEasy, 1 * time.Second, 3 * time.Second},
-		{"Medium bot has 1-2s delay", BotMedium, 1 * time.Second, 4 * time.Second},
-		{"Hard bot has 1s+ delay", BotHard, 1 * time.Second, 10 * time.Second}, // Hard can take longer naturally
+		// Race detector adds significant overhead, so tolerances are generous
+		{"Easy bot has 1-2s delay", BotEasy, 1 * time.Second, 5 * time.Second},
+		{"Medium bot has 1-2s delay", BotMedium, 1 * time.Second, 6 * time.Second},
+		{"Hard bot has 1s+ delay", BotHard, 1 * time.Second, 12 * time.Second}, // Hard can take longer naturally
 	}
 
 	for _, tt := range tests {
