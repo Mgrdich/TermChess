@@ -24,8 +24,6 @@ func screenName(s Screen) string {
 		return "Settings"
 	case ScreenSavePrompt:
 		return "Save Game"
-	case ScreenResumePrompt:
-		return "Resume Game"
 	case ScreenDrawPrompt:
 		return "Draw Offer"
 	case ScreenBvBBotSelect:
@@ -62,9 +60,11 @@ func (m *Model) pushScreen(newScreen Screen) {
 // popScreen returns to the previous screen in the navigation stack.
 // If the stack is empty, it returns to the main menu.
 // Returns the screen that was navigated to.
+// Also restores the appropriate menu state for the target screen.
 func (m *Model) popScreen() Screen {
 	if len(m.navStack) == 0 {
 		m.screen = ScreenMainMenu
+		m.restoreMenuState()
 		return ScreenMainMenu
 	}
 
@@ -73,7 +73,37 @@ func (m *Model) popScreen() Screen {
 	previousScreen := m.navStack[lastIndex]
 	m.navStack = m.navStack[:lastIndex]
 	m.screen = previousScreen
+	m.restoreMenuState()
 	return previousScreen
+}
+
+// restoreMenuState restores the appropriate menu options and selection for the current screen.
+// This is called after popScreen() to ensure the menu is correctly configured.
+func (m *Model) restoreMenuState() {
+	switch m.screen {
+	case ScreenGameTypeSelect:
+		m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
+	case ScreenBvBBotSelect:
+		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	case ScreenBvBGameMode:
+		m.menuOptions = []string{"Single Game", "Multi-Game"}
+	case ScreenBvBGridConfig:
+		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
+	case ScreenBvBConcurrencySelect:
+		// Concurrency menu doesn't use menuOptions (uses bvbConcurrencySelection)
+	case ScreenBvBViewModeSelect:
+		m.menuOptions = []string{"Grid View", "Single Board", "Stats Only"}
+	case ScreenMainMenu:
+		m.menuOptions = buildMainMenuOptions()
+	case ScreenBotSelect:
+		m.menuOptions = []string{"Easy", "Medium", "Hard"}
+	case ScreenColorSelect:
+		m.menuOptions = []string{"Play as White", "Play as Black"}
+	case ScreenSettings:
+		m.menuOptions = []string{"Theme: " + string(m.theme.Name)}
+	}
+	m.menuSelection = 0
+	m.errorMsg = ""
 }
 
 // clearNavStack clears the navigation stack.

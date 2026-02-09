@@ -180,8 +180,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSettingsKeys(msg)
 	case ScreenSavePrompt:
 		return m.handleSavePromptKeys(msg)
-	case ScreenResumePrompt:
-		return m.handleResumePromptKeys(msg)
 	case ScreenDrawPrompt:
 		return m.handleDrawPromptKeys(msg)
 	case ScreenBvBBotSelect:
@@ -337,13 +335,8 @@ func (m Model) handleGameTypeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
 		m.popScreen()
-		// Rebuild menu options in case we're back at main menu
-		if m.screen == ScreenMainMenu {
-			m.menuOptions = buildMainMenuOptions()
-		}
-		m.menuSelection = 0
-		m.errorMsg = ""
 		m.statusMsg = ""
 	}
 
@@ -394,7 +387,7 @@ func (m Model) handleGameTypeSelection() (tea.Model, tea.Cmd) {
 		m.gameType = GameTypeBvB
 		// Start with selecting White bot difficulty
 		m.bvbSelectingWhite = true
-		m.screen = ScreenBvBBotSelect
+		m.pushScreen(ScreenBvBBotSelect)
 		m.menuOptions = []string{"Easy", "Medium", "Hard"}
 		m.menuSelection = 0
 		m.statusMsg = ""
@@ -547,13 +540,8 @@ func (m Model) handleSettingsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc", "q", "b", "backspace":
 		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
 		m.popScreen()
-		// Rebuild menu options if we're back at main menu
-		if m.screen == ScreenMainMenu {
-			m.menuOptions = buildMainMenuOptions()
-		}
-		m.menuSelection = 0
-		m.errorMsg = ""
 		m.statusMsg = ""
 	}
 
@@ -636,190 +624,73 @@ func (m Model) handleSavePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "y", "Y":
-		// Direct "Yes" - save the game
+		// Direct "Yes" - save the game and exit to main menu
 		err := config.SaveGame(m.board)
 		if err != nil {
 			m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
 			return m, nil
 		}
-		// Clean up bot engine if it exists
-		if m.botEngine != nil {
-			_ = m.botEngine.Close()
-			m.botEngine = nil
-		}
-		// Save completed successfully, execute the action (exit or menu)
-		if m.savePromptAction == "exit" {
-			return m, tea.Quit
-		}
-		// Return to main menu
+		m.statusMsg = "Game saved!"
+		// Both Yes and No go to Main Menu
+		m.cleanupGame()
 		m.screen = ScreenMainMenu
-		m.board = nil
-		m.moveHistory = []engine.Move{}
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = ""
 		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
+		m.navStack = nil // Clear navigation stack
+		return m, nil
 
 	case "n", "N":
-		// Clean up bot engine if it exists
-		if m.botEngine != nil {
-			_ = m.botEngine.Close()
-			m.botEngine = nil
-		}
-		// Direct "No" - don't save, just execute the action
-		if m.savePromptAction == "exit" {
-			return m, tea.Quit
-		}
-		// Return to main menu without saving
+		// Direct "No" - exit to main menu without saving
+		m.cleanupGame()
 		m.screen = ScreenMainMenu
-		m.board = nil
-		m.moveHistory = []engine.Move{}
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = ""
 		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
+		m.navStack = nil // Clear navigation stack
+		return m, nil
 
 	case "enter":
 		// Execute the selected action
-		if m.savePromptSelection == 0 {
-			// User selected "Yes" - save the game
+		if m.savePromptSelection == 0 { // "Save & Exit"
+			// Save the game
 			err := config.SaveGame(m.board)
 			if err != nil {
-				m.errorMsg = fmt.Sprintf("Failed to save game: %v", err)
+				m.errorMsg = fmt.Sprintf("Failed to save: %v", err)
 				return m, nil
 			}
+			m.statusMsg = "Game saved!"
 		}
-		// Clean up bot engine if it exists
-		if m.botEngine != nil {
-			_ = m.botEngine.Close()
-			m.botEngine = nil
-		}
-		// User selected "No" or save completed successfully
-		// Execute the action (exit or menu)
-		if m.savePromptAction == "exit" {
-			return m, tea.Quit
-		}
-		// Return to main menu
+		// Both Save & Exit and Exit without saving go to Main Menu
+		m.cleanupGame()
 		m.screen = ScreenMainMenu
-		m.board = nil
-		m.moveHistory = []engine.Move{}
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = ""
 		m.menuOptions = buildMainMenuOptions()
 		m.menuSelection = 0
+		m.navStack = nil // Clear navigation stack
+		return m, nil
 
 	case "esc":
-		// Cancel and return to game
+		// Cancel - return to gameplay
 		m.screen = ScreenGamePlay
 		m.errorMsg = ""
-		m.statusMsg = ""
 	}
 
 	return m, nil
 }
 
-// handleResumePromptKeys handles keyboard input for the Resume Prompt screen.
-// Supports arrow keys to navigate between Yes/No, Enter to confirm.
-// User can choose to resume the saved game or start from main menu.
-func (m Model) handleResumePromptKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Clear any previous error or status messages when user takes action
+// cleanupGame cleans up game state when exiting a game.
+// This includes clearing the board, move history, input state, and bot engine.
+func (m *Model) cleanupGame() {
+	m.board = nil
+	m.moveHistory = nil
+	m.selectedSquare = nil
+	m.validMoves = nil
+	m.input = ""
 	m.errorMsg = ""
-	m.statusMsg = ""
-
-	switch msg.String() {
-	case "up", "k":
-		// Move selection up (toggle between Yes and No)
-		if m.resumePromptSelection > 0 {
-			m.resumePromptSelection--
-		} else {
-			// Wrap to bottom (only 2 options)
-			m.resumePromptSelection = 1
-		}
-
-	case "down", "j":
-		// Move selection down (toggle between Yes and No)
-		if m.resumePromptSelection < 1 {
-			m.resumePromptSelection++
-		} else {
-			// Wrap to top
-			m.resumePromptSelection = 0
-		}
-
-	case "y", "Y":
-		// Direct "Yes" - load the saved game
-		board, err := config.LoadGame()
-		if err != nil {
-			// Failed to load - show error and go to main menu
-			m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
-			m.screen = ScreenMainMenu
-			m.menuOptions = buildMainMenuOptions()
-			m.menuSelection = 0
-			return m, nil
-		}
-
-		// Successfully loaded - start gameplay with loaded board
-		m.board = board
-		m.moveHistory = []engine.Move{}
-		m.screen = ScreenGamePlay
-		m.input = ""
-		m.errorMsg = ""
-		m.statusMsg = "Game resumed"
-		m.resignedBy = -1
-		// Reset draw offer state
-		m.drawOfferedBy = -1
-		m.drawOfferedByWhite = false
-		m.drawOfferedByBlack = false
-		m.drawByAgreement = false
-
-	case "n", "N":
-		// Direct "No" - go to main menu
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
-		m.menuSelection = 0
-		m.errorMsg = ""
-		m.statusMsg = ""
-
-	case "enter":
-		// Execute the selected action
-		if m.resumePromptSelection == 0 {
-			// User selected "Yes" - load the saved game
-			board, err := config.LoadGame()
-			if err != nil {
-				// Failed to load - show error and go to main menu
-				m.errorMsg = fmt.Sprintf("Failed to load saved game: %v", err)
-				m.screen = ScreenMainMenu
-				m.menuOptions = []string{"New Game", "Load Game", "Settings", "Exit"}
-				m.menuSelection = 0
-				return m, nil
-			}
-
-			// Successfully loaded - start gameplay with loaded board
-			m.board = board
-			m.moveHistory = []engine.Move{}
-			m.screen = ScreenGamePlay
-			m.input = ""
-			m.errorMsg = ""
-			m.statusMsg = "Game resumed"
-			m.resignedBy = -1
-			// Reset draw offer state
-			m.drawOfferedBy = -1
-			m.drawOfferedByWhite = false
-			m.drawOfferedByBlack = false
-			m.drawByAgreement = false
-		} else {
-			// User selected "No" - go to main menu
-			m.screen = ScreenMainMenu
-			m.menuOptions = buildMainMenuOptions()
-			m.menuSelection = 0
-			m.errorMsg = ""
-			m.statusMsg = ""
-		}
+	m.blinkOn = false
+	// Clean up bot engine if it exists
+	if m.botEngine != nil {
+		_ = m.botEngine.Close()
+		m.botEngine = nil
 	}
-
-	return m, nil
 }
 
 // handleFENInputKeys handles keyboard input for the FEN Input screen.
@@ -831,13 +702,8 @@ func (m Model) handleFENInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
 		m.popScreen()
-		// Rebuild menu options if we're back at main menu
-		if m.screen == ScreenMainMenu {
-			m.menuOptions = buildMainMenuOptions()
-		}
-		m.menuSelection = 0
-		m.errorMsg = ""
 		m.statusMsg = ""
 		m.fenInput.SetValue("")
 		return m, nil
@@ -1149,13 +1015,8 @@ func (m Model) handleBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
 		m.popScreen()
-		// Rebuild menu options for game type selection if we're back there
-		if m.screen == ScreenGameTypeSelect {
-			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
-		}
-		m.menuSelection = 0
-		m.errorMsg = ""
 		m.statusMsg = ""
 	}
 
@@ -1191,18 +1052,12 @@ func (m Model) handleBvBBotSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		if m.bvbSelectingWhite {
-			// Go back to game type selection
-			m.screen = ScreenGameTypeSelect
-			m.menuOptions = []string{"Player vs Player", "Player vs Bot", "Bot vs Bot"}
-			m.menuSelection = 0
-			m.errorMsg = ""
-			m.statusMsg = ""
+			// At White selection - go back to previous screen
+			m.popScreen()
 		} else {
-			// Go back to selecting White bot
+			// At Black selection - go back to White selection (same screen)
 			m.bvbSelectingWhite = true
 			m.menuSelection = 0
-			m.errorMsg = ""
-			m.statusMsg = ""
 		}
 	}
 
@@ -1235,7 +1090,7 @@ func (m Model) handleBvBBotDifficultySelection() (tea.Model, tea.Cmd) {
 	} else {
 		// Store Black difficulty and transition to game mode selection
 		m.bvbBlackDiff = diff
-		m.screen = ScreenBvBGameMode
+		m.pushScreen(ScreenBvBGameMode)
 		m.menuOptions = []string{"Single Game", "Multi-Game"}
 		m.menuSelection = 0
 		m.bvbInputtingCount = false
@@ -1276,11 +1131,8 @@ func (m Model) handleBvBGameModeKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Go back to BvB bot select (Black selection)
-		m.screen = ScreenBvBBotSelect
+		m.popScreen()
 		m.bvbSelectingWhite = false
-		m.menuOptions = []string{"Easy", "Medium", "Hard"}
-		m.menuSelection = 0
-		m.statusMsg = ""
 	}
 
 	return m, nil
@@ -1333,7 +1185,7 @@ func (m Model) handleBvBCountInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.bvbGameCount = count
 		m.bvbInputtingCount = false
-		m.screen = ScreenBvBGridConfig
+		m.pushScreen(ScreenBvBGridConfig)
 		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
 		m.menuSelection = 0
 		m.bvbInputtingGrid = false
@@ -1400,11 +1252,8 @@ func (m Model) handleBvBGridConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Go back to game mode selection
-		m.screen = ScreenBvBGameMode
-		m.menuOptions = []string{"Single Game", "Multi-Game"}
-		m.menuSelection = 0
+		m.popScreen()
 		m.bvbInputtingGrid = false
-		m.statusMsg = ""
 	}
 
 	return m, nil
@@ -1529,6 +1378,7 @@ func (m Model) handleBvBViewModeSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) 
 
 	case "esc":
 		// Go back to concurrency select
+		// popScreen() handles menu state restoration
 		m.popScreen()
 		m.bvbConcurrencySelection = 0
 		m.bvbInputtingConcurrency = false
@@ -1577,9 +1427,8 @@ func (m Model) handleBvBConcurrencySelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cm
 
 	case "esc":
 		// Go back to grid config
+		// popScreen() handles menu state restoration
 		m.popScreen()
-		m.menuOptions = []string{"1x1", "2x2", "2x3", "2x4", "Custom"}
-		m.menuSelection = 0
 		m.bvbInputtingGrid = false
 		m.statusMsg = ""
 	}
@@ -1704,6 +1553,11 @@ func uiBotDiffToBvB(d BotDifficulty) bot.Difficulty {
 // handleBvBGamePlayKeys handles keyboard input during BvB game viewing.
 // Supports pause/resume, speed changes, view toggle, game navigation, jump to game, and abort.
 func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If abort dialog is showing, handle it
+	if m.bvbShowAbortConfirm {
+		return m.handleBvBAbortConfirmKeys(msg)
+	}
+
 	// If jump prompt is showing, handle jump input
 	if m.bvbShowJumpPrompt {
 		return m.handleBvBJumpInput(msg)
@@ -1720,16 +1574,18 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "esc":
-		// Abort the session and return to menu
-		if m.bvbManager != nil {
-			m.bvbManager.Abort()
-			m.bvbManager = nil
+		// Check if session is still running (has active games)
+		if m.bvbManager != nil && !m.bvbManager.AllFinished() {
+			// Show abort confirmation
+			m.bvbShowAbortConfirm = true
+			m.bvbAbortSelection = 0 // Default to Cancel
+			return m, nil
 		}
-		m.screen = ScreenMainMenu
-		m.menuOptions = buildMainMenuOptions()
-		m.menuSelection = 0
-		m.statusMsg = ""
-		m.errorMsg = ""
+		// Session finished - go to stats screen
+		m.screen = ScreenBvBStats
+		m.bvbStatsSelection = 0
+		m.bvbStatsResultsPage = 0
+		m.menuOptions = []string{"New Session", "Return to Menu"}
 		return m, nil
 
 	case " ":
@@ -1900,6 +1756,35 @@ func (m *Model) handleBvBJumpSubmit() {
 		boardsPerPage := m.bvbGridRows * m.bvbGridCols
 		m.bvbPageIndex = m.bvbSelectedGame / boardsPerPage
 	}
+}
+
+// handleBvBAbortConfirmKeys handles keyboard input for the BvB abort confirmation dialog.
+// Supports navigation between Cancel/Abort options, Enter to confirm, and ESC to cancel.
+func (m Model) handleBvBAbortConfirmKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "down", "k", "j":
+		// Toggle between Cancel (0) and Abort (1)
+		m.bvbAbortSelection = 1 - m.bvbAbortSelection
+	case "enter":
+		if m.bvbAbortSelection == 1 { // "Abort Session"
+			if m.bvbManager != nil {
+				m.bvbManager.Stop()
+				m.bvbManager = nil
+			}
+			m.bvbShowAbortConfirm = false
+			m.screen = ScreenMainMenu
+			m.menuOptions = buildMainMenuOptions()
+			m.menuSelection = 0
+			m.navStack = nil
+		} else { // "Cancel"
+			m.bvbShowAbortConfirm = false
+		}
+		return m, nil
+	case "esc":
+		// ESC on dialog = Cancel
+		m.bvbShowAbortConfirm = false
+	}
+	return m, nil
 }
 
 // bvbTickCmd returns a command that sends a BvBTickMsg after a delay based on speed.
@@ -2087,13 +1972,8 @@ func (m Model) handleColorSelectKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		// Return to previous screen using navigation stack
+		// popScreen() handles menu state restoration
 		m.popScreen()
-		// Rebuild menu options for bot selection if we're back there
-		if m.screen == ScreenBotSelect {
-			m.menuOptions = []string{"Easy", "Medium", "Hard"}
-		}
-		m.menuSelection = 0
-		m.errorMsg = ""
 		m.statusMsg = ""
 	}
 

@@ -1107,7 +1107,6 @@ func TestGlobalShortcutsWorkFromVariousScreens(t *testing.T) {
 		ScreenBvBGameMode,    // when not in count input mode
 		ScreenBvBGridConfig,  // when not in grid input mode
 		ScreenSavePrompt,     // though user should probably cancel first
-		ScreenResumePrompt,   // can start new game
 		ScreenDrawPrompt,     // though user should probably respond first
 	}
 

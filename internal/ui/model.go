@@ -31,8 +31,6 @@ const (
 	ScreenSettings
 	// ScreenSavePrompt is displayed when the user tries to quit during an active game
 	ScreenSavePrompt
-	// ScreenResumePrompt is displayed on startup when a saved game exists
-	ScreenResumePrompt
 	// ScreenDrawPrompt is displayed when one player offers a draw
 	ScreenDrawPrompt
 	// ScreenBvBBotSelect allows the user to choose bot difficulties for Bot vs Bot mode
@@ -198,6 +196,10 @@ type Model struct {
 	bvbInputtingConcurrency bool
 	// bvbConcurrency stores the selected concurrency value for the session
 	bvbConcurrency int
+	// bvbShowAbortConfirm indicates whether the abort confirmation dialog is displayed
+	bvbShowAbortConfirm bool
+	// bvbAbortSelection tracks the selected option in abort dialog (0 = Cancel, 1 = Abort)
+	bvbAbortSelection int
 
 	// Overlay state
 	// showShortcutsOverlay indicates whether the keyboard shortcuts help overlay is displayed

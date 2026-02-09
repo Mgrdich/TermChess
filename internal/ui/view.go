@@ -244,8 +244,6 @@ func (m Model) View() string {
 		return m.renderSettings()
 	case ScreenSavePrompt:
 		return m.renderSavePrompt()
-	case ScreenResumePrompt:
-		return m.renderResumePrompt()
 	case ScreenDrawPrompt:
 		return m.renderDrawPrompt()
 	case ScreenBvBBotSelect:
@@ -888,55 +886,11 @@ func (m Model) renderSavePrompt() string {
 	optionsStyle := lipgloss.NewStyle().
 		Foreground(m.theme.MenuSelected).
 		Align(lipgloss.Center)
-	optionsText := "y: Yes  |  n: No  |  ESC: Cancel"
+	optionsText := "y: Save & Exit  |  n: Exit without saving  |  ESC: Cancel"
 	b.WriteString(optionsStyle.Render(optionsText))
 
 	// Render help text
-	helpText := m.renderHelpText("y: save and exit | n: exit without saving | ESC: cancel")
-	if helpText != "" {
-		b.WriteString("\n\n")
-		b.WriteString(helpText)
-	}
-
-	// Render error message if present
-	if m.errorMsg != "" {
-		b.WriteString("\n\n")
-		errorText := m.errorStyle().Render(fmt.Sprintf("Error: %s", m.errorMsg))
-		b.WriteString(errorText)
-	}
-
-	return b.String()
-}
-
-// renderResumePrompt renders the resume prompt screen when a saved game exists on startup.
-// It asks the user if they want to resume the saved game or go to the main menu.
-func (m Model) renderResumePrompt() string {
-	var b strings.Builder
-
-	// Render the application title
-	title := m.titleStyle().Render("TermChess")
-	b.WriteString(title)
-	b.WriteString("\n\n")
-
-	// Render the resume prompt message
-	promptStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FFD700")).
-		Align(lipgloss.Center).
-		Padding(1, 0)
-	promptMsg := "A saved game was found. Resume last game?"
-	b.WriteString(promptStyle.Render(promptMsg))
-	b.WriteString("\n\n")
-
-	// Render options
-	optionsStyle := lipgloss.NewStyle().
-		Foreground(m.theme.MenuSelected).
-		Align(lipgloss.Center)
-	optionsText := "y: Yes  |  n: No"
-	b.WriteString(optionsStyle.Render(optionsText))
-
-	// Render help text
-	helpText := m.renderHelpText("y: resume game | n: go to main menu")
+	helpText := m.renderHelpText("y: save & exit | n: exit without saving | ESC: cancel")
 	if helpText != "" {
 		b.WriteString("\n\n")
 		b.WriteString(helpText)
@@ -1610,6 +1564,11 @@ func (m Model) renderBvBGamePlay() string {
 		return "No session running.\n"
 	}
 
+	// Render the abort confirmation dialog as an overlay if showing
+	if m.bvbShowAbortConfirm {
+		return m.renderBvBAbortConfirm()
+	}
+
 	switch m.bvbViewMode {
 	case BvBSingleView:
 		return m.renderBvBSingleView()
@@ -1618,6 +1577,52 @@ func (m Model) renderBvBGamePlay() string {
 	default:
 		return m.renderBvBGridView()
 	}
+}
+
+// renderBvBAbortConfirm renders the abort confirmation dialog for BvB sessions.
+func (m Model) renderBvBAbortConfirm() string {
+	var b strings.Builder
+
+	// Title
+	title := m.titleStyle().Render("TermChess - Bot vs Bot")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+
+	// Dialog box
+	dialogStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(m.theme.MenuSelected).
+		Padding(1, 2)
+
+	var dialogContent strings.Builder
+	dialogTitleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.theme.TitleText)
+	dialogContent.WriteString(dialogTitleStyle.Render("  Abort Session?  "))
+	dialogContent.WriteString("\n\n")
+	dialogContent.WriteString("  Games in progress will be lost.\n\n")
+
+	// Options
+	normalStyle := m.menuItemStyle()
+	selectedStyle := m.selectedItemStyle()
+
+	if m.bvbAbortSelection == 0 {
+		dialogContent.WriteString(selectedStyle.Render("  > Cancel"))
+	} else {
+		dialogContent.WriteString(normalStyle.Render("    Cancel"))
+	}
+	dialogContent.WriteString("\n")
+	if m.bvbAbortSelection == 1 {
+		dialogContent.WriteString(selectedStyle.Render("  > Abort Session"))
+	} else {
+		dialogContent.WriteString(normalStyle.Render("    Abort Session"))
+	}
+	dialogContent.WriteString("\n\n")
+	dialogContent.WriteString(m.helpStyle().Render("  esc: cancel | enter: select"))
+
+	b.WriteString(dialogStyle.Render(dialogContent.String()))
+
+	return b.String()
 }
 
 // renderBvBStats renders the Bot vs Bot statistics screen after all games finish.

@@ -307,57 +307,57 @@
 ## Slice 23: Navigation Stack Refactor and Linear Back-Navigation
 *Ensure consistent stack-based navigation across all screens with proper ESC behavior*
 
-- [ ] **Slice 23: Navigation Stack Refactor and Linear Back-Navigation**
+- [x] **Slice 23: Navigation Stack Refactor and Linear Back-Navigation**
 
   **Part A: Replace Direct Screen Assignments with pushScreen()**
-  - [ ] Update `handleGameTypeSelection()` - Bot vs Bot case: replace `m.screen = ScreenBvBBotSelect` with `m.pushScreen(ScreenBvBBotSelect)`
-  - [ ] Update `handleBvBBotDifficultySelection()` - replace `m.screen = ScreenBvBGameMode` with `m.pushScreen(ScreenBvBGameMode)`
-  - [ ] Update `handleBvBCountInput()` - replace `m.screen = ScreenBvBGridConfig` with `m.pushScreen(ScreenBvBGridConfig)`
-  - [ ] Update `navigateToViewModeSelect()` - replace direct assignment with `m.pushScreen(ScreenBvBViewModeSelect)`
-  - [ ] Add pushScreen for new ScreenBvBConcurrencySelect transitions
+  - [x] Update `handleGameTypeSelection()` - Bot vs Bot case: replace `m.screen = ScreenBvBBotSelect` with `m.pushScreen(ScreenBvBBotSelect)`
+  - [x] Update `handleBvBBotDifficultySelection()` - replace `m.screen = ScreenBvBGameMode` with `m.pushScreen(ScreenBvBGameMode)`
+  - [x] Update `handleBvBCountInput()` - replace `m.screen = ScreenBvBGridConfig` with `m.pushScreen(ScreenBvBGridConfig)`
+  - [x] Update `navigateToViewModeSelect()` - replace direct assignment with `m.pushScreen(ScreenBvBViewModeSelect)`
+  - [x] Add pushScreen for new ScreenBvBConcurrencySelect transitions
 
   **Part B: Replace Hardcoded ESC Handlers with popScreen()**
-  - [ ] Update `handleBvBBotSelectKeys()` - replace hardcoded `m.screen = ScreenGameTypeSelect` with `m.popScreen()` (keep White→Black internal toggle)
-  - [ ] Update `handleBvBGameModeKeys()` - replace `m.screen = ScreenBvBBotSelect` with `m.popScreen()`
-  - [ ] Update `handleBvBGridConfigKeys()` - replace `m.screen = ScreenBvBGameMode` with `m.popScreen()`
-  - [ ] Update `handleBvBViewModeSelectKeys()` - replace `m.screen = ScreenBvBGridConfig` with `m.popScreen()`
-  - [ ] Update `handleBvBConcurrencySelectKeys()` - use `m.popScreen()` for ESC
+  - [x] Update `handleBvBBotSelectKeys()` - replace hardcoded `m.screen = ScreenGameTypeSelect` with `m.popScreen()` (keep White→Black internal toggle)
+  - [x] Update `handleBvBGameModeKeys()` - replace `m.screen = ScreenBvBBotSelect` with `m.popScreen()`
+  - [x] Update `handleBvBGridConfigKeys()` - replace `m.screen = ScreenBvBGameMode` with `m.popScreen()`
+  - [x] Update `handleBvBViewModeSelectKeys()` - replace `m.screen = ScreenBvBGridConfig` with `m.popScreen()`
+  - [x] Update `handleBvBConcurrencySelectKeys()` - use `m.popScreen()` for ESC
 
   **Part C: Menu State Restoration in popScreen()**
-  - [ ] Update `popScreen()` to restore menu options based on returned screen type
-  - [ ] Add cases for: GameTypeSelect, BvBBotSelect, BvBGameMode, BvBGridConfig, BvBConcurrencySelect, BvBViewModeSelect, MainMenu
-  - [ ] Reset `menuSelection` to 0 and clear `errorMsg` on pop
-  - [ ] Write unit tests for menu restoration on each screen type
+  - [x] Update `popScreen()` to restore menu options based on returned screen type
+  - [x] Add cases for: GameTypeSelect, BvBBotSelect, BvBGameMode, BvBGridConfig, BvBConcurrencySelect, BvBViewModeSelect, MainMenu
+  - [x] Reset `menuSelection` to 0 and clear `errorMsg` on pop
+  - [x] Write unit tests for menu restoration on each screen type
 
   **Part D: Save/Quit Dialog Behavior Change**
-  - [ ] Update `handleSavePromptKeys()` - "No" now goes to MainMenu without saving (not back to gameplay)
-  - [ ] Keep ESC on dialog to cancel and return to gameplay
-  - [ ] Add `cleanupGame()` helper to properly cleanup game state before returning to menu
-  - [ ] Update Save/Quit dialog text to clearly explain "Yes = Save & Exit", "No = Exit without saving"
-  - [ ] Write unit tests for new Save/Quit behavior
+  - [x] Update `handleSavePromptKeys()` - "No" now goes to MainMenu without saving (not back to gameplay)
+  - [x] Keep ESC on dialog to cancel and return to gameplay
+  - [x] Add `cleanupGame()` helper to properly cleanup game state before returning to menu
+  - [x] Update Save/Quit dialog text to clearly explain "Yes = Save & Exit", "No = Exit without saving"
+  - [x] Write unit tests for new Save/Quit behavior
 
   **Part E: BvB Abort Confirmation Dialog**
-  - [ ] Add `bvbShowAbortConfirm bool` and `bvbAbortSelection int` fields to Model
-  - [ ] Update `handleBvBGamePlayKeys()` - show abort dialog on ESC when games are in progress
-  - [ ] Implement `handleBvBAbortConfirmKeys()` - handle Cancel (return to session) and Abort (stop and go to menu)
-  - [ ] Create `renderBvBAbortConfirm()` function for dialog overlay
-  - [ ] ESC on abort dialog cancels (returns to session)
-  - [ ] Write unit tests for abort confirmation flow
+  - [x] Add `bvbShowAbortConfirm bool` and `bvbAbortSelection int` fields to Model
+  - [x] Update `handleBvBGamePlayKeys()` - show abort dialog on ESC when games are in progress
+  - [x] Implement `handleBvBAbortConfirmKeys()` - handle Cancel (return to session) and Abort (stop and go to menu)
+  - [x] Create `renderBvBAbortConfirm()` function for dialog overlay
+  - [x] ESC on abort dialog cancels (returns to session)
+  - [x] Write unit tests for abort confirmation flow
 
   **Part F: Remove ScreenResumePrompt (Deprecated)**
-  - [ ] Remove `ScreenResumePrompt` constant from `internal/ui/model.go`
-  - [ ] Remove `case ScreenResumePrompt:` from `handleKeyPress()` in `update.go`
-  - [ ] Delete `handleResumePromptKeys()` function from `update.go`
-  - [ ] Remove `case ScreenResumePrompt:` from `View()` in `view.go`
-  - [ ] Delete `renderResumePrompt()` function from `view.go`
-  - [ ] Remove `case ScreenResumePrompt:` from `screenName()` in `navigation.go`
-  - [ ] Update test files to remove ScreenResumePrompt references
-  - [ ] Verify no compilation errors after removal
+  - [x] Remove `ScreenResumePrompt` constant from `internal/ui/model.go`
+  - [x] Remove `case ScreenResumePrompt:` from `handleKeyPress()` in `update.go`
+  - [x] Delete `handleResumePromptKeys()` function from `update.go`
+  - [x] Remove `case ScreenResumePrompt:` from `View()` in `view.go`
+  - [x] Delete `renderResumePrompt()` function from `view.go`
+  - [x] Remove `case ScreenResumePrompt:` from `screenName()` in `navigation.go`
+  - [x] Update test files to remove ScreenResumePrompt references
+  - [x] Verify no compilation errors after removal
 
   **Part G: Integration Testing**
-  - [ ] Test full BvB navigation flow: MainMenu → GameTypeSelect → BvBBotSelect → GameMode → GridConfig → ConcurrencySelect → ViewModeSelect, then ESC all the way back to MainMenu
-  - [ ] Test full PvBot navigation flow with ESC back to MainMenu
-  - [ ] Test Save/Quit dialog: Yes saves + exits, No exits without saving, ESC cancels
-  - [ ] Test BvB abort dialog during active session
-  - [ ] Verify breadcrumbs are correct at each step in BvB flow
-  - [ ] Test Settings accessed from multiple screens returns to correct origin
+  - [x] Test full BvB navigation flow: MainMenu → GameTypeSelect → BvBBotSelect → GameMode → GridConfig → ConcurrencySelect → ViewModeSelect, then ESC all the way back to MainMenu
+  - [x] Test full PvBot navigation flow with ESC back to MainMenu
+  - [x] Test Save/Quit dialog: Yes saves + exits, No exits without saving, ESC cancels
+  - [x] Test BvB abort dialog during active session
+  - [x] Verify breadcrumbs are correct at each step in BvB flow
+  - [x] Test Settings accessed from multiple screens returns to correct origin
