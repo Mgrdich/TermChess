@@ -51,11 +51,18 @@ The project must produce standalone executable binaries for supported platforms.
 
 Release binaries must be hosted at a stable, publicly accessible URL.
 
+**Release Process:**
+1. Developer updates `VERSION` file with new version (e.g., `1.1.0`)
+2. Creates PR and merges to main branch
+3. GitHub Actions automatically creates git tag and GitHub Release
+4. No manual tagging required - releases only happen from main
+
 **Acceptance Criteria:**
 - [ ] Binaries are published to GitHub Releases
 - [ ] Each release is tagged with semantic versioning (e.g., `v1.0.0`)
 - [ ] The `checksums.txt` file is included in each release
 - [ ] A "latest" release is always identifiable for upgrade scripts
+- [ ] Releases are automatically created when VERSION file changes on main
 
 ---
 

@@ -14,14 +14,14 @@
 ---
 
 ## Slice 2: Build System & Release Automation
-*After this slice: Pushing a git tag automatically creates a GitHub Release with binaries*
+*After this slice: Merging to main with VERSION file change automatically creates a GitHub Release*
 
 - [x] **2.1** Add `build-all` target to `Makefile` for cross-compilation (darwin/linux × amd64/arm64)
 - [x] **2.2** Add `checksums` target to `Makefile` to generate `checksums.txt` with SHA256 hashes
-- [x] **2.3** Create `.github/workflows/release.yml` that triggers on `v*` tags
-- [x] **2.4** Configure release workflow to build all platforms, generate checksums, and create GitHub Release
-- [ ] **2.5** Test: Push a test tag (e.g., `v0.0.1-test`) and verify release is created with all 4 binaries + checksums.txt
-- [ ] **2.6** Clean up test release/tag after verification
+- [x] **2.3** Create `VERSION` file at repository root
+- [x] **2.4** Create `.github/workflows/release.yml` that triggers on VERSION file changes to main
+- [x] **2.5** Configure release workflow to auto-create git tag, build all platforms, generate checksums, and create GitHub Release
+- [x] **2.6** Test: Merge PR with VERSION change and verify release is created automatically
 
 ---
 

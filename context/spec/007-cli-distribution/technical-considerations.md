@@ -217,15 +217,20 @@ Already up to date (v1.2.0)
 
 ### 2.6 Automated Release Workflow
 
-**New File:** `.github/workflows/release.yml`
+**Version Source of Truth:** `VERSION` file at repository root (e.g., contains `1.0.0`)
+
+**New Files:**
+- `VERSION` - Contains the current version number (e.g., `1.0.0`)
+- `.github/workflows/release.yml` - Automated release workflow
 
 ```yaml
 name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths:
+      - 'VERSION'
 
 permissions:
   contents: write
@@ -238,21 +243,51 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get version from VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git rev-parse "${{ steps.version.outputs.VERSION }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a ${{ steps.version.outputs.VERSION }} -m "Release ${{ steps.version.outputs.VERSION }}"
+          git push origin ${{ steps.version.outputs.VERSION }}
+
       - uses: actions/setup-go@v5
+        if: steps.check_tag.outputs.exists == 'false'
         with:
           go-version: '1.24'
 
+      - name: Install system dependencies
+        if: steps.check_tag.outputs.exists == 'false'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev xorg-dev
+
       - name: Build all platforms
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          make build-all VERSION=$VERSION
+        if: steps.check_tag.outputs.exists == 'false'
+        run: make build-all VERSION=${{ steps.version.outputs.VERSION }}
 
       - name: Generate checksums
+        if: steps.check_tag.outputs.exists == 'false'
         run: make checksums
 
       - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
           files: |
             dist/termchess-*
             dist/checksums.txt
@@ -261,18 +296,32 @@ jobs:
 
 **Automated Release Flow:**
 ```
-Developer: git tag v1.0.0 && git push origin v1.0.0
+1. Developer updates VERSION file (e.g., "1.0.0" → "1.1.0")
     ↓
-GitHub Actions triggers on tag push
+2. Creates PR and merges to main
     ↓
-Builds 4 binaries (darwin/linux × amd64/arm64)
+3. GitHub Actions detects VERSION file changed
     ↓
-Generates checksums.txt
+4. Reads version from file → "v1.1.0"
     ↓
-Creates GitHub Release with all assets
+5. Checks if tag exists (skip if already released)
     ↓
-Users can now install/upgrade to v1.0.0
+6. Creates git tag v1.1.0 automatically
+    ↓
+7. Builds 4 binaries (darwin/linux × amd64/arm64)
+    ↓
+8. Generates checksums.txt
+    ↓
+9. Creates GitHub Release with all assets
+    ↓
+Users can now install/upgrade to v1.1.0
 ```
+
+**Key Benefits:**
+- No manual tagging required
+- Releases only happen from main branch
+- Version is explicitly controlled in VERSION file
+- Duplicate releases are prevented (tag existence check)
 
 ---
 
