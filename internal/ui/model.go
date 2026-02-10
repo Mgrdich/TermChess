@@ -215,6 +215,11 @@ type Model struct {
 	// blinkOn controls the blinking highlight state for selected squares
 	// Toggles every 500ms when a piece is selected to create a blinking effect
 	blinkOn bool
+
+	// Update notification state
+	// updateAvailable holds the latest version string when an update is available
+	// Empty string means no update is available or check hasn't completed
+	updateAvailable string
 }
 
 // BvBViewMode represents the display mode for BvB gameplay.

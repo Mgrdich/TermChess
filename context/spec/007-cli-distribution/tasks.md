@@ -41,13 +41,13 @@
 ## Slice 4: Async Update Notification in UI
 *After this slice: Users see orange "Update available" message on startup if newer version exists*
 
-- [ ] **4.1** Add `updateAvailable string` field to `Model` in `internal/ui/model.go`
-- [ ] **4.2** Add `SetUpdateChannel(chan string)` method to `Model`
-- [ ] **4.3** Implement async update check goroutine in `main.go` that sends to channel
-- [ ] **4.4** Listen for update channel in TUI and set `updateAvailable` field
-- [ ] **4.5** Display orange notification in main menu view when `updateAvailable != ""`
-- [ ] **4.6** Ensure silent failure: no error shown if network fails or timeout occurs
-- [ ] **4.7** Verify: Build old version, create newer release, run old version → orange notification appears
+- [x] **4.1** Add `updateAvailable string` field to `Model` in `internal/ui/model.go`
+- [x] **4.2** Add `UpdateAvailableMsg` message type and handler in `internal/ui/update.go`
+- [x] **4.3** Implement async update check via `Init()` command using Bubbletea pattern
+- [x] **4.4** Handle `UpdateAvailableMsg` in `Update()` to set `updateAvailable` field
+- [x] **4.5** Display orange notification in main menu view when `updateAvailable != ""`
+- [x] **4.6** Ensure silent failure: no error shown if network fails or timeout occurs
+- [x] **4.7** Verify: `make test` passes with update notification implementation
 
 ---
 

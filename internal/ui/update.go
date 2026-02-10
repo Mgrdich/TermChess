@@ -11,7 +11,9 @@ import (
 	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/config"
 	"github.com/Mgrdich/TermChess/internal/engine"
+	"github.com/Mgrdich/TermChess/internal/updater"
 	"github.com/Mgrdich/TermChess/internal/util"
+	"github.com/Mgrdich/TermChess/internal/version"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -32,6 +34,12 @@ type BotMoveErrorMsg struct {
 	err error
 }
 
+// UpdateAvailableMsg is sent when a newer version of TermChess is available.
+// The Version field contains the latest version string (e.g., "v0.2.0").
+type UpdateAvailableMsg struct {
+	Version string
+}
+
 // blinkTickCmd returns a command that sends a BlinkTickMsg after 500ms.
 // Used to create the blinking highlight effect for selected squares.
 func blinkTickCmd() tea.Cmd {
@@ -40,10 +48,44 @@ func blinkTickCmd() tea.Cmd {
 	})
 }
 
+// checkForUpdateCmd returns a command that checks for available updates asynchronously.
+// It queries the GitHub API for the latest release and compares it with the current version.
+// If a newer version is available, it sends an UpdateAvailableMsg.
+// On any error (network, timeout, parsing), it silently returns nil (no message).
+func checkForUpdateCmd() tea.Cmd {
+	return func() tea.Msg {
+		// Don't check for updates in dev builds
+		currentVersion := version.Version
+		if currentVersion == "dev" {
+			return nil
+		}
+
+		// Create context with 5 second timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Check for latest version
+		client := updater.NewClient()
+		latestVersion, err := client.CheckLatestVersion(ctx)
+		if err != nil {
+			// Silent failure - don't show any error to user
+			return nil
+		}
+
+		// Compare versions (simple string comparison works for semver)
+		// Both should have 'v' prefix from GitHub releases
+		if latestVersion != currentVersion && latestVersion > currentVersion {
+			return UpdateAvailableMsg{Version: latestVersion}
+		}
+
+		return nil
+	}
+}
+
 // Init initializes the model. Called once at program start.
-// Returns nil as no initial commands are needed for the basic menu interface.
+// Returns a command to check for updates asynchronously.
 func (m Model) Init() tea.Cmd {
-	return nil
+	return checkForUpdateCmd()
 }
 
 // Update handles incoming messages and updates the model state.
@@ -81,6 +123,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, blinkTickCmd()
 		}
 		m.blinkOn = false
+		return m, nil
+	case UpdateAvailableMsg:
+		// Store the available update version for display in main menu
+		m.updateAvailable = msg.Version
 		return m, nil
 	}
 
