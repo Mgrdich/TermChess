@@ -28,13 +28,13 @@
 ## Slice 3: Update Check Infrastructure
 *After this slice: Internal functions ready for checking updates (not user-facing yet)*
 
-- [ ] **3.1** Create `internal/updater/updater.go` with package structure
-- [ ] **3.2** Implement `CheckLatestVersion(ctx) (string, error)` using GitHub API
-- [ ] **3.3** Implement `GetAssetURL(version, os, arch string) string` to construct download URLs
-- [ ] **3.4** Implement `VerifyChecksum(data []byte, expected string) bool` for SHA256 verification
-- [ ] **3.5** Implement `detectInstallMethod() string` to identify go-install vs install-script
-- [ ] **3.6** Create `internal/updater/updater_test.go` with unit tests for all functions
-- [ ] **3.7** Verify: `make test` passes with new updater tests
+- [x] **3.1** Create `internal/updater/updater.go` with package structure
+- [x] **3.2** Implement `CheckLatestVersion(ctx) (string, error)` using GitHub API
+- [x] **3.3** Implement `GetAssetURL(version, os, arch string) string` to construct download URLs
+- [x] **3.4** Implement `VerifyChecksum(data []byte, expected string) bool` for SHA256 verification
+- [x] **3.5** Implement `detectInstallMethod() string` to identify go-install vs install-script
+- [x] **3.6** Create `internal/updater/updater_test.go` with unit tests for all functions
+- [x] **3.7** Verify: `make test` passes with new updater tests
 
 ---
 
