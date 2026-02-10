@@ -5,21 +5,21 @@
 ## Slice 1: Version Display (`--version` flag)
 *After this slice: `termchess --version` displays version info*
 
-- [ ] **1.1** Create `internal/version/version.go` with `Version`, `BuildDate`, `GitCommit` variables (default to "dev"/"unknown")
-- [ ] **1.2** Update `Makefile` to inject version via ldflags when building
-- [ ] **1.3** Add `flag` parsing to `cmd/termchess/main.go` for `--version` flag
-- [ ] **1.4** Implement `printVersion()` function that displays version, build date, and commit
-- [ ] **1.5** Verify: `make build && ./bin/termchess --version` shows "dev" version
+- [x] **1.1** Create `internal/version/version.go` with `Version`, `BuildDate`, `GitCommit` variables (default to "dev"/"unknown")
+- [x] **1.2** Update `Makefile` to inject version via ldflags when building
+- [x] **1.3** Add `flag` parsing to `cmd/termchess/main.go` for `--version` flag
+- [x] **1.4** Implement `printVersion()` function that displays version, build date, and commit
+- [x] **1.5** Verify: `make build && ./bin/termchess --version` shows "dev" version
 
 ---
 
 ## Slice 2: Build System & Release Automation
 *After this slice: Pushing a git tag automatically creates a GitHub Release with binaries*
 
-- [ ] **2.1** Add `build-all` target to `Makefile` for cross-compilation (darwin/linux × amd64/arm64)
-- [ ] **2.2** Add `checksums` target to `Makefile` to generate `checksums.txt` with SHA256 hashes
-- [ ] **2.3** Create `.github/workflows/release.yml` that triggers on `v*` tags
-- [ ] **2.4** Configure release workflow to build all platforms, generate checksums, and create GitHub Release
+- [x] **2.1** Add `build-all` target to `Makefile` for cross-compilation (darwin/linux × amd64/arm64)
+- [x] **2.2** Add `checksums` target to `Makefile` to generate `checksums.txt` with SHA256 hashes
+- [x] **2.3** Create `.github/workflows/release.yml` that triggers on `v*` tags
+- [x] **2.4** Configure release workflow to build all platforms, generate checksums, and create GitHub Release
 - [ ] **2.5** Test: Push a test tag (e.g., `v0.0.1-test`) and verify release is created with all 4 binaries + checksums.txt
 - [ ] **2.6** Clean up test release/tag after verification
 
