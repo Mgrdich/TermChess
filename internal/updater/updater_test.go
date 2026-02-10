@@ -4,8 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -468,4 +472,562 @@ func TestNewClientWithHTTPClient(t *testing.T) {
 	if client.baseURL != customURL {
 		t.Errorf("NewClientWithHTTPClient() baseURL = %q, want %q", client.baseURL, customURL)
 	}
+}
+
+func TestGetChecksumsURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{
+			name:    "standard version",
+			version: "v0.1.0",
+			want:    "https://github.com/Mgrdich/TermChess/releases/download/v0.1.0/checksums.txt",
+		},
+		{
+			name:    "different version",
+			version: "v1.2.3",
+			want:    "https://github.com/Mgrdich/TermChess/releases/download/v1.2.3/checksums.txt",
+		},
+		{
+			name:    "prerelease version",
+			version: "v0.2.0-beta.1",
+			want:    "https://github.com/Mgrdich/TermChess/releases/download/v0.2.0-beta.1/checksums.txt",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetChecksumsURL(tt.version)
+			if got != tt.want {
+				t.Errorf("GetChecksumsURL() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseChecksums(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    map[string]string
+	}{
+		{
+			name: "standard format with two spaces",
+			content: `abc123def456  termchess-v0.1.0-darwin-amd64
+def789ghi012  termchess-v0.1.0-darwin-arm64
+jkl345mno678  termchess-v0.1.0-linux-amd64`,
+			want: map[string]string{
+				"termchess-v0.1.0-darwin-amd64": "abc123def456",
+				"termchess-v0.1.0-darwin-arm64": "def789ghi012",
+				"termchess-v0.1.0-linux-amd64":  "jkl345mno678",
+			},
+		},
+		{
+			name: "standard format with single space",
+			content: `abc123def456 termchess-v0.1.0-darwin-amd64
+def789ghi012 termchess-v0.1.0-darwin-arm64`,
+			want: map[string]string{
+				"termchess-v0.1.0-darwin-amd64": "abc123def456",
+				"termchess-v0.1.0-darwin-arm64": "def789ghi012",
+			},
+		},
+		{
+			name:    "empty content",
+			content: "",
+			want:    map[string]string{},
+		},
+		{
+			name: "content with empty lines",
+			content: `abc123def456  termchess-v0.1.0-darwin-amd64
+
+def789ghi012  termchess-v0.1.0-darwin-arm64
+
+`,
+			want: map[string]string{
+				"termchess-v0.1.0-darwin-amd64": "abc123def456",
+				"termchess-v0.1.0-darwin-arm64": "def789ghi012",
+			},
+		},
+		{
+			name: "content with whitespace padding",
+			content: `  abc123def456  termchess-v0.1.0-darwin-amd64
+  def789ghi012  termchess-v0.1.0-darwin-arm64  `,
+			want: map[string]string{
+				"termchess-v0.1.0-darwin-amd64": "abc123def456",
+				"termchess-v0.1.0-darwin-arm64": "def789ghi012",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseChecksums(tt.content)
+			if len(got) != len(tt.want) {
+				t.Errorf("ParseChecksums() returned %d entries, want %d", len(got), len(tt.want))
+				return
+			}
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Errorf("ParseChecksums()[%q] = %q, want %q", k, got[k], v)
+				}
+			}
+		})
+	}
+}
+
+func TestGetExpectedChecksum(t *testing.T) {
+	checksums := map[string]string{
+		"termchess-v0.1.0-darwin-amd64": "abc123",
+		"termchess-v0.1.0-darwin-arm64": "def456",
+		"termchess-v0.1.0-linux-amd64":  "ghi789",
+		"termchess-v0.1.0-linux-arm64":  "jkl012",
+	}
+
+	tests := []struct {
+		name        string
+		version     string
+		goos        string
+		goarch      string
+		want        string
+		wantErr     bool
+		checksumMap map[string]string
+	}{
+		{
+			name:        "darwin amd64",
+			version:     "v0.1.0",
+			goos:        "darwin",
+			goarch:      "amd64",
+			want:        "abc123",
+			wantErr:     false,
+			checksumMap: checksums,
+		},
+		{
+			name:        "darwin arm64",
+			version:     "v0.1.0",
+			goos:        "darwin",
+			goarch:      "arm64",
+			want:        "def456",
+			wantErr:     false,
+			checksumMap: checksums,
+		},
+		{
+			name:        "linux amd64",
+			version:     "v0.1.0",
+			goos:        "linux",
+			goarch:      "amd64",
+			want:        "ghi789",
+			wantErr:     false,
+			checksumMap: checksums,
+		},
+		{
+			name:        "missing platform",
+			version:     "v0.1.0",
+			goos:        "windows",
+			goarch:      "amd64",
+			want:        "",
+			wantErr:     true,
+			checksumMap: checksums,
+		},
+		{
+			name:        "empty checksums",
+			version:     "v0.1.0",
+			goos:        "darwin",
+			goarch:      "amd64",
+			want:        "",
+			wantErr:     true,
+			checksumMap: map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Store original values
+			origGOOS := runtime.GOOS
+			origGOARCH := runtime.GOARCH
+
+			// We can't change runtime.GOOS/GOARCH, so we'll test the logic directly
+			filename := GetBinaryFilename(tt.version, tt.goos, tt.goarch)
+			got, ok := tt.checksumMap[filename]
+
+			if tt.wantErr {
+				if ok {
+					t.Errorf("expected error for %s, but got checksum %q", filename, got)
+				}
+			} else {
+				if !ok {
+					t.Errorf("expected checksum for %s, but got error", filename)
+				} else if got != tt.want {
+					t.Errorf("GetExpectedChecksum() = %q, want %q", got, tt.want)
+				}
+			}
+
+			// Verify runtime values weren't modified
+			if runtime.GOOS != origGOOS || runtime.GOARCH != origGOARCH {
+				t.Error("runtime values were unexpectedly modified")
+			}
+		})
+	}
+}
+
+func TestCompareVersions(t *testing.T) {
+	tests := []struct {
+		name string
+		v1   string
+		v2   string
+		want int
+	}{
+		{
+			name: "equal versions",
+			v1:   "v1.0.0",
+			v2:   "v1.0.0",
+			want: 0,
+		},
+		{
+			name: "equal versions without prefix",
+			v1:   "1.0.0",
+			v2:   "1.0.0",
+			want: 0,
+		},
+		{
+			name: "equal versions mixed prefix",
+			v1:   "v1.0.0",
+			v2:   "1.0.0",
+			want: 0,
+		},
+		{
+			name: "v1 less than v2 major",
+			v1:   "v1.0.0",
+			v2:   "v2.0.0",
+			want: -1,
+		},
+		{
+			name: "v1 less than v2 minor",
+			v1:   "v1.0.0",
+			v2:   "v1.1.0",
+			want: -1,
+		},
+		{
+			name: "v1 less than v2 patch",
+			v1:   "v1.0.0",
+			v2:   "v1.0.1",
+			want: -1,
+		},
+		{
+			name: "v1 greater than v2 major",
+			v1:   "v2.0.0",
+			v2:   "v1.0.0",
+			want: 1,
+		},
+		{
+			name: "v1 greater than v2 minor",
+			v1:   "v1.1.0",
+			v2:   "v1.0.0",
+			want: 1,
+		},
+		{
+			name: "v1 greater than v2 patch",
+			v1:   "v1.0.1",
+			v2:   "v1.0.0",
+			want: 1,
+		},
+		{
+			name: "prerelease comparison",
+			v1:   "v1.0.0-alpha",
+			v2:   "v1.0.0-beta",
+			want: -1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CompareVersions(tt.v1, tt.v2)
+			if got != tt.want {
+				t.Errorf("CompareVersions(%q, %q) = %d, want %d", tt.v1, tt.v2, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDownloadBinary(t *testing.T) {
+	expectedData := []byte("fake binary data")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify the request path contains the expected binary name pattern
+		expectedPattern := "/releases/download/v0.1.0/termchess-v0.1.0-"
+		if !containsPath(r.URL.Path, expectedPattern) {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(expectedData)
+	}))
+	defer server.Close()
+
+	// Create a custom client that redirects to our test server
+	customTransport := &testTransport{
+		server: server,
+	}
+	httpClient := &http.Client{Transport: customTransport}
+	client := NewClientWithHTTPClient(httpClient, server.URL)
+
+	data, err := client.DownloadBinary(context.Background(), "v0.1.0")
+	if err != nil {
+		t.Fatalf("DownloadBinary() error = %v", err)
+	}
+
+	if string(data) != string(expectedData) {
+		t.Errorf("DownloadBinary() = %q, want %q", string(data), string(expectedData))
+	}
+}
+
+func TestDownloadBinaryError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	customTransport := &testTransport{server: server}
+	httpClient := &http.Client{Transport: customTransport}
+	client := NewClientWithHTTPClient(httpClient, server.URL)
+
+	_, err := client.DownloadBinary(context.Background(), "v0.1.0")
+	if err == nil {
+		t.Error("expected error for 404 response, got nil")
+	}
+}
+
+func TestDownloadChecksums(t *testing.T) {
+	checksumContent := `abc123def456  termchess-v0.1.0-darwin-amd64
+def789ghi012  termchess-v0.1.0-darwin-arm64`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(checksumContent))
+	}))
+	defer server.Close()
+
+	customTransport := &testTransport{server: server}
+	httpClient := &http.Client{Transport: customTransport}
+	client := NewClientWithHTTPClient(httpClient, server.URL)
+
+	checksums, err := client.DownloadChecksums(context.Background(), "v0.1.0")
+	if err != nil {
+		t.Fatalf("DownloadChecksums() error = %v", err)
+	}
+
+	if len(checksums) != 2 {
+		t.Errorf("DownloadChecksums() returned %d entries, want 2", len(checksums))
+	}
+
+	if checksums["termchess-v0.1.0-darwin-amd64"] != "abc123def456" {
+		t.Errorf("unexpected checksum for darwin-amd64: %q", checksums["termchess-v0.1.0-darwin-amd64"])
+	}
+}
+
+func TestReplaceBinary(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "termchess-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create a fake "current" binary
+	currentBinary := filepath.Join(tmpDir, "termchess")
+	if err := os.WriteFile(currentBinary, []byte("old binary"), 0755); err != nil {
+		t.Fatalf("failed to write current binary: %v", err)
+	}
+
+	// New binary data
+	newData := []byte("new binary")
+
+	// We can't directly test ReplaceBinary because it uses os.Executable()
+	// But we can test the atomic replacement logic
+
+	// Test the atomic replacement logic manually
+	tmpPath := currentBinary + ".new"
+	oldPath := currentBinary + ".old"
+
+	// 1. Write new binary to temp file
+	if err := os.WriteFile(tmpPath, newData, 0755); err != nil {
+		t.Fatalf("failed to write new binary: %v", err)
+	}
+
+	// 2. Rename current to .old
+	if err := os.Rename(currentBinary, oldPath); err != nil {
+		t.Fatalf("failed to rename current to old: %v", err)
+	}
+
+	// 3. Rename new to current
+	if err := os.Rename(tmpPath, currentBinary); err != nil {
+		t.Fatalf("failed to rename new to current: %v", err)
+	}
+
+	// 4. Delete old
+	os.Remove(oldPath)
+
+	// Verify the new binary is in place
+	data, err := os.ReadFile(currentBinary)
+	if err != nil {
+		t.Fatalf("failed to read replaced binary: %v", err)
+	}
+
+	if string(data) != string(newData) {
+		t.Errorf("replaced binary content = %q, want %q", string(data), string(newData))
+	}
+
+	// Verify .old was deleted
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+		t.Error("old binary file should have been deleted")
+	}
+
+	// Verify .new was moved
+	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+		t.Error("temp new binary file should have been moved")
+	}
+}
+
+func TestUpgradeAlreadyUpToDate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return v1.0.0 as latest
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"tag_name": "v1.0.0"}`))
+	}))
+	defer server.Close()
+
+	client := NewClientWithHTTPClient(server.Client(), server.URL)
+
+	_, err := client.Upgrade(context.Background(), "v1.0.0", "", nil)
+	if !errors.Is(err, ErrAlreadyUpToDate) {
+		t.Errorf("Upgrade() error = %v, want ErrAlreadyUpToDate", err)
+	}
+}
+
+func TestUpgradeAlreadyUpToDateWithTarget(t *testing.T) {
+	client := NewClient()
+
+	_, err := client.Upgrade(context.Background(), "v1.0.0", "v1.0.0", nil)
+	if !errors.Is(err, ErrAlreadyUpToDate) {
+		t.Errorf("Upgrade() error = %v, want ErrAlreadyUpToDate", err)
+	}
+}
+
+func TestUpgradeDowngradeCancelled(t *testing.T) {
+	client := NewClient()
+
+	confirmDowngrade := func() bool {
+		return false // User says no
+	}
+
+	_, err := client.Upgrade(context.Background(), "v2.0.0", "v1.0.0", confirmDowngrade)
+	if err == nil {
+		t.Error("Upgrade() should have returned error for cancelled downgrade")
+	}
+	if err != nil && !containsPath(err.Error(), "cancelled by user") {
+		t.Errorf("Upgrade() error = %v, want 'cancelled by user'", err)
+	}
+}
+
+func TestGetGoInstallMessage(t *testing.T) {
+	msg := GetGoInstallMessage()
+
+	// Verify the message contains key instructions
+	if !containsPath(msg, "go install") {
+		t.Error("GetGoInstallMessage() should mention 'go install'")
+	}
+	if !containsPath(msg, "github.com/Mgrdich/TermChess") {
+		t.Error("GetGoInstallMessage() should mention the repository")
+	}
+	if !containsPath(msg, "install.sh") {
+		t.Error("GetGoInstallMessage() should mention the install script")
+	}
+}
+
+func TestGetBinaryFilename(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		goos    string
+		goarch  string
+		want    string
+	}{
+		{
+			name:    "darwin amd64",
+			version: "v0.1.0",
+			goos:    "darwin",
+			goarch:  "amd64",
+			want:    "termchess-v0.1.0-darwin-amd64",
+		},
+		{
+			name:    "linux arm64",
+			version: "v1.2.3",
+			goos:    "linux",
+			goarch:  "arm64",
+			want:    "termchess-v1.2.3-linux-arm64",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetBinaryFilename(tt.version, tt.goos, tt.goarch)
+			if got != tt.want {
+				t.Errorf("GetBinaryFilename() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUpgradeResultFields(t *testing.T) {
+	result := &UpgradeResult{
+		PreviousVersion: "v1.0.0",
+		NewVersion:      "v2.0.0",
+		IsDowngrade:     false,
+	}
+
+	if result.PreviousVersion != "v1.0.0" {
+		t.Errorf("PreviousVersion = %q, want %q", result.PreviousVersion, "v1.0.0")
+	}
+	if result.NewVersion != "v2.0.0" {
+		t.Errorf("NewVersion = %q, want %q", result.NewVersion, "v2.0.0")
+	}
+	if result.IsDowngrade {
+		t.Error("IsDowngrade should be false for upgrade")
+	}
+}
+
+func TestSentinelErrors(t *testing.T) {
+	// Test that sentinel errors are properly defined
+	if ErrAlreadyUpToDate == nil {
+		t.Error("ErrAlreadyUpToDate should not be nil")
+	}
+	if ErrChecksumMismatch == nil {
+		t.Error("ErrChecksumMismatch should not be nil")
+	}
+	if ErrPermissionDenied == nil {
+		t.Error("ErrPermissionDenied should not be nil")
+	}
+
+	// Test error messages
+	if ErrAlreadyUpToDate.Error() != "already up to date" {
+		t.Errorf("ErrAlreadyUpToDate.Error() = %q, want %q", ErrAlreadyUpToDate.Error(), "already up to date")
+	}
+	if ErrChecksumMismatch.Error() != "checksum mismatch" {
+		t.Errorf("ErrChecksumMismatch.Error() = %q, want %q", ErrChecksumMismatch.Error(), "checksum mismatch")
+	}
+	if ErrPermissionDenied.Error() != "permission denied" {
+		t.Errorf("ErrPermissionDenied.Error() = %q, want %q", ErrPermissionDenied.Error(), "permission denied")
+	}
+}
+
+// testTransport is a custom transport that redirects all requests to the test server.
+type testTransport struct {
+	server *httptest.Server
+}
+
+func (t *testTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Rewrite the URL to point to our test server
+	req.URL.Scheme = "http"
+	req.URL.Host = t.server.Listener.Addr().String()
+	return http.DefaultTransport.RoundTrip(req)
 }

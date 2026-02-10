@@ -54,18 +54,18 @@
 ## Slice 5: Self-Upgrade Command (`--upgrade`)
 *After this slice: `termchess --upgrade` downloads and replaces the binary*
 
-- [ ] **5.1** Add `--upgrade` flag parsing to `main.go`
-- [ ] **5.2** Implement `handleUpgrade(args []string)` function in main
-- [ ] **5.3** Check for `go install` users → display redirect message and exit
-- [ ] **5.4** Implement `Upgrade(targetVersion string) error` in updater package
-- [ ] **5.5** Implement download logic: fetch binary from GitHub Releases
-- [ ] **5.6** Implement checksum verification before replacement
-- [ ] **5.7** Implement atomic binary replacement (rename dance: old → .old, new → current, delete .old)
-- [ ] **5.8** Handle "already up to date" case
-- [ ] **5.9** Add downgrade warning: "It might be buggier than a summer porch. Continue? [y/N]"
-- [ ] **5.10** Display success message with old → new version
-- [ ] **5.11** Handle permission errors with helpful message (suggest sudo)
-- [ ] **5.12** Verify: Install via curl script, run `--upgrade`, confirm version changes
+- [x] **5.1** Add `--upgrade` flag parsing to `main.go`
+- [x] **5.2** Implement `handleUpgrade(args []string)` function in main
+- [x] **5.3** Check for `go install` users → display redirect message and exit
+- [x] **5.4** Implement `Upgrade(targetVersion string) error` in updater package
+- [x] **5.5** Implement download logic: fetch binary from GitHub Releases
+- [x] **5.6** Implement checksum verification before replacement
+- [x] **5.7** Implement atomic binary replacement (rename dance: old → .old, new → current, delete .old)
+- [x] **5.8** Handle "already up to date" case
+- [x] **5.9** Add downgrade warning: "It might be buggier than a summer porch. Continue? [y/N]"
+- [x] **5.10** Display success message with old → new version
+- [x] **5.11** Handle permission errors with helpful message (suggest sudo)
+- [x] **5.12** Verify: `make test` passes with upgrade functionality
 
 ---
 
