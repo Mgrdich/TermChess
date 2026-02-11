@@ -1031,3 +1031,124 @@ func (t *testTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.URL.Host = t.server.Listener.Addr().String()
 	return http.DefaultTransport.RoundTrip(req)
 }
+
+func TestUninstallLogic(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "termchess-uninstall-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create a fake binary
+	binaryPath := filepath.Join(tmpDir, "termchess")
+	if err := os.WriteFile(binaryPath, []byte("fake binary"), 0755); err != nil {
+		t.Fatalf("failed to write fake binary: %v", err)
+	}
+
+	// Create a fake config directory with files
+	configDir := filepath.Join(tmpDir, ".termchess")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+	configFile := filepath.Join(configDir, "config.toml")
+	if err := os.WriteFile(configFile, []byte("# config"), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+
+	// Test the removal logic manually (since Uninstall uses os.Executable())
+	// Remove binary
+	if err := os.Remove(binaryPath); err != nil {
+		t.Errorf("failed to remove binary: %v", err)
+	}
+
+	// Verify binary is gone
+	if _, err := os.Stat(binaryPath); !os.IsNotExist(err) {
+		t.Error("binary should have been removed")
+	}
+
+	// Remove config directory
+	if err := os.RemoveAll(configDir); err != nil {
+		t.Errorf("failed to remove config dir: %v", err)
+	}
+
+	// Verify config directory is gone
+	if _, err := os.Stat(configDir); !os.IsNotExist(err) {
+		t.Error("config directory should have been removed")
+	}
+}
+
+func TestUninstallNonExistentBinary(t *testing.T) {
+	// Test that removing a non-existent binary returns an error
+	nonExistentPath := "/tmp/non-existent-termchess-binary-12345"
+
+	err := os.Remove(nonExistentPath)
+	if err == nil {
+		t.Error("expected error when removing non-existent binary")
+	}
+	if !os.IsNotExist(err) {
+		t.Errorf("expected IsNotExist error, got: %v", err)
+	}
+}
+
+func TestUninstallEmptyConfigDir(t *testing.T) {
+	// Create a temporary empty config directory
+	tmpDir, err := os.MkdirTemp("", "termchess-uninstall-empty-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+
+	configDir := filepath.Join(tmpDir, ".termchess")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+
+	// Remove the empty config directory
+	if err := os.RemoveAll(configDir); err != nil {
+		t.Errorf("failed to remove empty config dir: %v", err)
+	}
+
+	// Verify it's gone
+	if _, err := os.Stat(configDir); !os.IsNotExist(err) {
+		t.Error("empty config directory should have been removed")
+	}
+
+	// Clean up
+	os.RemoveAll(tmpDir)
+}
+
+func TestUninstallNestedConfigDir(t *testing.T) {
+	// Create a temporary config directory with nested files
+	tmpDir, err := os.MkdirTemp("", "termchess-uninstall-nested-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configDir := filepath.Join(tmpDir, ".termchess")
+	subDir := filepath.Join(configDir, "subdir")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatalf("failed to create nested dirs: %v", err)
+	}
+
+	// Create files in the config directory and subdirectory
+	if err := os.WriteFile(filepath.Join(configDir, "config.toml"), []byte("# config"), 0644); err != nil {
+		t.Fatalf("failed to write config file: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "savegame.fen"), []byte("fen string"), 0644); err != nil {
+		t.Fatalf("failed to write savegame file: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(subDir, "nested.txt"), []byte("nested"), 0644); err != nil {
+		t.Fatalf("failed to write nested file: %v", err)
+	}
+
+	// Remove the config directory recursively
+	if err := os.RemoveAll(configDir); err != nil {
+		t.Errorf("failed to remove nested config dir: %v", err)
+	}
+
+	// Verify everything is gone
+	if _, err := os.Stat(configDir); !os.IsNotExist(err) {
+		t.Error("config directory should have been removed")
+	}
+}

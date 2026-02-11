@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/Mgrdich/TermChess/internal/config"
 )
 
 const (
@@ -401,4 +403,44 @@ Or switch to our install script for automatic upgrades:
 // GetBinaryFilename returns the binary filename for the given version and platform.
 func GetBinaryFilename(version, goos, goarch string) string {
 	return fmt.Sprintf("termchess-%s-%s-%s", version, goos, goarch)
+}
+
+// Uninstall removes the TermChess binary and configuration directory.
+// It returns an error if any removal operation fails.
+func Uninstall() error {
+	// Get executable path
+	execPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("getting executable path: %w", err)
+	}
+
+	// Resolve symlinks to get the real path
+	realPath, err := filepath.EvalSymlinks(execPath)
+	if err != nil {
+		realPath = execPath
+	}
+
+	// Get config directory
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		return fmt.Errorf("getting config directory: %w", err)
+	}
+
+	// Remove the binary
+	if err := os.Remove(realPath); err != nil {
+		if os.IsPermission(err) {
+			return ErrPermissionDenied
+		}
+		return fmt.Errorf("removing binary: %w", err)
+	}
+
+	// Remove config directory recursively
+	if err := os.RemoveAll(configDir); err != nil {
+		if os.IsPermission(err) {
+			return ErrPermissionDenied
+		}
+		return fmt.Errorf("removing config directory: %w", err)
+	}
+
+	return nil
 }

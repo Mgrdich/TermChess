@@ -80,9 +80,9 @@ func TestSaveAndLoadConfig(t *testing.T) {
 // TestSaveConfig_CreatesDirectory tests that SaveConfig creates the config directory if it doesn't exist
 func TestSaveConfig_CreatesDirectory(t *testing.T) {
 	// Get the config directory path
-	configDir, err := getConfigDir()
+	configDir, err := GetConfigDir()
 	if err != nil {
-		t.Fatalf("getConfigDir failed: %v", err)
+		t.Fatalf("GetConfigDir failed: %v", err)
 	}
 
 	// The directory should exist after calling SaveConfig (it may already exist)

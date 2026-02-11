@@ -23,6 +23,7 @@ func main() {
 	// Parse command-line flags first
 	showVersion := flag.Bool("version", false, "Show version information")
 	doUpgrade := flag.Bool("upgrade", false, "Upgrade to latest version (or specify version as argument)")
+	doUninstall := flag.Bool("uninstall", false, "Uninstall TermChess (remove binary and config)")
 	flag.Parse()
 
 	// Handle --version flag (exit before TUI)
@@ -34,6 +35,11 @@ func main() {
 	// Handle --upgrade flag
 	if *doUpgrade {
 		os.Exit(handleUpgrade(flag.Args()))
+	}
+
+	// Handle --uninstall flag
+	if *doUninstall {
+		os.Exit(handleUninstall())
 	}
 
 	// Load configuration from ~/.termchess/config.toml
@@ -152,5 +158,40 @@ func handleUpgrade(args []string) int {
 		fmt.Printf("\u2713 TermChess upgraded from %s to %s\n", result.PreviousVersion, result.NewVersion)
 	}
 
+	return 0
+}
+
+// handleUninstall handles the --uninstall flag.
+// It returns the exit code (0 for success, 1 for error).
+func handleUninstall() int {
+	// Prompt for confirmation
+	fmt.Print("Are you sure you want to uninstall TermChess? [y/N] ")
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("\nError reading input: %v\n", err)
+		return 1
+	}
+
+	response = strings.TrimSpace(strings.ToLower(response))
+	if response != "y" && response != "yes" {
+		fmt.Println("\nUninstall cancelled.")
+		return 0
+	}
+
+	fmt.Println()
+
+	// Perform uninstall
+	if err := updater.Uninstall(); err != nil {
+		if errors.Is(err, updater.ErrPermissionDenied) {
+			fmt.Println("Error: Permission denied removing binary. Try running with sudo:")
+			fmt.Println("  sudo termchess --uninstall")
+			return 1
+		}
+		fmt.Printf("Error: %v\n", err)
+		return 1
+	}
+
+	fmt.Println("\u2713 TermChess has been uninstalled. Goodbye!")
 	return 0
 }

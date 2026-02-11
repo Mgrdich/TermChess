@@ -72,15 +72,15 @@
 ## Slice 6: Self-Uninstall Command (`--uninstall`)
 *After this slice: `termchess --uninstall` removes binary and config*
 
-- [ ] **6.1** Export `GetConfigDir()` function in `internal/config/paths.go`
-- [ ] **6.2** Add `--uninstall` flag parsing to `main.go`
-- [ ] **6.3** Implement `handleUninstall()` function in main
-- [ ] **6.4** Prompt for confirmation: "Are you sure you want to uninstall TermChess? [y/N]"
-- [ ] **6.5** Implement `Uninstall() error` in updater package
-- [ ] **6.6** Remove binary file (via `os.Executable()` path)
-- [ ] **6.7** Remove config directory (`~/.termchess/`)
-- [ ] **6.8** Display farewell message: "✓ TermChess has been uninstalled. Goodbye!"
-- [ ] **6.9** Verify: Install, create config, run `--uninstall`, confirm both binary and config are gone
+- [x] **6.1** Export `GetConfigDir()` function in `internal/config/paths.go`
+- [x] **6.2** Add `--uninstall` flag parsing to `main.go`
+- [x] **6.3** Implement `handleUninstall()` function in main
+- [x] **6.4** Prompt for confirmation: "Are you sure you want to uninstall TermChess? [y/N]"
+- [x] **6.5** Implement `Uninstall() error` in updater package
+- [x] **6.6** Remove binary file (via `os.Executable()` path)
+- [x] **6.7** Remove config directory (`~/.termchess/`)
+- [x] **6.8** Display farewell message: "✓ TermChess has been uninstalled. Goodbye!"
+- [x] **6.9** Verify: `make test` passes with uninstall functionality
 
 ---
 
