@@ -87,20 +87,20 @@
 ## Slice 7: Install Script
 *After this slice: Users can install via `curl ... | bash`*
 
-- [ ] **7.1** Create `scripts/install.sh` with shebang and error handling (`set -euo pipefail`)
-- [ ] **7.2** Implement OS detection (`uname -s` → darwin/linux)
-- [ ] **7.3** Implement architecture detection (`uname -m` → amd64/arm64)
-- [ ] **7.4** Implement unsupported platform error messages
-- [ ] **7.5** Implement existing installation detection and version comparison
-- [ ] **7.6** Implement upgrade prompt for existing installations
-- [ ] **7.7** Implement binary download from GitHub Releases
-- [ ] **7.8** Implement checksum verification
-- [ ] **7.9** Implement install to `~/.local/bin` (create dir if needed)
-- [ ] **7.10** Implement fallback to `/usr/local/bin` with sudo prompt
-- [ ] **7.11** Implement PATH check with shell-specific instructions (bash/zsh)
-- [ ] **7.12** Implement specific version install: `bash -s -- v1.0.0`
-- [ ] **7.13** Display success message with installed version
-- [ ] **7.14** Verify: Test fresh install on macOS and Linux (Docker)
+- [x] **7.1** Create `scripts/install.sh` with shebang and error handling (`set -euo pipefail`)
+- [x] **7.2** Implement OS detection (`uname -s` → darwin/linux)
+- [x] **7.3** Implement architecture detection (`uname -m` → amd64/arm64)
+- [x] **7.4** Implement unsupported platform error messages
+- [x] **7.5** Implement existing installation detection and version comparison
+- [x] **7.6** Implement upgrade prompt for existing installations
+- [x] **7.7** Implement binary download from GitHub Releases
+- [x] **7.8** Implement checksum verification
+- [x] **7.9** Implement install to `~/.local/bin` (create dir if needed)
+- [x] **7.10** Implement fallback to `/usr/local/bin` with sudo prompt
+- [x] **7.11** Implement PATH check with shell-specific instructions (bash/zsh)
+- [x] **7.12** Implement specific version install: `bash -s -- v1.0.0`
+- [x] **7.13** Display success message with installed version
+- [x] **7.14** Verify: Script created and `make test` passes
 
 ---
 
