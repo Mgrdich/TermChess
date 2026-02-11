@@ -38,17 +38,20 @@ To install a specific version:
 curl -fsSL https://raw.githubusercontent.com/Mgrdich/TermChess/main/scripts/install.sh | bash -s -- v1.0.0
 ```
 
+> **Why curl install is recommended:** Installing via the curl script or manual download enables the built-in `--upgrade` and `--uninstall` commands, making it easy to keep TermChess up to date.
+
 ### Manual Download
 
 If you prefer not to pipe to bash, download the binary directly:
 
 **Available platforms:**
-| Platform | Binary Name |
-|----------|-------------|
+
+| Platform              | Binary Name                     |
+|-----------------------|---------------------------------|
 | macOS (Apple Silicon) | `termchess-vX.X.X-darwin-arm64` |
-| macOS (Intel) | `termchess-vX.X.X-darwin-amd64` |
-| Linux (x86_64) | `termchess-vX.X.X-linux-amd64` |
-| Linux (ARM64) | `termchess-vX.X.X-linux-arm64` |
+| macOS (Intel)         | `termchess-vX.X.X-darwin-amd64` |
+| Linux (x86_64)        | `termchess-vX.X.X-linux-amd64`  |
+| Linux (ARM64)         | `termchess-vX.X.X-linux-arm64`  |
 
 **Option 1: Download from browser**
 1. Go to the [Releases page](https://github.com/Mgrdich/TermChess/releases)
@@ -96,6 +99,8 @@ The binary will be created at `bin/termchess`.
 
 ### Upgrading
 
+The `--upgrade` command works when TermChess is installed via the **curl script** or **manual download** to `~/.local/bin` or `/usr/local/bin`.
+
 To upgrade to the latest version:
 
 ```bash
@@ -107,6 +112,8 @@ To upgrade (or downgrade) to a specific version:
 ```bash
 termchess --upgrade v1.0.0
 ```
+
+> **Note:** If you installed via `go install`, use `go install github.com/Mgrdich/TermChess/cmd/termchess@latest` to upgrade instead.
 
 ### Uninstalling
 
