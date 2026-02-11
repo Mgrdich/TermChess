@@ -24,6 +24,33 @@ A terminal-based chess application written in Go. Play chess against friends loc
 
 ## Installation
 
+### Quick Install (Recommended)
+
+Install TermChess with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mgrdich/TermChess/main/scripts/install.sh | bash
+```
+
+To install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mgrdich/TermChess/main/scripts/install.sh | bash -s -- v1.0.0
+```
+
+### Manual Download
+
+If you prefer not to pipe to bash, download the binary directly:
+
+1. Go to the [Releases page](https://github.com/Mgrdich/TermChess/releases)
+2. Download the binary for your platform (e.g., `termchess-v1.0.0-darwin-arm64` for Apple Silicon)
+3. Make it executable and move to your PATH:
+
+```bash
+chmod +x termchess-*
+mv termchess-* ~/.local/bin/termchess
+```
+
 ### From Source
 
 Requires Go 1.21 or later.
@@ -35,6 +62,36 @@ make build
 ```
 
 The binary will be created at `bin/termchess`.
+
+### Upgrading
+
+To upgrade to the latest version:
+
+```bash
+termchess --upgrade
+```
+
+To upgrade (or downgrade) to a specific version:
+
+```bash
+termchess --upgrade v1.0.0
+```
+
+### Uninstalling
+
+To remove TermChess and its configuration:
+
+```bash
+termchess --uninstall
+```
+
+### Version Information
+
+To check your installed version:
+
+```bash
+termchess --version
+```
 
 ## Usage
 
@@ -255,6 +312,7 @@ termchess/
 - [x] Draw offers and resignation
 - [x] Bot opponents (easy/medium/hard)
 - [x] Bot vs Bot spectator mode
+- [x] CLI distribution (install script, self-upgrade, self-uninstall)
 
 ### In Progress / Planned 🚧
 - [ ] RL-trained agent

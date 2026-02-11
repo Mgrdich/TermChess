@@ -1,7 +1,7 @@
 # Technical Specification: CLI Distribution
 
 - **Functional Specification:** `context/spec/007-cli-distribution/functional-spec.md`
-- **Status:** Draft
+- **Status:** Complete
 - **Author(s):** Claude
 
 ---

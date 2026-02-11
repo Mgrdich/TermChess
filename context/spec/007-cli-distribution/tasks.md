@@ -107,10 +107,10 @@
 ## Slice 8: Documentation
 *After this slice: README has complete installation instructions*
 
-- [ ] **8.1** Add "Installation" section to README with curl one-liner
-- [ ] **8.2** Add specific version install example
-- [ ] **8.3** Add manual download instructions (for users who don't trust piping to bash)
-- [ ] **8.4** Document `--upgrade` command usage
-- [ ] **8.5** Document `--uninstall` command usage
-- [ ] **8.6** Document `--version` command
-- [ ] **8.7** Verify: README is clear and all commands work as documented
+- [x] **8.1** Add "Installation" section to README with curl one-liner
+- [x] **8.2** Add specific version install example
+- [x] **8.3** Add manual download instructions (for users who don't trust piping to bash)
+- [x] **8.4** Document `--upgrade` command usage
+- [x] **8.5** Document `--uninstall` command usage
+- [x] **8.6** Document `--version` command
+- [x] **8.7** Verify: README is clear and all commands work as documented
