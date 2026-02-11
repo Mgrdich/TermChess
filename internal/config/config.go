@@ -200,7 +200,7 @@ func LoadGameConfig() GameConfig {
 // Returns an error if the file cannot be written.
 func SaveConfig(config Config) error {
 	// Get the config directory path
-	configDir, err := getConfigDir()
+	configDir, err := GetConfigDir()
 	if err != nil {
 		return fmt.Errorf("failed to get config directory: %w", err)
 	}

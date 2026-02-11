@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 )
 
-// getConfigDir returns the path to the TermChess configuration directory.
+// GetConfigDir returns the path to the TermChess configuration directory.
 // It returns ~/.termchess/ or an error if the home directory cannot be determined.
-func getConfigDir() (string, error) {
+func GetConfigDir() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
@@ -18,7 +18,7 @@ func getConfigDir() (string, error) {
 
 // getConfigFilePath returns the full path to the configuration file.
 func getConfigFilePath() (string, error) {
-	configDir, err := getConfigDir()
+	configDir, err := GetConfigDir()
 	if err != nil {
 		return "", err
 	}
@@ -28,7 +28,7 @@ func getConfigFilePath() (string, error) {
 // SaveGamePath returns the full path to the save game file.
 // Exported for testing purposes.
 func SaveGamePath() (string, error) {
-	configDir, err := getConfigDir()
+	configDir, err := GetConfigDir()
 	if err != nil {
 		return "", err
 	}

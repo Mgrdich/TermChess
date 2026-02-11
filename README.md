@@ -24,6 +24,67 @@ A terminal-based chess application written in Go. Play chess against friends loc
 
 ## Installation
 
+### Quick Install (Recommended)
+
+Install TermChess with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mgrdich/TermChess/main/scripts/install.sh | bash
+```
+
+To install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mgrdich/TermChess/main/scripts/install.sh | bash -s -- v1.0.0
+```
+
+> **Why curl install is recommended:** Installing via the curl script or manual download enables the built-in `--upgrade` and `--uninstall` commands, making it easy to keep TermChess up to date.
+
+### Manual Download
+
+If you prefer not to pipe to bash, download the binary directly:
+
+**Available platforms:**
+
+| Platform              | Binary Name                     |
+|-----------------------|---------------------------------|
+| macOS (Apple Silicon) | `termchess-vX.X.X-darwin-arm64` |
+| macOS (Intel)         | `termchess-vX.X.X-darwin-amd64` |
+| Linux (x86_64)        | `termchess-vX.X.X-linux-amd64`  |
+| Linux (ARM64)         | `termchess-vX.X.X-linux-arm64`  |
+
+**Option 1: Download from browser**
+1. Go to the [Releases page](https://github.com/Mgrdich/TermChess/releases)
+2. Download the binary for your platform
+3. Make it executable and move to your PATH
+
+**Option 2: Download with curl**
+```bash
+# Set the version and platform
+VERSION="v0.1.0"
+OS="darwin"      # or "linux"
+ARCH="arm64"     # or "amd64"
+
+# Download the binary
+curl -fsSL "https://github.com/Mgrdich/TermChess/releases/download/${VERSION}/termchess-${VERSION}-${OS}-${ARCH}" -o termchess
+
+# Make executable and install
+chmod +x termchess
+mv termchess ~/.local/bin/
+```
+
+**Verify checksum (optional but recommended):**
+```bash
+# Download checksums file
+curl -fsSL "https://github.com/Mgrdich/TermChess/releases/download/${VERSION}/checksums.txt" -o checksums.txt
+
+# Verify (on macOS)
+shasum -a 256 termchess | grep -f checksums.txt
+
+# Verify (on Linux)
+sha256sum termchess | grep -f checksums.txt
+```
+
 ### From Source
 
 Requires Go 1.21 or later.
@@ -35,6 +96,40 @@ make build
 ```
 
 The binary will be created at `bin/termchess`.
+
+### Upgrading
+
+The `--upgrade` command works when TermChess is installed via the **curl script** or **manual download** to `~/.local/bin` or `/usr/local/bin`.
+
+To upgrade to the latest version:
+
+```bash
+termchess --upgrade
+```
+
+To upgrade (or downgrade) to a specific version:
+
+```bash
+termchess --upgrade v1.0.0
+```
+
+> **Note:** If you installed via `go install`, use `go install github.com/Mgrdich/TermChess/cmd/termchess@latest` to upgrade instead.
+
+### Uninstalling
+
+To remove TermChess and its configuration:
+
+```bash
+termchess --uninstall
+```
+
+### Version Information
+
+To check your installed version:
+
+```bash
+termchess --version
+```
 
 ## Usage
 
@@ -255,6 +350,7 @@ termchess/
 - [x] Draw offers and resignation
 - [x] Bot opponents (easy/medium/hard)
 - [x] Bot vs Bot spectator mode
+- [x] CLI distribution (install script, self-upgrade, self-uninstall)
 
 ### In Progress / Planned 🚧
 - [ ] RL-trained agent

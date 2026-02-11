@@ -1,7 +1,7 @@
 # Functional Specification: CLI Distribution
 
 - **Roadmap Item:** CLI Distribution (Phase 5) - Make the application accessible to users via simple command-line installation
-- **Status:** Draft
+- **Status:** Complete
 - **Author:** Claude
 
 ---

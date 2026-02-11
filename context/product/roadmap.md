@@ -84,11 +84,14 @@ _Enhanced user interaction and visual experience._
 
 _Make the application accessible to users via simple command-line installation._
 
-- [ ] **CLI Distribution**
-  - [ ] **Release Binary Builds:** Compile standalone binaries for macOS and Linux architectures.
-  - [ ] **Hosted Download Endpoint:** Host release binaries at a stable URL (e.g., GitHub Releases).
-  - [ ] **Curl Install Script:** Provide a one-liner curl/wget command that downloads and installs the binary to a standard location (e.g., `/usr/local/bin`).
-  - [ ] **Installation Instructions:** Document the install process in the README with copy-paste commands.
+- [x] **CLI Distribution**
+  - [x] **Release Binary Builds:** Compile standalone binaries for macOS and Linux (amd64/arm64) with automated GitHub Actions workflow.
+  - [x] **Hosted Download Endpoint:** Host release binaries on GitHub Releases with SHA256 checksums.
+  - [x] **Curl Install Script:** One-liner install script with checksum verification, existing installation detection, and PATH guidance.
+  - [x] **Self-Upgrade Command:** `--upgrade` flag to download and replace binary with atomic replacement.
+  - [x] **Self-Uninstall Command:** `--uninstall` flag to remove binary and config directory.
+  - [x] **Update Notifications:** Async update check on startup with orange notification in main menu.
+  - [x] **Installation Instructions:** Comprehensive README documentation for install, upgrade, uninstall, and version commands.
 
 ---
 

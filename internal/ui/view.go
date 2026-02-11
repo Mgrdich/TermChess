@@ -8,6 +8,8 @@ import (
 
 	"github.com/Mgrdich/TermChess/internal/bvb"
 	"github.com/Mgrdich/TermChess/internal/engine"
+	"github.com/Mgrdich/TermChess/internal/updater"
+	"github.com/Mgrdich/TermChess/internal/version"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -355,6 +357,25 @@ func (m Model) renderMainMenu() string {
 		b.WriteString("\n\n")
 		statusText := m.statusStyle().Render(m.statusMsg)
 		b.WriteString(statusText)
+	}
+
+	// Render update notification if available
+	if m.updateAvailable != "" {
+		b.WriteString("\n\n")
+		updateStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("208")). // Orange color
+			Bold(true)
+
+		var updateText string
+		installMethod := updater.DetectInstallMethod()
+		if installMethod == updater.InstallMethodGoInstall {
+			updateText = fmt.Sprintf("Update available: %s (current: %s). Run 'go install github.com/Mgrdich/TermChess/cmd/termchess@latest' to update.",
+				m.updateAvailable, version.Version)
+		} else {
+			updateText = fmt.Sprintf("Update available: %s (current: %s). Run 'termchess --upgrade' to update.",
+				m.updateAvailable, version.Version)
+		}
+		b.WriteString(updateStyle.Render(updateText))
 	}
 
 	return b.String()
