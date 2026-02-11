@@ -42,13 +42,44 @@ curl -fsSL https://raw.githubusercontent.com/Mgrdich/TermChess/main/scripts/inst
 
 If you prefer not to pipe to bash, download the binary directly:
 
-1. Go to the [Releases page](https://github.com/Mgrdich/TermChess/releases)
-2. Download the binary for your platform (e.g., `termchess-v1.0.0-darwin-arm64` for Apple Silicon)
-3. Make it executable and move to your PATH:
+**Available platforms:**
+| Platform | Binary Name |
+|----------|-------------|
+| macOS (Apple Silicon) | `termchess-vX.X.X-darwin-arm64` |
+| macOS (Intel) | `termchess-vX.X.X-darwin-amd64` |
+| Linux (x86_64) | `termchess-vX.X.X-linux-amd64` |
+| Linux (ARM64) | `termchess-vX.X.X-linux-arm64` |
 
+**Option 1: Download from browser**
+1. Go to the [Releases page](https://github.com/Mgrdich/TermChess/releases)
+2. Download the binary for your platform
+3. Make it executable and move to your PATH
+
+**Option 2: Download with curl**
 ```bash
-chmod +x termchess-*
-mv termchess-* ~/.local/bin/termchess
+# Set the version and platform
+VERSION="v0.1.0"
+OS="darwin"      # or "linux"
+ARCH="arm64"     # or "amd64"
+
+# Download the binary
+curl -fsSL "https://github.com/Mgrdich/TermChess/releases/download/${VERSION}/termchess-${VERSION}-${OS}-${ARCH}" -o termchess
+
+# Make executable and install
+chmod +x termchess
+mv termchess ~/.local/bin/
+```
+
+**Verify checksum (optional but recommended):**
+```bash
+# Download checksums file
+curl -fsSL "https://github.com/Mgrdich/TermChess/releases/download/${VERSION}/checksums.txt" -o checksums.txt
+
+# Verify (on macOS)
+shasum -a 256 termchess | grep -f checksums.txt
+
+# Verify (on Linux)
+sha256sum termchess | grep -f checksums.txt
 ```
 
 ### From Source
