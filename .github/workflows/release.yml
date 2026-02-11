@@ -1,10 +1,11 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
     branches: [main]
-    paths:
-      - 'VERSION'
 
 permissions:
   contents: write
@@ -12,12 +13,25 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Check if VERSION file changed
+        id: version_changed
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^VERSION$'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "VERSION file was modified"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "VERSION file was not modified, skipping release"
+          fi
+
       - name: Get version from VERSION file
+        if: steps.version_changed.outputs.changed == 'true'
         id: version
         run: |
           VERSION=$(cat VERSION | tr -d '[:space:]')
@@ -25,6 +39,7 @@ jobs:
           echo "Version: v$VERSION"
 
       - name: Check if tag already exists
+        if: steps.version_changed.outputs.changed == 'true'
         id: check_tag
         run: |
           if git rev-parse "${{ steps.version.outputs.VERSION }}" >/dev/null 2>&1; then
@@ -69,3 +84,13 @@ jobs:
             dist/termchess-*
             dist/checksums.txt
           generate_release_notes: true
+
+      - name: Summary
+        run: |
+          if [[ "${{ steps.version_changed.outputs.changed }}" != "true" ]]; then
+            echo "::notice::Not released - VERSION file was not modified"
+          elif [[ "${{ steps.check_tag.outputs.exists }}" == "true" ]]; then
+            echo "::notice::Not released - Tag ${{ steps.version.outputs.VERSION }} already exists"
+          else
+            echo "::notice::Released ${{ steps.version.outputs.VERSION }}"
+          fi
