@@ -122,8 +122,14 @@ func handleUpgrade(args []string) int {
 		return response == "y" || response == "yes"
 	}
 
+	// Normalize target version for display (ensure 'v' prefix)
+	displayVersion := targetVersion
+	if !strings.HasPrefix(displayVersion, "v") {
+		displayVersion = "v" + displayVersion
+	}
+
 	// Perform the upgrade
-	binaryName := updater.GetBinaryFilename(targetVersion, runtime.GOOS, runtime.GOARCH)
+	binaryName := updater.GetBinaryFilename(displayVersion, runtime.GOOS, runtime.GOARCH)
 	fmt.Printf("Downloading %s...\n", binaryName)
 
 	result, err := client.Upgrade(ctx, currentVersion, targetVersion, confirmDowngrade)

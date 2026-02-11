@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 )
@@ -622,6 +621,15 @@ func TestGetExpectedChecksum(t *testing.T) {
 			checksumMap: checksums,
 		},
 		{
+			name:        "linux arm64",
+			version:     "v0.1.0",
+			goos:        "linux",
+			goarch:      "arm64",
+			want:        "jkl012",
+			wantErr:     false,
+			checksumMap: checksums,
+		},
+		{
 			name:        "missing platform",
 			version:     "v0.1.0",
 			goos:        "windows",
@@ -643,29 +651,18 @@ func TestGetExpectedChecksum(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Store original values
-			origGOOS := runtime.GOOS
-			origGOARCH := runtime.GOARCH
-
-			// We can't change runtime.GOOS/GOARCH, so we'll test the logic directly
-			filename := GetBinaryFilename(tt.version, tt.goos, tt.goarch)
-			got, ok := tt.checksumMap[filename]
+			got, err := GetExpectedChecksum(tt.checksumMap, tt.version, tt.goos, tt.goarch)
 
 			if tt.wantErr {
-				if ok {
-					t.Errorf("expected error for %s, but got checksum %q", filename, got)
+				if err == nil {
+					t.Errorf("GetExpectedChecksum() expected error, got checksum %q", got)
 				}
 			} else {
-				if !ok {
-					t.Errorf("expected checksum for %s, but got error", filename)
+				if err != nil {
+					t.Errorf("GetExpectedChecksum() unexpected error: %v", err)
 				} else if got != tt.want {
 					t.Errorf("GetExpectedChecksum() = %q, want %q", got, tt.want)
 				}
-			}
-
-			// Verify runtime values weren't modified
-			if runtime.GOOS != origGOOS || runtime.GOARCH != origGOARCH {
-				t.Error("runtime values were unexpectedly modified")
 			}
 		})
 	}

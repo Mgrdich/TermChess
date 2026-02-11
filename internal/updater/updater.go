@@ -215,9 +215,10 @@ func ParseChecksums(content string) map[string]string {
 	return checksums
 }
 
-// GetExpectedChecksum returns the expected checksum for the current platform binary.
-func GetExpectedChecksum(checksums map[string]string, version string) (string, error) {
-	filename := fmt.Sprintf("termchess-%s-%s-%s", version, runtime.GOOS, runtime.GOARCH)
+// GetExpectedChecksum returns the expected checksum for the specified platform binary.
+// Use runtime.GOOS and runtime.GOARCH for the current platform.
+func GetExpectedChecksum(checksums map[string]string, version, goos, goarch string) (string, error) {
+	filename := fmt.Sprintf("termchess-%s-%s-%s", version, goos, goarch)
 	checksum, ok := checksums[filename]
 	if !ok {
 		return "", fmt.Errorf("checksum not found for %s", filename)
@@ -252,9 +253,10 @@ func (c *Client) downloadFile(ctx context.Context, url string) ([]byte, error) {
 	return data, nil
 }
 
-// CompareVersions compares two version strings.
+// CompareVersions compares two semantic version strings.
 // Returns -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2.
-// Uses simple string comparison which works for semver tags.
+// Handles proper semver comparison (e.g., "1.10.0" > "1.2.0").
+// Non-semver versions like "dev" are treated as less than any semver.
 func CompareVersions(v1, v2 string) int {
 	// Normalize versions by removing 'v' prefix if present
 	v1 = strings.TrimPrefix(v1, "v")
@@ -263,10 +265,101 @@ func CompareVersions(v1, v2 string) int {
 	if v1 == v2 {
 		return 0
 	}
-	if v1 < v2 {
+
+	// Parse versions into components
+	parts1, pre1 := parseVersion(v1)
+	parts2, pre2 := parseVersion(v2)
+
+	// If either failed to parse (non-semver like "dev"), fall back to string comparison
+	if parts1 == nil && parts2 == nil {
+		if v1 < v2 {
+			return -1
+		}
+		return 1
+	}
+	if parts1 == nil {
+		return -1 // non-semver is less than semver
+	}
+	if parts2 == nil {
+		return 1 // semver is greater than non-semver
+	}
+
+	// Compare major, minor, patch
+	for i := 0; i < 3; i++ {
+		if parts1[i] < parts2[i] {
+			return -1
+		}
+		if parts1[i] > parts2[i] {
+			return 1
+		}
+	}
+
+	// Compare prerelease (if present)
+	// Version without prerelease > version with prerelease
+	if pre1 == "" && pre2 != "" {
+		return 1 // no prerelease > has prerelease
+	}
+	if pre1 != "" && pre2 == "" {
+		return -1 // has prerelease < no prerelease
+	}
+	// Both have prerelease - compare lexicographically
+	if pre1 < pre2 {
 		return -1
 	}
-	return 1
+	if pre1 > pre2 {
+		return 1
+	}
+
+	return 0
+}
+
+// parseVersion parses a semver string into [major, minor, patch] integers and prerelease string.
+// Returns nil for parts if the string is not a valid semver.
+func parseVersion(v string) ([]int, string) {
+	// Handle prerelease suffix (e.g., "1.0.0-beta.1")
+	prerelease := ""
+	if idx := strings.Index(v, "-"); idx != -1 {
+		prerelease = v[idx+1:]
+		// Strip build metadata from prerelease if present
+		if buildIdx := strings.Index(prerelease, "+"); buildIdx != -1 {
+			prerelease = prerelease[:buildIdx]
+		}
+		v = v[:idx]
+	} else if idx := strings.Index(v, "+"); idx != -1 {
+		// Build metadata without prerelease
+		v = v[:idx]
+	}
+
+	parts := strings.Split(v, ".")
+	if len(parts) < 1 || len(parts) > 3 {
+		return nil, ""
+	}
+
+	result := make([]int, 3)
+	for i, part := range parts {
+		n, err := parseUint(part)
+		if err != nil {
+			return nil, ""
+		}
+		result[i] = n
+	}
+
+	return result, prerelease
+}
+
+// parseUint parses a string as a non-negative integer.
+func parseUint(s string) (int, error) {
+	if s == "" {
+		return 0, fmt.Errorf("empty string")
+	}
+	n := 0
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return 0, fmt.Errorf("not a number")
+		}
+		n = n*10 + int(r-'0')
+	}
+	return n, nil
 }
 
 // Upgrade performs the upgrade to the specified version.
@@ -304,11 +397,11 @@ func (c *Client) Upgrade(ctx context.Context, currentVersion, targetVersion stri
 	// Download checksums first
 	checksums, err := c.DownloadChecksums(ctx, targetVersion)
 	if err != nil {
-		return nil, fmt.Errorf("downloading checksums: %w", err)
+		return nil, err // DownloadChecksums already wraps the error
 	}
 
 	// Get expected checksum
-	expectedChecksum, err := GetExpectedChecksum(checksums, targetVersion)
+	expectedChecksum, err := GetExpectedChecksum(checksums, targetVersion, runtime.GOOS, runtime.GOARCH)
 	if err != nil {
 		return nil, err
 	}
@@ -342,6 +435,7 @@ func normalizeVersion(v string) string {
 }
 
 // ReplaceBinary atomically replaces the current executable with new binary data.
+// It preserves the original file's permissions.
 func ReplaceBinary(newBinaryData []byte) error {
 	execPath, err := os.Executable()
 	if err != nil {
@@ -353,9 +447,16 @@ func ReplaceBinary(newBinaryData []byte) error {
 		realPath = execPath
 	}
 
-	// 1. Write new binary to temp file
+	// Get the current binary's permissions to preserve them
+	fileInfo, err := os.Stat(realPath)
+	if err != nil {
+		return fmt.Errorf("getting file info: %w", err)
+	}
+	fileMode := fileInfo.Mode()
+
+	// 1. Write new binary to temp file with same permissions as original
 	tmpPath := realPath + ".new"
-	if err := os.WriteFile(tmpPath, newBinaryData, 0755); err != nil {
+	if err := os.WriteFile(tmpPath, newBinaryData, fileMode); err != nil {
 		if os.IsPermission(err) {
 			return ErrPermissionDenied
 		}
@@ -375,8 +476,9 @@ func ReplaceBinary(newBinaryData []byte) error {
 
 	// 3. Rename new to current
 	if err := os.Rename(tmpPath, realPath); err != nil {
-		// Try to restore old binary
+		// Try to restore old binary and clean up temp file
 		os.Rename(oldPath, realPath)
+		os.Remove(tmpPath) // Clean up temp file on rollback
 		if os.IsPermission(err) {
 			return ErrPermissionDenied
 		}

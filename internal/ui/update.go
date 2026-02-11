@@ -72,9 +72,9 @@ func checkForUpdateCmd() tea.Cmd {
 			return nil
 		}
 
-		// Compare versions (simple string comparison works for semver)
-		// Both should have 'v' prefix from GitHub releases
-		if latestVersion != currentVersion && latestVersion > currentVersion {
+		// Compare versions using proper semver comparison
+		// Returns 1 if latestVersion > currentVersion
+		if updater.CompareVersions(latestVersion, currentVersion) > 0 {
 			return UpdateAvailableMsg{Version: latestVersion}
 		}
 
