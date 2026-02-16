@@ -10,10 +10,10 @@
   - [x] Create `training/test_board_encoder.py` - verify output shape [18, 8, 8], test known positions
   - [x] Verify encoder runs on MPS device
 
-- [ ] **Slice 2: Neural network architecture with forward pass**
-  - [ ] Create `training/model.py` - ResNet with 6 blocks, 128 filters, dual heads (policy + value)
-  - [ ] Create `training/test_model.py` - verify forward pass shapes, policy sums to ~1
-  - [ ] Verify model runs on MPS device
+- [x] **Slice 2: Neural network architecture with forward pass**
+  - [x] Create `training/model.py` - ResNet with 6 blocks, 128 filters, dual heads (policy + value)
+  - [x] Create `training/test_model.py` - verify forward pass shapes, policy sums to ~1
+  - [x] Verify model runs on MPS device
 
 - [ ] **Slice 3: MCTS implementation**
   - [ ] Create `training/mcts.py` - Monte Carlo Tree Search with UCB selection
