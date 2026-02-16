@@ -25,7 +25,7 @@ This feature requires two separate components:
 **Directory Structure:**
 ```
 training/
-├── requirements.txt
+├── pyproject.toml        # Project config and dependencies (uv)
 ├── train.py              # Main training loop
 ├── model.py              # Neural network architecture
 ├── mcts.py               # Monte Carlo Tree Search
@@ -147,7 +147,12 @@ var rlThinkingMessages = []string{
 
 ### 2.4 Dependencies
 
-**Python (training only):**
+**Python (training only) - managed via uv:**
+```bash
+uv init training && cd training
+uv add torch numpy python-chess onnx onnxruntime
+uv add --dev pytest
+```
 - PyTorch >= 2.0 (MPS support)
 - numpy
 - python-chess (for Stockfish evaluation)

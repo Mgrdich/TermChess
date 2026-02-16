@@ -5,6 +5,7 @@
 ## Phase A: Python Training Pipeline
 
 - [ ] **Slice 1: Board encoder with tests**
+  - [ ] Initialize `training/` project with `uv init` and add dependencies (torch, numpy, python-chess, pytest)
   - [ ] Create `training/board_encoder.py` - convert chess position to 18-channel tensor
   - [ ] Create `training/test_board_encoder.py` - verify output shape [18, 8, 8], test known positions
   - [ ] Verify encoder runs on MPS device

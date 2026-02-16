@@ -75,8 +75,8 @@ termchess/
 │   └── config/
 │       ├── config.go            # Config loading/saving
 │       └── saves.go             # Game save/load
-├── training/                     # Python RL training (separate)
-│   ├── requirements.txt
+├── training/                     # Python RL training (separate, managed by uv)
+│   ├── pyproject.toml
 │   ├── train.py
 │   ├── model.py
 │   └── export_onnx.py
@@ -89,7 +89,7 @@ termchess/
 
 - **Go Modules:** Dependency management for Go
 - **Makefile:** Build, test, run commands
-- **Python venv:** Isolated environment for RL training
+- **uv:** Python package management for RL training (fast, deterministic lockfile)
 - **Model Distribution:** Bundled via Go `embed` package — single self-contained binary
 
 ---
