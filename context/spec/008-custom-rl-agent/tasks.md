@@ -15,10 +15,10 @@
   - [x] Create `training/test_model.py` - verify forward pass shapes, policy sums to ~1
   - [x] Verify model runs on MPS device
 
-- [ ] **Slice 3: MCTS implementation**
-  - [ ] Create `training/mcts.py` - Monte Carlo Tree Search with UCB selection
-  - [ ] Create `training/test_mcts.py` - verify finds mate-in-1 positions
-  - [ ] Integrate neural network for position evaluation
+- [x] **Slice 3: MCTS implementation**
+  - [x] Create `training/mcts.py` - Monte Carlo Tree Search with UCB selection
+  - [x] Create `training/test_mcts.py` - verify finds mate-in-1 positions
+  - [x] Integrate neural network for position evaluation
 
 - [ ] **Slice 4: Self-play game generation**
   - [ ] Create `training/self_play.py` - play games using MCTS + neural network
