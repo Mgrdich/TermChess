@@ -20,10 +20,10 @@
   - [x] Create `training/test_mcts.py` - verify finds mate-in-1 positions
   - [x] Integrate neural network for position evaluation
 
-- [ ] **Slice 4: Self-play game generation**
-  - [ ] Create `training/self_play.py` - play games using MCTS + neural network
-  - [ ] Create `training/replay_buffer.py` - store training examples
-  - [ ] Verify can generate 10 self-play games end-to-end
+- [x] **Slice 4: Self-play game generation**
+  - [x] Create `training/self_play.py` - play games using MCTS + neural network
+  - [x] Create `training/replay_buffer.py` - store training examples
+  - [x] Verify can generate 10 self-play games end-to-end
 
 - [ ] **Slice 5: Training loop (minimal)**
   - [ ] Create `training/train.py` - main training loop with MPS support
