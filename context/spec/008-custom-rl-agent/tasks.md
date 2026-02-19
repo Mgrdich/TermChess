@@ -25,10 +25,10 @@
   - [x] Create `training/replay_buffer.py` - store training examples
   - [x] Verify can generate 10 self-play games end-to-end
 
-- [ ] **Slice 5: Training loop (minimal)**
-  - [ ] Create `training/train.py` - main training loop with MPS support
-  - [ ] Implement 1 iteration: generate games → sample batches → train → save checkpoint
-  - [ ] Verify training runs for 100 iterations without errors
+- [x] **Slice 5: Training loop (minimal)**
+  - [x] Create `training/train.py` - main training loop with MPS support
+  - [x] Implement 1 iteration: generate games → sample batches → train → save checkpoint
+  - [x] Verify training runs for 100 iterations without errors
 
 - [ ] **Slice 6: ONNX export**
   - [ ] Create `training/export_onnx.py` - export PyTorch checkpoint to ONNX
