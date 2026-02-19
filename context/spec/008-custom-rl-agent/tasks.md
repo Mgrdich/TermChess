@@ -35,10 +35,10 @@
   - [x] Verify exported model loads in onnxruntime
   - [x] Verify outputs match between PyTorch and ONNX
 
-- [ ] **Slice 7: ELO evaluation**
-  - [ ] Create `training/evaluate.py` - play model vs Stockfish at fixed depth
-  - [ ] Estimate ELO from win rate
-  - [ ] Document checkpoint → ELO mapping
+- [x] **Slice 7: ELO evaluation**
+  - [x] Create `training/evaluate.py` - play model vs Stockfish at fixed depth
+  - [x] Estimate ELO from win rate
+  - [x] Document checkpoint → ELO mapping
 
 ---
 
