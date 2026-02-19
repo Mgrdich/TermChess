@@ -30,10 +30,10 @@
   - [x] Implement 1 iteration: generate games → sample batches → train → save checkpoint
   - [x] Verify training runs for 100 iterations without errors
 
-- [ ] **Slice 6: ONNX export**
-  - [ ] Create `training/export_onnx.py` - export PyTorch checkpoint to ONNX
-  - [ ] Verify exported model loads in onnxruntime
-  - [ ] Verify outputs match between PyTorch and ONNX
+- [x] **Slice 6: ONNX export**
+  - [x] Create `training/export_onnx.py` - export PyTorch checkpoint to ONNX
+  - [x] Verify exported model loads in onnxruntime
+  - [x] Verify outputs match between PyTorch and ONNX
 
 - [ ] **Slice 7: ELO evaluation**
   - [ ] Create `training/evaluate.py` - play model vs Stockfish at fixed depth
