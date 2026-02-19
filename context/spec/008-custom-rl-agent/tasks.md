@@ -44,11 +44,11 @@
 
 ## Phase B: Go Runtime Integration
 
-- [ ] **Slice 8: RL engine skeleton**
-  - [ ] Create `internal/bot/rl.go` - implement `rlEngine` struct with `Engine` interface
-  - [ ] Add `RLDifficulty` enum (RLIntermediate, RLAdvanced, RLMaster)
-  - [ ] Create factory function `NewRLEngine()` returning error (model not yet available)
-  - [ ] Add unit tests for factory and interface compliance
+- [x] **Slice 8: RL engine skeleton**
+  - [x] Create `internal/bot/rl.go` - implement `rlEngine` struct with `Engine` interface
+  - [x] Add `RLDifficulty` enum (RLIntermediate, RLAdvanced, RLMaster)
+  - [x] Create factory function `NewRLEngine()` returning error (model not yet available)
+  - [x] Add unit tests for factory and interface compliance
 
 - [ ] **Slice 9: ONNX Runtime integration**
   - [ ] Add `github.com/yalue/onnxruntime_go` dependency

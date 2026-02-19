@@ -20,13 +20,13 @@ uv sync
 
 The neural network is a ResNet with dual heads (policy + value), trained via self-play:
 
-| Component       | Details                                      |
-|-----------------|----------------------------------------------|
+| Component       | Details                                                        |
+|-----------------|----------------------------------------------------------------|
 | Input           | 18 channels x 8x8 (pieces, castling, en passant, side to move) |
-| Residual blocks | 6 blocks, 128 filters each                   |
-| Policy head     | 4096 outputs (64 from-squares x 64 to-squares) |
-| Value head      | 1 output, tanh activation [-1, 1]            |
-| Parameters      | ~2M                                          |
+| Residual blocks | 6 blocks, 128 filters each                                     |
+| Policy head     | 4096 outputs (64 from-squares x 64 to-squares)                 |
+| Value head      | 1 output, tanh activation [-1, 1]                              |
+| Parameters      | ~2M                                                            |
 
 ## Training
 
@@ -56,16 +56,16 @@ uv run python train.py --resume checkpoints/checkpoint_5000.pt
 
 ### Training parameters
 
-| Parameter              | Default   |
-|------------------------|-----------|
-| Iterations             | 80,000    |
-| Games per iteration    | 100       |
-| Batch size             | 256       |
-| Batches per iteration  | 10        |
-| Replay buffer size     | 500K      |
-| MCTS simulations/move  | 400       |
-| Learning rate          | 0.001 -> 0.0001 (decay) |
-| Optimizer              | Adam (weight decay 1e-4) |
+| Parameter             | Default                  |
+|-----------------------|--------------------------|
+| Iterations            | 80,000                   |
+| Games per iteration   | 100                      |
+| Batch size            | 256                      |
+| Batches per iteration | 10                       |
+| Replay buffer size    | 500K                     |
+| MCTS simulations/move | 400                      |
+| Learning rate         | 0.001 -> 0.0001 (decay)  |
+| Optimizer             | Adam (weight decay 1e-4) |
 
 Checkpoints are saved at iterations: **5K, 10K, 30K, 80K**.
 
@@ -91,13 +91,13 @@ uv run python evaluate.py checkpoints/checkpoint_*.pt \
 
 ### Evaluation options
 
-| Flag                  | Default      | Description                        |
-|-----------------------|--------------|------------------------------------|
-| `--stockfish-path`    | `stockfish`  | Path to Stockfish binary           |
-| `--num-games`         | 20           | Games per checkpoint               |
-| `--stockfish-depth`   | 5            | Stockfish search depth             |
-| `--stockfish-time-limit` | 1.0       | Stockfish seconds per move         |
-| `--mcts-simulations`  | 200          | MCTS simulations for model moves   |
+| Flag                     | Default     | Description                      |
+|--------------------------|-------------|----------------------------------|
+| `--stockfish-path`       | `stockfish` | Path to Stockfish binary         |
+| `--num-games`            | 20          | Games per checkpoint             |
+| `--stockfish-depth`      | 5           | Stockfish search depth           |
+| `--stockfish-time-limit` | 1.0         | Stockfish seconds per move       |
+| `--mcts-simulations`     | 200         | MCTS simulations for model moves |
 
 ### Stockfish depth to approximate ELO
 
@@ -128,10 +128,10 @@ A 95% confidence interval is computed using the Wilson score interval.
 
 The goal is to identify checkpoints that correspond to the three target difficulty tiers:
 
-| Target       | ELO  | Suggested approach                             |
-|--------------|------|------------------------------------------------|
-| Intermediate | 1500 | Evaluate early checkpoints (5K) against depth 2-3 |
-| Advanced     | 2000 | Evaluate mid checkpoints (10K-30K) against depth 5 |
+| Target       | ELO  | Suggested approach                                  |
+|--------------|------|-----------------------------------------------------|
+| Intermediate | 1500 | Evaluate early checkpoints (5K) against depth 2-3   |
+| Advanced     | 2000 | Evaluate mid checkpoints (10K-30K) against depth 5  |
 | Master       | 2200 | Evaluate late checkpoints (30K-80K) against depth 8 |
 
 Example output when evaluating multiple checkpoints:
