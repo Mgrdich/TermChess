@@ -27,13 +27,11 @@ Resume from checkpoint:
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
 import time
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -41,7 +39,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR, MultiStepLR
+from torch.optim.lr_scheduler import StepLR
 
 from board_encoder import get_device
 from model import ChessNet, create_model

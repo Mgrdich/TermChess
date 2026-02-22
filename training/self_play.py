@@ -34,8 +34,6 @@ The value targets are determined after the game ends:
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import multiprocessing
 
 import chess
 import numpy as np
@@ -203,14 +201,9 @@ def play_game(
         # Get action probabilities and select move
         moves, probs = mcts.get_action_probabilities(board, temperature)
 
-        if temperature == 0:
-            # Deterministic selection
-            best_idx = np.argmax(probs)
-            selected_move = moves[best_idx]
-        else:
-            # Sample from distribution
-            idx = np.random.choice(len(moves), p=probs)
-            selected_move = moves[idx]
+        # Sample from distribution
+        idx = np.random.choice(len(moves), p=probs)
+        selected_move = moves[idx]
 
         # Make the move
         board.push(selected_move)
