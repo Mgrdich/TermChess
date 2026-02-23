@@ -37,18 +37,29 @@ func (d RLDifficulty) String() string {
 }
 
 // ErrModelNotLoaded is returned when SelectMove is called before
-// the ONNX model has been loaded. This is a placeholder until
-// ONNX runtime integration is added.
+// the ONNX model has been loaded.
 var ErrModelNotLoaded = errors.New("RL model not loaded: ONNX runtime integration pending")
 
+// rlInferenceSession abstracts the ONNX inference so it can be mocked in tests
+// and implemented with real ONNX Runtime.
+type rlInferenceSession interface {
+	// RunInference takes the encoded board (flat [1, 18, 8, 8] = 1152 floats)
+	// and returns policy logits [4096] and a value in [-1, 1].
+	RunInference(input []float32) (policy []float32, value float32, err error)
+
+	// Close releases resources held by the inference session.
+	Close() error
+}
+
 // rlEngine implements the Engine and Inspectable interfaces for RL-based
-// chess agents. This is a skeleton; actual ONNX model loading and inference
-// will be added in a later slice.
+// chess agents. When session is nil, SelectMove returns ErrModelNotLoaded.
+// The actual ONNX session will be wired in when models are embedded.
 type rlEngine struct {
 	name       string
 	difficulty RLDifficulty
 	timeLimit  time.Duration
-	closed     int32 // atomic: 0 = open, 1 = closed
+	closed     int32              // atomic: 0 = open, 1 = closed
+	session    rlInferenceSession // nil until model is loaded
 }
 
 // NewRLEngine creates an RL-based engine with the given difficulty.
@@ -88,13 +99,18 @@ func NewRLEngine(difficulty RLDifficulty, opts ...EngineOption) (Engine, error) 
 }
 
 // SelectMove returns the engine's chosen move for the given position.
-// Currently returns ErrModelNotLoaded as a placeholder until ONNX
-// runtime integration is added.
+// Returns ErrModelNotLoaded if the ONNX session has not been loaded.
 func (e *rlEngine) SelectMove(ctx context.Context, board *engine.Board) (engine.Move, error) {
 	if atomic.LoadInt32(&e.closed) == 1 {
 		return engine.Move{}, errors.New("engine is closed")
 	}
 
+	if e.session == nil {
+		return engine.Move{}, ErrModelNotLoaded
+	}
+
+	// TODO: encode board, run inference, decode policy into a legal move.
+	// This will be implemented when MCTS + move selection is added.
 	return engine.Move{}, ErrModelNotLoaded
 }
 
@@ -104,12 +120,25 @@ func (e *rlEngine) Name() string {
 }
 
 // Close releases resources held by the engine.
+// If an inference session is loaded, it is also closed.
 // Returns an error if the engine is already closed.
 func (e *rlEngine) Close() error {
 	if !atomic.CompareAndSwapInt32(&e.closed, 0, 1) {
 		return errors.New("engine already closed")
 	}
+
+	if e.session != nil {
+		return e.session.Close()
+	}
+
 	return nil
+}
+
+// newOnnxSession creates an ONNX inference session from model bytes.
+// This is the bridge to the onnxruntime_go library.
+// Returns an error until ONNX Runtime is configured with embedded models.
+func newOnnxSession(_ []byte) (rlInferenceSession, error) {
+	return nil, errors.New("ONNX Runtime not yet configured: run with embedded models")
 }
 
 // Info returns metadata about this engine.

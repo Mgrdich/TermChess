@@ -50,11 +50,11 @@
   - [x] Create factory function `NewRLEngine()` returning error (model not yet available)
   - [x] Add unit tests for factory and interface compliance
 
-- [ ] **Slice 9: ONNX Runtime integration**
-  - [ ] Add `github.com/yalue/onnxruntime_go` dependency
-  - [ ] Implement model loading from embedded bytes
-  - [ ] Create Go board encoder matching Python encoder exactly
-  - [ ] Unit test: encoder output matches Python reference
+- [x] **Slice 9: ONNX Runtime integration**
+  - [x] Add `github.com/yalue/onnxruntime_go` dependency
+  - [x] Implement model loading from embedded bytes
+  - [x] Create Go board encoder matching Python encoder exactly
+  - [x] Unit test: encoder output matches Python reference
 
 - [ ] **Slice 10: Inference and move selection**
   - [ ] Implement `SelectMove()` - run inference, decode policy, select legal move
