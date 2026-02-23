@@ -109,9 +109,66 @@ func (e *rlEngine) SelectMove(ctx context.Context, board *engine.Board) (engine.
 		return engine.Move{}, ErrModelNotLoaded
 	}
 
-	// TODO: encode board, run inference, decode policy into a legal move.
-	// This will be implemented when MCTS + move selection is added.
-	return engine.Move{}, ErrModelNotLoaded
+	// 1. Get legal moves
+	legalMoves := board.LegalMoves()
+	if len(legalMoves) == 0 {
+		return engine.Move{}, errors.New("no legal moves available")
+	}
+	if len(legalMoves) == 1 {
+		return legalMoves[0], nil // Only one legal move, return immediately
+	}
+
+	// 2. Encode the board
+	input := encodeBoard(board)
+
+	// 3. Run inference
+	policyLogits, _, err := e.session.RunInference(input)
+	if err != nil {
+		return engine.Move{}, fmt.Errorf("inference failed: %w", err)
+	}
+
+	// 4. Select best legal move using policy with legal move masking
+	return selectBestMove(legalMoves, policyLogits)
+}
+
+// moveToPolicyIndex converts a chess move to its index in the 4096-element policy vector.
+// The policy uses a flat from-to encoding: index = from_square * 64 + to_square.
+func moveToPolicyIndex(m engine.Move) int {
+	return int(m.From)*64 + int(m.To)
+}
+
+// selectBestMove applies legal move masking to the policy logits and returns
+// the legal move with the highest policy score.
+//
+// Legal move masking works by only considering scores for legal moves,
+// effectively ignoring all illegal moves without explicitly zeroing them out.
+// When multiple promotion moves share the same policy index (since the from-to
+// encoding does not distinguish promotion piece), queen promotion is preferred
+// as a tie-breaker.
+func selectBestMove(legalMoves []engine.Move, policyLogits []float32) (engine.Move, error) {
+	if len(legalMoves) == 0 {
+		return engine.Move{}, errors.New("no legal moves")
+	}
+
+	bestMove := legalMoves[0]
+	bestScore := float32(-1e9) // Start with very negative so any real score wins
+
+	for _, move := range legalMoves {
+		idx := moveToPolicyIndex(move)
+		if idx < 0 || idx >= len(policyLogits) {
+			continue
+		}
+		score := policyLogits[idx]
+		if score > bestScore {
+			bestScore = score
+			bestMove = move
+		} else if score == bestScore && move.Promotion == engine.Queen {
+			// Prefer queen promotion when scores are tied
+			bestMove = move
+		}
+	}
+
+	return bestMove, nil
 }
 
 // Name returns the human-readable name of this engine.

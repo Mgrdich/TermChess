@@ -56,10 +56,10 @@
   - [x] Create Go board encoder matching Python encoder exactly
   - [x] Unit test: encoder output matches Python reference
 
-- [ ] **Slice 10: Inference and move selection**
-  - [ ] Implement `SelectMove()` - run inference, decode policy, select legal move
-  - [ ] Add legal move masking
-  - [ ] Unit test with a dummy/test ONNX model
+- [x] **Slice 10: Inference and move selection**
+  - [x] Implement `SelectMove()` - run inference, decode policy, select legal move
+  - [x] Add legal move masking
+  - [x] Unit test with a dummy/test ONNX model
 
 - [ ] **Slice 11: Embed trained models**
   - [ ] Export 1500/2000/2200 ELO models from training
