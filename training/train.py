@@ -39,7 +39,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import LambdaLR
 
 from board_encoder import get_device
 from model import ChessNet, create_model
@@ -108,6 +108,8 @@ class TrainingConfig:
     def __post_init__(self):
         if self.checkpoint_intervals is None:
             self.checkpoint_intervals = DEFAULT_CHECKPOINT_INTERVALS.copy()
+        if self.batches_per_iteration < 1:
+            raise ValueError(f"batches_per_iteration must be >= 1, got {self.batches_per_iteration}")
 
 
 @dataclass
@@ -130,13 +132,17 @@ def setup_logging(verbose: bool = True) -> logging.Logger:
     Set up logging for training.
 
     Args:
-        verbose: If True, log to console. Otherwise, only to file.
+        verbose: If True, log to console. If False, no handlers are added.
 
     Returns:
         Configured logger instance.
     """
     logger = logging.getLogger("train")
     logger.setLevel(logging.INFO)
+
+    # Avoid adding duplicate handlers on repeated calls
+    if logger.handlers:
+        return logger
 
     # Console handler
     if verbose:
@@ -184,7 +190,8 @@ def create_scheduler(
     """
     Create learning rate scheduler for decay.
 
-    Uses StepLR to decay from initial_lr to final_lr at decay_steps.
+    Uses LambdaLR to decay from initial_lr to final_lr at decay_steps.
+    The learning rate is clamped at final_lr and will not decay further.
 
     Args:
         optimizer: Optimizer to schedule
@@ -195,9 +202,14 @@ def create_scheduler(
     Returns:
         Learning rate scheduler
     """
-    # Calculate gamma to get from initial_lr to final_lr in one step
-    gamma = final_lr / initial_lr
-    return StepLR(optimizer, step_size=decay_steps, gamma=gamma)
+    ratio = final_lr / initial_lr
+
+    def lr_lambda(step: int) -> float:
+        if step >= decay_steps:
+            return ratio
+        return 1.0
+
+    return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
 
 def compute_loss(
@@ -377,8 +389,11 @@ def save_checkpoint(
             "num_iterations": config.num_iterations,
             "games_per_iteration": config.games_per_iteration,
             "batch_size": config.batch_size,
+            "batches_per_iteration": config.batches_per_iteration,
             "initial_lr": config.initial_lr,
+            "final_lr": config.final_lr,
             "weight_decay": config.weight_decay,
+            "lr_decay_steps": config.lr_decay_steps,
         }
     }
 
@@ -430,8 +445,13 @@ def load_checkpoint(
     )
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-    # Create scheduler
-    scheduler = StepLR(optimizer, step_size=50_000, gamma=0.1)
+    # Create scheduler using saved config (with fallback defaults)
+    scheduler = create_scheduler(
+        optimizer,
+        initial_lr=config_dict.get("initial_lr", DEFAULT_INITIAL_LR),
+        final_lr=config_dict.get("final_lr", DEFAULT_FINAL_LR),
+        decay_steps=config_dict.get("lr_decay_steps", 50_000),
+    )
     scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
     iteration = checkpoint["iteration"]

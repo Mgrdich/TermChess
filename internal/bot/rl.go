@@ -149,6 +149,9 @@ func selectBestMove(legalMoves []engine.Move, policyLogits []float32) (engine.Mo
 	if len(legalMoves) == 0 {
 		return engine.Move{}, errors.New("no legal moves")
 	}
+	if len(policyLogits) != policySize {
+		return engine.Move{}, fmt.Errorf("invalid policy logits length: got %d, want %d", len(policyLogits), policySize)
+	}
 
 	bestMove := legalMoves[0]
 	bestScore := float32(-1e9) // Start with very negative so any real score wins
