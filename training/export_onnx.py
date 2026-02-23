@@ -98,14 +98,16 @@ def export_to_onnx(
     Args:
         model: ChessNet model to export (should be in eval mode)
         output_path: Path for the output ONNX file
-        opset_version: ONNX opset version to use (default: 17)
+        opset_version: ONNX opset version to use (default: 18)
 
     Raises:
         RuntimeError: If export fails
     """
+    # Ensure model is on CPU for ONNX export
+    model = model.cpu()
     model.eval()
 
-    # Create dummy input for tracing
+    # Create dummy input for tracing (CPU to match model)
     # Shape: [batch, channels, height, width] = [1, 18, 8, 8]
     dummy_input = torch.randn(1, NUM_CHANNELS, 8, 8)
 
@@ -182,12 +184,12 @@ def compare_outputs(
         onnx_path,
         providers=["CPUExecutionProvider"]
     )
-    ort_inputs = {INPUT_NAME: test_input.numpy()}
+    ort_inputs = {INPUT_NAME: test_input.detach().cpu().numpy()}
     ort_outputs = ort_session.run(None, ort_inputs)
     ort_policy, ort_value = ort_outputs
 
     # Compare policy outputs
-    pt_policy_np = pt_policy.numpy()
+    pt_policy_np = pt_policy.detach().cpu().numpy()
     policy_match = np.allclose(pt_policy_np, ort_policy, rtol=rtol, atol=atol)
 
     if not policy_match:
@@ -195,7 +197,7 @@ def compare_outputs(
         return False, f"Policy mismatch: max difference = {max_diff}"
 
     # Compare value outputs
-    pt_value_np = pt_value.numpy()
+    pt_value_np = pt_value.detach().cpu().numpy()
     value_match = np.allclose(pt_value_np, ort_value, rtol=rtol, atol=atol)
 
     if not value_match:

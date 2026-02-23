@@ -50,16 +50,16 @@
   - [x] Create factory function `NewRLEngine()` returning error (model not yet available)
   - [x] Add unit tests for factory and interface compliance
 
-- [x] **Slice 9: ONNX Runtime integration**
+- [x] **Slice 9: ONNX Runtime integration** *(interface + encoder; ONNX session wiring in Slice 11)*
   - [x] Add `github.com/yalue/onnxruntime_go` dependency
-  - [x] Implement model loading from embedded bytes
+  - [x] Define `rlInferenceSession` interface and stubbed `newOnnxSession()`
   - [x] Create Go board encoder matching Python encoder exactly
   - [x] Unit test: encoder output matches Python reference
 
-- [x] **Slice 10: Inference and move selection**
+- [x] **Slice 10: Inference and move selection** *(uses mock session; real ONNX in Slice 11)*
   - [x] Implement `SelectMove()` - run inference, decode policy, select legal move
   - [x] Add legal move masking
-  - [x] Unit test with a dummy/test ONNX model
+  - [x] Unit test with mock inference session
 
 - [ ] **Slice 11: Embed trained models**
   - [ ] Export 1500/2000/2200 ELO models from training
