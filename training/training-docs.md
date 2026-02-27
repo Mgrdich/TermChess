@@ -33,41 +33,114 @@ The neural network is a ResNet with dual heads (policy + value), trained via sel
 ### Quick start
 
 ```bash
-uv run python train.py
+uv run python -u train.py --verbose-self-play
 ```
+
+Use `-u` for unbuffered output so logs appear in real time. Use `--verbose-self-play` to see per-game progress during self-play.
+
+### Verbose output
+
+With `--verbose-self-play`, you'll see per-game results as they complete:
+
+```
+Game 1/20: 1-0 in 87 moves (CHECKMATE) - 42.3s
+Game 2/20: 1/2-1/2 in 124 moves (STALEMATE) - 58.1s
+...
+--- Self-Play Summary ---
+Games played: 20
+Total positions: 1965
+Average game length: 98.2 moves
+Results: White +8, Black +7, Draws =5
+Total time: 1153.1s (57.7s per game)
+```
+
+Without it, you only see a summary line after each full iteration completes.
+
+Use `--quiet` / `-q` to suppress all console output.
 
 ### Full configuration
 
 ```bash
-uv run python train.py \
+uv run python -u train.py \
+  --verbose-self-play \
   --iterations 80000 \
   --games-per-iter 100 \
   --batch-size 256 \
-  --mcts-simulations 400 \
+  --mcts-sims 400 \
   --num-blocks 6 \
   --num-filters 128
 ```
 
-### Resume from checkpoint
+### Recommended staged training
+
+Training all 80K iterations in one run takes a very long time. A practical approach is to train in stages, resuming from each checkpoint:
+
+**Stage 1 — Intermediate (target ~1500 ELO)**
 
 ```bash
-uv run python train.py --resume checkpoints/checkpoint_5000.pt
+uv run python -u train.py \
+  --verbose-self-play \
+  --iterations 5000 \
+  --games-per-iter 20 \
+  --mcts-sims 100 \
+  --save-every 500
 ```
+
+Evaluate, then continue:
+
+**Stage 2 — Advanced (target ~2000 ELO)**
+
+```bash
+uv run python -u train.py \
+  --verbose-self-play \
+  --resume checkpoints/checkpoint_5000.pt \
+  --iterations 30000 \
+  --games-per-iter 50 \
+  --mcts-sims 200 \
+  --save-every 1000
+```
+
+**Stage 3 — Master (target ~2200 ELO)**
+
+```bash
+uv run python -u train.py \
+  --verbose-self-play \
+  --resume checkpoints/checkpoint_30000.pt \
+  --iterations 80000 \
+  --games-per-iter 100 \
+  --mcts-sims 400
+```
+
+You can increase `--games-per-iter` and `--mcts-sims` at later stages since the model benefits more from stronger self-play as it improves.
+
+### Resume from checkpoint
+
+Resume training from any saved checkpoint:
+
+```bash
+uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_5000.pt
+```
+
+The checkpoint restores model weights, optimizer state, learning rate schedule, and iteration count. Training continues from where it left off.
 
 ### Training parameters
 
-| Parameter             | Default                  |
-|-----------------------|--------------------------|
-| Iterations            | 80,000                   |
-| Games per iteration   | 100                      |
-| Batch size            | 256                      |
-| Batches per iteration | 10                       |
-| Replay buffer size    | 500K                     |
-| MCTS simulations/move | 400                      |
-| Learning rate         | 0.001 -> 0.0001 (decay)  |
-| Optimizer             | Adam (weight decay 1e-4) |
+| Parameter              | Flag                   | Default                  |
+|------------------------|------------------------|--------------------------|
+| Iterations             | `--iterations`         | 80,000                   |
+| Games per iteration    | `--games-per-iter`     | 100                      |
+| Batch size             | `--batch-size`         | 256                      |
+| Batches per iteration  | `--batches-per-iter`   | 10                       |
+| Replay buffer size     | `--buffer-size`        | 500K                     |
+| MCTS simulations/move  | `--mcts-sims`          | 400                      |
+| Learning rate          | `--lr` / `--lr-final`  | 0.001 -> 0.0001 (decay)  |
+| Optimizer              |                        | Adam (weight decay 1e-4) |
+| Verbose self-play      | `--verbose-self-play`  | off                      |
+| Quiet mode             | `--quiet` / `-q`       | off                      |
+| Save interval          | `--save-every`         | 0 (disabled)             |
+| Resume                 | `--resume`             | none                     |
 
-Checkpoints are saved at iterations: **5K, 10K, 30K, 80K**.
+Checkpoints are saved at iterations: **5K, 10K, 30K, 80K** (plus any `--save-every` interval).
 
 ## ELO Evaluation
 
@@ -180,8 +253,23 @@ uv run pytest
 ## End-to-end workflow
 
 ```
-1. Train        uv run python train.py
+1. Train        uv run python -u train.py --verbose-self-play --save-every 500
 2. Evaluate     uv run python evaluate.py checkpoints/checkpoint_*.pt --stockfish-path stockfish
 3. Export       uv run python export_onnx.py <best_checkpoint>.pt model.onnx
 4. Integrate    Copy .onnx files to internal/bot/models/ in the Go project
+```
+
+To train in stages with resume:
+
+```
+1a. Train to 5K    uv run python -u train.py --verbose-self-play --iterations 5000 --mcts-sims 100 --save-every 500
+1b. Evaluate       uv run python evaluate.py checkpoints/checkpoint_5000.pt --stockfish-path stockfish
+1c. Train to 30K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_5000.pt --iterations 30000 --mcts-sims 200
+1d. Evaluate       uv run python evaluate.py checkpoints/checkpoint_30000.pt --stockfish-path stockfish
+1e. Train to 80K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_30000.pt --iterations 80000 --mcts-sims 400
+1f. Evaluate       uv run python evaluate.py checkpoints/checkpoint_80000.pt --stockfish-path stockfish
+2.  Export          uv run python export_onnx.py checkpoints/checkpoint_5000.pt models/rl_1500.onnx
+                    uv run python export_onnx.py checkpoints/checkpoint_30000.pt models/rl_2000.onnx
+                    uv run python export_onnx.py checkpoints/checkpoint_80000.pt models/rl_2200.onnx
+3.  Integrate       Copy .onnx files to internal/bot/models/ in the Go project
 ```

@@ -299,7 +299,8 @@ def generate_games(
             print(
                 f"Game {game_idx + 1}/{num_games}: "
                 f"{stats.result} in {stats.num_moves} moves "
-                f"({stats.termination}) - {stats.duration_seconds:.1f}s"
+                f"({stats.termination}) - {stats.duration_seconds:.1f}s",
+                flush=True
             )
 
     if verbose:
@@ -311,12 +312,12 @@ def generate_games(
         draws = sum(1 for s in all_stats if s.winner is None)
         total_time = sum(s.duration_seconds for s in all_stats)
 
-        print(f"\n--- Self-Play Summary ---")
-        print(f"Games played: {num_games}")
-        print(f"Total positions: {total_positions}")
-        print(f"Average game length: {avg_moves:.1f} moves")
-        print(f"Results: White +{white_wins}, Black +{black_wins}, Draws ={draws}")
-        print(f"Total time: {total_time:.1f}s ({total_time/num_games:.1f}s per game)")
+        print(f"\n--- Self-Play Summary ---", flush=True)
+        print(f"Games played: {num_games}", flush=True)
+        print(f"Total positions: {total_positions}", flush=True)
+        print(f"Average game length: {avg_moves:.1f} moves", flush=True)
+        print(f"Results: White +{white_wins}, Black +{black_wins}, Draws ={draws}", flush=True)
+        print(f"Total time: {total_time:.1f}s ({total_time/num_games:.1f}s per game)", flush=True)
 
     return all_examples, all_stats
 
@@ -363,7 +364,7 @@ def generate_games_to_buffer(
     buffer.add_batch(examples)
 
     if verbose:
-        print(f"Added {len(examples)} examples to buffer (total: {len(buffer)})")
+        print(f"Added {len(examples)} examples to buffer (total: {len(buffer)})", flush=True)
 
     return stats
 

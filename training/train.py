@@ -104,6 +104,7 @@ class TrainingConfig:
     # Logging
     log_every_n_iterations: int = 1
     verbose: bool = True
+    verbose_self_play: bool = False
 
     def __post_init__(self):
         if self.checkpoint_intervals is None:
@@ -530,7 +531,7 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
         model.eval()
         game_stats = manager.generate(
             num_games=config.games_per_iteration,
-            verbose=False
+            verbose=config.verbose_self_play
         )
         positions_generated = sum(s.num_moves for s in game_stats)
 
@@ -744,6 +745,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Reduce output verbosity"
     )
+    parser.add_argument(
+        "--verbose-self-play",
+        action="store_true",
+        help="Log per-game self-play progress"
+    )
 
     return parser.parse_args()
 
@@ -769,7 +775,8 @@ def main():
         checkpoint_dir=args.checkpoint_dir,
         save_every_n_iterations=args.save_every,
         log_every_n_iterations=args.log_every,
-        verbose=not args.quiet
+        verbose=not args.quiet,
+        verbose_self_play=args.verbose_self_play
     )
 
     # Run training
