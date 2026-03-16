@@ -358,6 +358,50 @@ termchess/
 - [ ] PGN import/export
 - [ ] Time controls
 
+## RL Training Pipeline
+
+The `training/` directory contains an AlphaZero-style self-play training pipeline for chess, built with PyTorch and optimized for Apple Silicon (MPS). It trains a neural network through self-play using MCTS, then exports to ONNX for use as a bot opponent in the game.
+
+See [training/training-docs.md](training/training-docs.md) for full documentation.
+
+### Quick start
+
+```bash
+cd training
+uv sync
+uv run python -u train.py --verbose-self-play --iterations 500 --games-per-iter 20 --mcts-sims 100 --save-every 50
+```
+
+### Monitoring training health
+
+Training writes per-iteration metrics to `training/checkpoints/training_log.csv`. If you use [Claude Code](https://claude.ai/claude-code), the `/training-health` slash command analyzes this log and reports whether training is progressing normally:
+
+```
+/training-health
+```
+
+It compares metrics against expected ranges for each training phase, detects failure modes (repetition collapse, value head starvation, policy plateau, etc.), and suggests specific parameter changes if something is off.
+
+You can also monitor the CSV directly — key columns to watch:
+
+| Column | What it tells you |
+|--------|-------------------|
+| `policy_loss` | Should decrease over time (8.0 → 2.0) |
+| `value_loss` | Should be >0.01 (means decisive games are happening) |
+| `checkmates` | Should appear by iteration ~100 and increase |
+| `repetition_draws` | Should be <30% of games after early training |
+| `avg_game_length` | 50-150 is healthy; <40 with high repetition is a problem |
+
+### Training stages and ELO targets
+
+| Stage | Iterations | Target ELO | Stockfish Eval Depth |
+|-------|-----------|------------|---------------------|
+| Beginner | 0-500 | ~1000 | depth 1 |
+| Intermediate | 500-2500 | ~1200 | depth 1-2 |
+| Club Player | 2500-5000 | ~1500 | depth 2-3 |
+| Advanced | 5000-30000 | ~2000 | depth 5 |
+| Master | 30000-80000 | ~2200 | depth 8 |
+
 ## License
 
 MIT
