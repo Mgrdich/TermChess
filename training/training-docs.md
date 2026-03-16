@@ -153,6 +153,120 @@ The training loop writes a CSV log to `checkpoints/training_log.csv` with per-it
 
 If you see repetition collapse (all games ending in FIVEFOLD_REPETITION with short game lengths), the Dirichlet noise and repetition penalty should help. If it persists, try increasing `--c-puct` (e.g., 2.0-3.0) to encourage more exploration.
 
+### What to expect at each training phase
+
+Use this as a reference when monitoring `checkpoints/training_log.csv`. Numbers are approximate — your run may differ, but the **trends** should match. Iteration ranges below align with the staged training plan above.
+
+#### Iterations 1-25 (Random play)
+
+```
+Expected:  policy_loss ~7-8, value_loss ~0.01-0.05, avg_game_length 100-256
+           checkmates: 0-1, repetition_draws: 0-5, max_moves_draws: 5-15
+           white_wins: 0-1, black_wins: 0-1, draws: 18-20
+```
+
+The model plays essentially random legal moves. Games are long and almost all end in draws (max moves, insufficient material, or stalemate). This is normal — the model has no chess knowledge yet.
+
+**What's OK:** All draws, no checkmates, high policy loss.
+**Red flag:** If games are already very short (<50 moves) with all repetition draws, Dirichlet noise may not be working.
+
+#### Iterations 25-100 (Learning piece values)
+
+```
+Expected:  policy_loss ~5-6 (dropping steadily), value_loss ~0.01-0.1
+           avg_game_length: 80-200, gradually decreasing
+           checkmates: 0-2 per iteration, draws: 15-20
+           repetition_draws: should be <50% of games
+```
+
+The model starts learning which pieces are valuable and basic captures. Games get shorter as the model learns to take hanging pieces. Policy loss should drop noticeably.
+
+**What's OK:** Mostly draws still, but some decisive games appearing. Game lengths decreasing.
+**Red flag:** Policy loss not decreasing, or avg_game_length dropping below 40 with all repetition draws.
+
+#### Iterations 100-500 (Basic tactics, approaching ~1000 ELO)
+
+```
+Expected:  policy_loss ~3.5-5, value_loss ~0.05-0.2
+           avg_game_length: 60-120
+           checkmates: 1-5 per iteration (increasing trend)
+           white_wins + black_wins: 2-8 per iteration
+           repetition_draws: <30% of games
+```
+
+The model develops basic tactical awareness — it can capture pieces intentionally and starts mating in simple endgames. Value loss should be rising as the model sees more decisive games and the value head gets meaningful training signal.
+
+**Evaluate at iteration 500:** Run against Stockfish depth 1. Target: win rate >30% → ~1000 ELO.
+
+**What's OK:** Mix of decisive games and draws. Checkmates appearing semi-regularly.
+**Red flag:** Value loss still near 0, zero checkmates after 250 iterations. Try increasing `--c-puct` to 2.0-3.0.
+
+#### Iterations 500-2500 (Piece development, ~1200 ELO)
+
+```
+Expected:  policy_loss ~2.5-3.5, value_loss ~0.1-0.3
+           avg_game_length: 50-100
+           checkmates: 3-8 per iteration
+           white_wins + black_wins: 5-12 per iteration
+           repetition_draws: <20% of games
+```
+
+The model learns basic opening principles (develop pieces, control center) and can execute simple tactical combinations. Games should have a healthy mix of decisive outcomes and draws.
+
+**Evaluate at iteration 2500:** Run against Stockfish depth 1-2. Target: ~50% score vs depth 1 → ~1200 ELO.
+
+**What's OK:** Roughly balanced white/black wins, checkmates in most iterations.
+**Red flag:** One side winning much more than the other (>80% of decisive games).
+
+#### Iterations 2500-5000 (Positional play, ~1500 ELO)
+
+```
+Expected:  policy_loss ~2.0-3.0, value_loss ~0.15-0.4
+           avg_game_length: 50-90
+           checkmates: 5-10 per iteration
+           white_wins + black_wins: 8-15 per iteration
+```
+
+The model develops positional understanding — pawn structure, piece coordination, king safety. Games should be shorter and more decisive.
+
+**Evaluate at iteration 5000:** Run against Stockfish depth 2-3. Target: ~50% score vs depth 2 → ~1500 ELO.
+
+#### Iterations 5000-30000 (Strategic depth, ~2000 ELO)
+
+```
+Expected:  policy_loss ~1.5-2.5, value_loss ~0.2-0.5
+           avg_game_length: 40-80
+           checkmates: consistent 5+ per iteration
+```
+
+Loss will plateau — the model is refining rather than learning new concepts. Increase `--mcts-sims` to 200 and `--games-per-iter` to 50 for higher quality self-play.
+
+**Evaluate at iteration 30000:** Run against Stockfish depth 5. Target: ~50% score → ~2000 ELO.
+
+#### Iterations 30000-80000 (Master play, ~2200 ELO)
+
+```
+Expected:  policy_loss ~1.0-2.0, value_loss ~0.3-0.5
+           avg_game_length: 40-70
+```
+
+Increase `--mcts-sims` to 400 and `--games-per-iter` to 100. Improvements will be incremental.
+
+**Evaluate at iteration 80000:** Run against Stockfish depth 8. Target: ~50% score → ~2200 ELO.
+
+### Troubleshooting guide
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| All games end in FIVEFOLD_REPETITION | Dirichlet noise too low, or model collapsed to repetitive policy | Increase `--c-puct` to 2.0-3.0, or restart from earlier checkpoint |
+| Policy loss stuck / not decreasing | Learning rate too low, or buffer too large (stale data dilutes signal) | Decrease `--buffer-size` to 100K, or increase `--lr` |
+| Value loss stays near 0 | All games are draws, value head is starved | Check that Dirichlet noise is working (games should be diverse). Increase repetition penalty |
+| Policy loss oscillating wildly | Gradient explosions | Decrease `--lr`, gradient clipping should help (already enabled, max_norm=1.0) |
+| One side always wins | Asymmetric training signal | Likely fine — it can self-correct as both sides improve. Monitor over 10+ iterations |
+| Training very slow per iteration | MCTS simulations are bottleneck | Reduce `--mcts-sims` for early stages (100 is fine for <1500 ELO) |
+| Loss suddenly jumps up after resume | Learning rate schedule mismatch or buffer was emptied | Normal — new self-play data from improved model takes time to stabilize |
+| avg_game_length increasing after initial decrease | Model entering positional play phase (longer games = more strategic) | Good sign — this is healthy if checkmates are still occurring |
+
 ### Resume from checkpoint
 
 Resume training from any saved checkpoint:
@@ -162,6 +276,23 @@ uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_50
 ```
 
 The checkpoint restores model weights, optimizer state, learning rate schedule, and iteration count. Training continues from where it left off.
+
+### Crash recovery
+
+A `checkpoint_latest.pt` and `buffer_latest.npz` are saved **every iteration**, overwriting the previous version. If training crashes or is interrupted:
+
+```bash
+# Resume from the last completed iteration (no lost progress)
+uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_latest.pt
+```
+
+This restores:
+- Model weights, optimizer state, and LR schedule from `checkpoint_latest.pt`
+- Replay buffer contents from `buffer_latest.npz` (so you don't regenerate all self-play data)
+- Iteration count (continues from exactly where it stopped)
+- The CSV training log is append-only, so all previous metrics are preserved
+
+The numbered checkpoints (e.g., `checkpoint_500.pt`) are still saved at milestone intervals for ELO evaluation and export. The `checkpoint_latest.pt` is only for crash recovery.
 
 ### Training parameters
 
@@ -263,14 +394,15 @@ Example output when evaluating multiple checkpoints:
 
 ## ONNX Export
 
-Once you've identified the right checkpoints, export them to ONNX for the Go runtime:
+Once you've identified the right checkpoints via ELO evaluation, export them to ONNX for the Go runtime:
 
 ```bash
-uv run python export_onnx.py checkpoints/checkpoint_250.pt models/rl_1000.onnx
-uv run python export_onnx.py checkpoints/checkpoint_1000.pt models/rl_1200.onnx
-uv run python export_onnx.py checkpoints/checkpoint_5000.pt models/rl_1500.onnx
-uv run python export_onnx.py checkpoints/checkpoint_30000.pt models/rl_2000.onnx
-uv run python export_onnx.py checkpoints/checkpoint_80000.pt models/rl_2200.onnx
+# Replace checkpoint filenames with the ones that matched each ELO target
+uv run python export_onnx.py checkpoints/<best_1000_elo>.pt models/rl_1000.onnx   # Stage 1: iter ~100-500
+uv run python export_onnx.py checkpoints/<best_1200_elo>.pt models/rl_1200.onnx   # Stage 2: iter ~500-2500
+uv run python export_onnx.py checkpoints/<best_1500_elo>.pt models/rl_1500.onnx   # Stage 3: iter ~2500-5000
+uv run python export_onnx.py checkpoints/<best_2000_elo>.pt models/rl_2000.onnx   # Stage 4: iter ~5000-30000
+uv run python export_onnx.py checkpoints/<best_2200_elo>.pt models/rl_2200.onnx   # Stage 5: iter ~30000-80000
 ```
 
 The exported `.onnx` files are then embedded into the Go binary via `go:embed`.

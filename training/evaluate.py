@@ -395,14 +395,15 @@ def play_match(
 
             board = chess.Board()
             move_list: List[str] = []
+            board_history: List[chess.Board] = []
             move_count = 0
 
             while not board.is_game_over() and move_count < MAX_GAME_MOVES:
                 is_model_turn = (board.turn == chess.WHITE) == model_is_white
 
                 if is_model_turn:
-                    # Model's turn: use MCTS
-                    move = mcts.select_move(board, temperature=0)
+                    # Model's turn: use MCTS with history
+                    move = mcts.select_move(board, temperature=0, history=board_history)
                 else:
                     # Stockfish's turn
                     sf_result = engine.play(
@@ -415,6 +416,7 @@ def play_match(
                     move = sf_result.move
 
                 move_list.append(board.san(move))
+                board_history.append(board.copy())
                 board.push(move)
                 move_count += 1
 

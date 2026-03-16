@@ -39,8 +39,8 @@ class TestOutputShape:
         board = chess.Board()
         encoded = encode_board(board)
 
-        assert encoded.shape == (18, 8, 8), (
-            f"Expected shape (18, 8, 8), got {encoded.shape}"
+        assert encoded.shape == (NUM_CHANNELS, 8, 8), (
+            f"Expected shape (NUM_CHANNELS, 8, 8), got {encoded.shape}"
         )
 
     def test_output_shape_empty_board(self):
@@ -48,7 +48,7 @@ class TestOutputShape:
         board = chess.Board.empty()
         encoded = encode_board(board)
 
-        assert encoded.shape == (18, 8, 8)
+        assert encoded.shape == (NUM_CHANNELS, 8, 8)
 
     def test_output_dtype(self):
         """The encoded board should be float32."""
@@ -338,7 +338,7 @@ class TestTensorEncoding:
         device = torch.device("cpu")
         tensor = encode_board_tensor(board, device)
 
-        assert tensor.shape == torch.Size([18, 8, 8])
+        assert tensor.shape == torch.Size([NUM_CHANNELS, 8, 8])
 
     def test_tensor_dtype(self):
         """Tensor should be float32."""
@@ -395,7 +395,7 @@ class TestMPSDevice:
         tensor = encode_board_tensor(board, device)
 
         assert tensor.device.type == "mps"
-        assert tensor.shape == torch.Size([18, 8, 8])
+        assert tensor.shape == torch.Size([NUM_CHANNELS, 8, 8])
 
     @pytest.mark.skipif(
         not torch.backends.mps.is_available(),

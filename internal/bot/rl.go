@@ -43,7 +43,7 @@ var ErrModelNotLoaded = errors.New("RL model not loaded: ONNX runtime integratio
 // rlInferenceSession abstracts the ONNX inference so it can be mocked in tests
 // and implemented with real ONNX Runtime.
 type rlInferenceSession interface {
-	// RunInference takes the encoded board (flat [1, 18, 8, 8] = 1152 floats)
+	// RunInference takes the encoded board (flat [1, 66, 8, 8] = 4224 floats)
 	// and returns policy logits [4096] and a value in [-1, 1].
 	RunInference(input []float32) (policy []float32, value float32, err error)
 
@@ -118,8 +118,9 @@ func (e *rlEngine) SelectMove(ctx context.Context, board *engine.Board) (engine.
 		return legalMoves[0], nil // Only one legal move, return immediately
 	}
 
-	// 2. Encode the board
-	input := encodeBoard(board)
+	// 2. Encode the board (nil history = zero-filled history planes)
+	// TODO: pass actual game history for stronger play
+	input := encodeBoard(board, nil)
 
 	// 3. Run inference
 	policyLogits, _, err := e.session.RunInference(input)

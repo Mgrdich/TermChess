@@ -39,7 +39,7 @@ import chess
 import numpy as np
 import torch
 
-from board_encoder import encode_board, get_device
+from board_encoder import encode_board, get_device, NUM_HISTORY_POSITIONS
 from model import ChessNet, create_model, POLICY_OUTPUT_SIZE
 from mcts import MCTS
 from replay_buffer import TrainingExample, ReplayBuffer
@@ -191,6 +191,9 @@ def play_game(
     # Store positions, policies, and whose turn it was
     positions: List[Tuple[np.ndarray, np.ndarray, bool]] = []
 
+    # Track board history for encoding previous positions
+    board_history: List[chess.Board] = []
+
     move_number = 0
     while not board.is_game_over() and move_number < max_moves:
         # Early termination on threefold repetition to avoid wasting compute
@@ -199,8 +202,8 @@ def play_game(
         # Get temperature for this move
         temperature = _get_temperature(move_number)
 
-        # Run MCTS search
-        visit_counts = mcts.search(board)
+        # Run MCTS search with history context
+        visit_counts = mcts.search(board, history=board_history)
 
         if len(visit_counts) == 0:
             # No legal moves (game should be over)
@@ -209,16 +212,19 @@ def play_game(
         # Convert visit counts to policy vector
         policy = _moves_to_policy_vector(visit_counts)
 
-        # Store the position data
-        board_state = encode_board(board)
+        # Store the position data with history
+        board_state = encode_board(board, history=board_history)
         positions.append((board_state, policy, board.turn))
 
         # Get action probabilities and select move
-        moves, probs = mcts.get_action_probabilities(board, temperature)
+        moves, probs = mcts.get_action_probabilities(board, temperature, history=board_history)
 
         # Sample from distribution
         idx = np.random.choice(len(moves), p=probs)
         selected_move = moves[idx]
+
+        # Record current position in history before making the move
+        board_history.append(board.copy())
 
         # Make the move
         board.push(selected_move)

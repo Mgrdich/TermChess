@@ -92,6 +92,8 @@ class TrainingConfig:
     final_lr: float = DEFAULT_FINAL_LR
     weight_decay: float = DEFAULT_WEIGHT_DECAY
     lr_decay_steps: int = 50_000  # Decay LR at this point
+    max_grad_norm: float = 1.0  # Gradient clipping max norm
+    value_loss_weight: float = 1.0  # Multiplier for value loss in total loss
 
     # Model architecture
     num_blocks: int = DEFAULT_NUM_BLOCKS
@@ -263,17 +265,19 @@ def compute_loss(
     states: torch.Tensor,
     policy_targets: torch.Tensor,
     value_targets: torch.Tensor,
-    device: torch.device
+    device: torch.device,
+    value_loss_weight: float = 1.0
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute policy and value losses.
 
     Args:
         model: ChessNet model
-        states: Batch of board states [batch, 18, 8, 8]
+        states: Batch of board states [batch, C, 8, 8]
         policy_targets: MCTS policy targets [batch, 4096]
         value_targets: Game outcome targets [batch]
         device: Torch device
+        value_loss_weight: Multiplier for value loss (default: 1.0)
 
     Returns:
         Tuple of (policy_loss, value_loss, total_loss)
@@ -295,8 +299,10 @@ def compute_loss(
     # Value loss: MSE between predicted value and game outcome
     value_loss = F.mse_loss(value_pred.squeeze(-1), value_targets)
 
-    # Total loss: equal weighting
-    total_loss = policy_loss + value_loss
+    # Total loss: weighted combination
+    # Value loss is scaled up to give the value head a stronger training signal,
+    # especially important when most games are draws (value targets near 0).
+    total_loss = policy_loss + value_loss_weight * value_loss
 
     return policy_loss, value_loss, total_loss
 
@@ -307,7 +313,9 @@ def train_batch(
     states: np.ndarray,
     policy_targets: np.ndarray,
     value_targets: np.ndarray,
-    device: torch.device
+    device: torch.device,
+    max_grad_norm: float = 1.0,
+    value_loss_weight: float = 1.0
 ) -> Tuple[float, float, float]:
     """
     Train on a single batch.
@@ -319,6 +327,8 @@ def train_batch(
         policy_targets: MCTS policy targets
         value_targets: Game outcome targets
         device: Torch device
+        max_grad_norm: Maximum gradient norm for clipping (default: 1.0)
+        value_loss_weight: Multiplier for value loss (default: 1.0)
 
     Returns:
         Tuple of (policy_loss, value_loss, total_loss) as floats
@@ -327,12 +337,14 @@ def train_batch(
 
     # Compute loss
     policy_loss, value_loss, total_loss = compute_loss(
-        model, states, policy_targets, value_targets, device
+        model, states, policy_targets, value_targets, device,
+        value_loss_weight=value_loss_weight
     )
 
     # Backward pass
     optimizer.zero_grad()
     total_loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
     optimizer.step()
 
     return (
@@ -348,7 +360,9 @@ def train_iteration(
     buffer: ReplayBuffer,
     batch_size: int,
     batches_per_iteration: int,
-    device: torch.device
+    device: torch.device,
+    max_grad_norm: float = 1.0,
+    value_loss_weight: float = 1.0
 ) -> Tuple[float, float, float]:
     """
     Run one training iteration (multiple batches).
@@ -360,6 +374,8 @@ def train_iteration(
         batch_size: Size of each batch
         batches_per_iteration: Number of batches to train per iteration
         device: Torch device
+        max_grad_norm: Maximum gradient norm for clipping (default: 1.0)
+        value_loss_weight: Multiplier for value loss (default: 1.0)
 
     Returns:
         Tuple of average (policy_loss, value_loss, total_loss)
@@ -374,7 +390,9 @@ def train_iteration(
 
         # Train on batch
         p_loss, v_loss, t_loss = train_batch(
-            model, optimizer, states, policies, values, device
+            model, optimizer, states, policies, values, device,
+            max_grad_norm=max_grad_norm,
+            value_loss_weight=value_loss_weight
         )
 
         total_policy_loss += p_loss
@@ -513,6 +531,60 @@ def load_checkpoint(
     return model, optimizer, scheduler, iteration, config_dict
 
 
+def _save_latest(
+    model: ChessNet,
+    optimizer: optim.Optimizer,
+    scheduler: optim.lr_scheduler.LRScheduler,
+    iteration: int,
+    config: "TrainingConfig",
+    buffer: ReplayBuffer,
+    metrics: Optional["TrainingMetrics"] = None
+) -> None:
+    """
+    Save checkpoint_latest.pt and buffer_latest.npz for crash recovery.
+
+    These files are overwritten every iteration so they always reflect
+    the most recent state without accumulating disk space.
+    """
+    os.makedirs(config.checkpoint_dir, exist_ok=True)
+
+    # Save model checkpoint
+    latest_ckpt = os.path.join(config.checkpoint_dir, "checkpoint_latest.pt")
+    checkpoint = {
+        "iteration": iteration,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "scheduler_state_dict": scheduler.state_dict(),
+        "config": {
+            "num_blocks": config.num_blocks,
+            "num_filters": config.num_filters,
+            "num_iterations": config.num_iterations,
+            "games_per_iteration": config.games_per_iteration,
+            "batch_size": config.batch_size,
+            "batches_per_iteration": config.batches_per_iteration,
+            "initial_lr": config.initial_lr,
+            "final_lr": config.final_lr,
+            "weight_decay": config.weight_decay,
+            "lr_decay_steps": config.lr_decay_steps,
+        }
+    }
+    if metrics is not None:
+        checkpoint["metrics"] = {
+            "policy_loss": metrics.policy_loss,
+            "value_loss": metrics.value_loss,
+            "total_loss": metrics.total_loss,
+            "buffer_size": metrics.buffer_size,
+        }
+    # Write to temp file then rename for atomicity
+    tmp_path = latest_ckpt + ".tmp"
+    torch.save(checkpoint, tmp_path)
+    os.replace(tmp_path, latest_ckpt)
+
+    # Save replay buffer
+    buffer_path = os.path.join(config.checkpoint_dir, "buffer_latest.npz")
+    buffer.save(buffer_path)
+
+
 def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet:
     """
     Main training loop.
@@ -560,8 +632,17 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
 
     logger.info(f"Model parameters: {model.count_parameters():,}")
 
-    # Create replay buffer
+    # Create replay buffer and restore from disk if resuming
     buffer = ReplayBuffer(max_size=config.buffer_size)
+    if resume_from is not None:
+        # Try to load buffer from same directory as the checkpoint
+        ckpt_dir = os.path.dirname(resume_from)
+        buffer_path = os.path.join(ckpt_dir, "buffer_latest.npz")
+        if os.path.exists(buffer_path):
+            buffer.load(buffer_path)
+            logger.info(f"Restored replay buffer: {len(buffer):,} examples from {buffer_path}")
+        else:
+            logger.info("No saved buffer found — starting with empty buffer")
 
     # Create self-play manager
     manager = SelfPlayManager(
@@ -604,7 +685,9 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
                 buffer=buffer,
                 batch_size=config.batch_size,
                 batches_per_iteration=config.batches_per_iteration,
-                device=device
+                device=device,
+                max_grad_norm=config.max_grad_norm,
+                value_loss_weight=config.value_loss_weight
             )
 
             # Step the learning rate scheduler
@@ -682,6 +765,11 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
                 metrics=metrics
             )
             logger.info(f"Saved checkpoint: {checkpoint_path}")
+
+        # Always save latest checkpoint + buffer for crash recovery.
+        # Overwrites each iteration so it doesn't accumulate disk space.
+        _save_latest(model, optimizer, scheduler, iteration + 1,
+                      config, buffer, metrics)
 
     # Save final checkpoint if not already saved
     final_iteration = config.num_iterations

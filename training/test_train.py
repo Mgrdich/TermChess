@@ -69,7 +69,7 @@ class TestTrainingConfig:
     def test_checkpoint_intervals_default(self):
         """Test that checkpoint intervals have default values."""
         config = TrainingConfig()
-        assert config.checkpoint_intervals == [5_000, 10_000, 30_000, 80_000]
+        assert config.checkpoint_intervals == [10, 25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 30_000, 80_000]
 
 
 class TestLossComputation:

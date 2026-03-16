@@ -6,10 +6,10 @@ import (
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
-// TestEncodeBoard_Shape verifies the output length is exactly 1152 (18*8*8).
+// TestEncodeBoard_Shape verifies the output length is exactly 4224 (66*8*8).
 func TestEncodeBoard_Shape(t *testing.T) {
 	board := engine.NewBoard()
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	if len(encoded) != encodingSize {
 		t.Errorf("encodeBoard output length = %d, want %d", len(encoded), encodingSize)
@@ -20,7 +20,7 @@ func TestEncodeBoard_Shape(t *testing.T) {
 // starting position against known correct values.
 func TestEncodeBoard_StartingPosition(t *testing.T) {
 	board := engine.NewBoard()
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	// Helper to get value at [channel][rank][file].
 	at := func(ch, rank, file int) float32 {
@@ -98,7 +98,7 @@ func TestEncodeBoard_AfterE4(t *testing.T) {
 		t.Fatalf("MakeMove e2-e4 failed: %v", err)
 	}
 
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	at := func(ch, rank, file int) float32 {
 		return encoded[ch*64+rank*8+file]
@@ -154,7 +154,7 @@ func TestEncodeBoard_AfterE4(t *testing.T) {
 // can be computed analytically and would match the Python encoder output.
 func TestEncodeBoard_PythonReference(t *testing.T) {
 	board := engine.NewBoard()
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	// Starting position reference values:
 	//
@@ -251,7 +251,7 @@ func TestEncodeBoard_NoCastlingRights(t *testing.T) {
 	board := engine.NewBoard()
 	board.CastlingRights = 0 // Remove all castling rights.
 
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	for ch := 13; ch <= 16; ch++ {
 		for i := 0; i < 64; i++ {
@@ -271,7 +271,7 @@ func TestEncodeBoard_PartialCastlingRights(t *testing.T) {
 	// Only white kingside and black queenside.
 	board.CastlingRights = engine.CastleWhiteKing | engine.CastleBlackQueen
 
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	// Channel 13 (WK): should be all 1.0.
 	for i := 0; i < 64; i++ {
@@ -310,7 +310,7 @@ func TestEncodeBoard_EnPassant(t *testing.T) {
 	// This means a pawn just moved e2-e4, en passant target is e3.
 	board.EnPassantSq = int8(engine.NewSquare(4, 2)) // e3, file=4
 
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	// Channel 17: file 4 should have 1.0 for all 8 ranks.
 	for rank := 0; rank < 8; rank++ {
@@ -339,7 +339,7 @@ func TestEncodeBoard_EnPassantFileA(t *testing.T) {
 	board := engine.NewBoard()
 	board.EnPassantSq = int8(engine.NewSquare(0, 2)) // a3, file=0
 
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	for rank := 0; rank < 8; rank++ {
 		idx := 17*64 + rank*8 + 0
@@ -363,7 +363,7 @@ func TestEncodeBoard_BlackToMove(t *testing.T) {
 	board := engine.NewBoard()
 	board.ActiveColor = engine.Black
 
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	for i := 0; i < 64; i++ {
 		if encoded[12*64+i] != 0.0 {
@@ -385,7 +385,7 @@ func TestEncodeBoard_EmptyBoard(t *testing.T) {
 	board.Squares[engine.NewSquare(4, 0)] = engine.NewPiece(engine.White, engine.King) // e1
 	board.Squares[engine.NewSquare(4, 7)] = engine.NewPiece(engine.Black, engine.King) // e8
 
-	encoded := encodeBoard(board)
+	encoded := encodeBoard(board, nil)
 
 	// Only 2 pieces should be set in channels 0-11.
 	var pieceCount float32
