@@ -27,11 +27,12 @@ Resume from checkpoint:
 """
 
 import argparse
+import csv
 import logging
 import os
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -59,8 +60,8 @@ DEFAULT_FINAL_LR = 0.0001
 DEFAULT_WEIGHT_DECAY = 1e-4
 DEFAULT_CHECKPOINT_DIR = "checkpoints"
 
-# Checkpoint intervals from technical requirements
-DEFAULT_CHECKPOINT_INTERVALS = [5_000, 10_000, 30_000, 80_000]
+# Checkpoint intervals — save early and often for ELO evaluation
+DEFAULT_CHECKPOINT_INTERVALS = [10, 25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 30_000, 80_000]
 
 # Model architecture defaults
 DEFAULT_NUM_BLOCKS = 6
@@ -126,6 +127,15 @@ class TrainingMetrics:
     buffer_size: int
     learning_rate: float
     iteration_time: float
+    # Game statistics for analysis
+    avg_game_length: float = 0.0
+    white_wins: int = 0
+    black_wins: int = 0
+    draws: int = 0
+    checkmates: int = 0
+    repetition_draws: int = 0
+    stalemates: int = 0
+    max_moves_draws: int = 0
 
 
 def setup_logging(verbose: bool = True) -> logging.Logger:
@@ -157,6 +167,41 @@ def setup_logging(verbose: bool = True) -> logging.Logger:
         logger.addHandler(console_handler)
 
     return logger
+
+
+def _compute_game_stats(game_stats: List["GameStats"]) -> Dict:
+    """Compute summary statistics from a list of game stats."""
+    if not game_stats:
+        return {}
+    return {
+        "avg_game_length": np.mean([s.num_moves for s in game_stats]),
+        "white_wins": sum(1 for s in game_stats if s.winner is True),
+        "black_wins": sum(1 for s in game_stats if s.winner is False),
+        "draws": sum(1 for s in game_stats if s.winner is None),
+        "checkmates": sum(1 for s in game_stats if s.termination == "CHECKMATE"),
+        "repetition_draws": sum(
+            1 for s in game_stats
+            if s.termination in ("FIVEFOLD_REPETITION", "THREEFOLD_REPETITION")
+        ),
+        "stalemates": sum(1 for s in game_stats if s.termination == "STALEMATE"),
+        "max_moves_draws": sum(1 for s in game_stats if s.termination == "MAX_MOVES"),
+    }
+
+
+def _init_csv_log(log_path: str) -> None:
+    """Initialize the CSV training log with headers."""
+    header = [f.name for f in fields(TrainingMetrics)]
+    with open(log_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+
+
+def _append_csv_log(log_path: str, metrics: "TrainingMetrics") -> None:
+    """Append a single metrics row to the CSV training log."""
+    row = [getattr(metrics, f.name) for f in fields(TrainingMetrics)]
+    with open(log_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(row)
 
 
 def create_optimizer(
@@ -404,6 +449,14 @@ def save_checkpoint(
             "value_loss": metrics.value_loss,
             "total_loss": metrics.total_loss,
             "buffer_size": metrics.buffer_size,
+            "avg_game_length": metrics.avg_game_length,
+            "white_wins": metrics.white_wins,
+            "black_wins": metrics.black_wins,
+            "draws": metrics.draws,
+            "checkmates": metrics.checkmates,
+            "repetition_draws": metrics.repetition_draws,
+            "stalemates": metrics.stalemates,
+            "max_moves_draws": metrics.max_moves_draws,
         }
 
     # Save checkpoint
@@ -523,6 +576,12 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
     # Track training metrics
     all_metrics: List[TrainingMetrics] = []
 
+    # Initialize CSV training log
+    csv_log_path = os.path.join(config.checkpoint_dir, "training_log.csv")
+    os.makedirs(config.checkpoint_dir, exist_ok=True)
+    if start_iteration == 0:
+        _init_csv_log(csv_log_path)
+
     # Main training loop
     for iteration in range(start_iteration, config.num_iterations):
         iteration_start = time.time()
@@ -556,6 +615,9 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
 
         iteration_time = time.time() - iteration_start
 
+        # Compute game statistics for this iteration
+        gstats = _compute_game_stats(game_stats)
+
         # Create metrics for this iteration
         current_lr = optimizer.param_groups[0]["lr"]
         metrics = TrainingMetrics(
@@ -567,16 +629,32 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
             positions_generated=positions_generated,
             buffer_size=len(buffer),
             learning_rate=current_lr,
-            iteration_time=iteration_time
+            iteration_time=iteration_time,
+            avg_game_length=gstats.get("avg_game_length", 0.0),
+            white_wins=gstats.get("white_wins", 0),
+            black_wins=gstats.get("black_wins", 0),
+            draws=gstats.get("draws", 0),
+            checkmates=gstats.get("checkmates", 0),
+            repetition_draws=gstats.get("repetition_draws", 0),
+            stalemates=gstats.get("stalemates", 0),
+            max_moves_draws=gstats.get("max_moves_draws", 0),
         )
         all_metrics.append(metrics)
 
+        # Write metrics to CSV log (append each iteration for crash-safety)
+        _append_csv_log(csv_log_path, metrics)
+
         # 4. Log progress
         if (iteration + 1) % config.log_every_n_iterations == 0:
+            decisive = metrics.checkmates
+            rep = metrics.repetition_draws
             logger.info(
                 f"Iteration {iteration + 1}/{config.num_iterations} | "
                 f"Loss: {total_loss:.4f} (P: {policy_loss:.4f}, V: {value_loss:.4f}) | "
                 f"Games: {len(game_stats)}, Positions: {positions_generated} | "
+                f"AvgLen: {metrics.avg_game_length:.0f} | "
+                f"W/B/D: {metrics.white_wins}/{metrics.black_wins}/{metrics.draws} | "
+                f"Mates: {decisive}, Reps: {rep} | "
                 f"Buffer: {len(buffer):,} | LR: {current_lr:.6f} | "
                 f"Time: {iteration_time:.1f}s"
             )

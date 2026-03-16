@@ -75,20 +75,46 @@ uv run python -u train.py \
 
 Training all 80K iterations in one run takes a very long time. A practical approach is to train in stages, resuming from each checkpoint:
 
-**Stage 1 — Intermediate (target ~1500 ELO)**
+**Stage 1 — Beginner (target ~1000 ELO)**
 
 ```bash
 uv run python -u train.py \
   --verbose-self-play \
-  --iterations 5000 \
+  --iterations 500 \
   --games-per-iter 20 \
   --mcts-sims 100 \
+  --save-every 50
+```
+
+At ~1000 ELO the model should avoid blundering pieces, make basic captures, and play legal-looking chess. Evaluate early checkpoints against Stockfish depth 1.
+
+**Stage 2 — Intermediate (target ~1200 ELO)**
+
+```bash
+uv run python -u train.py \
+  --verbose-self-play \
+  --resume checkpoints/checkpoint_500.pt \
+  --iterations 2500 \
+  --games-per-iter 20 \
+  --mcts-sims 100 \
+  --save-every 250
+```
+
+At ~1200 ELO the model should have basic tactical awareness (pins, forks), develop pieces, and avoid trivial draws. Evaluate against Stockfish depth 1-2.
+
+**Stage 3 — Club Player (target ~1500 ELO)**
+
+```bash
+uv run python -u train.py \
+  --verbose-self-play \
+  --resume checkpoints/checkpoint_2500.pt \
+  --iterations 5000 \
+  --games-per-iter 30 \
+  --mcts-sims 150 \
   --save-every 500
 ```
 
-Evaluate, then continue:
-
-**Stage 2 — Advanced (target ~2000 ELO)**
+**Stage 4 — Advanced (target ~2000 ELO)**
 
 ```bash
 uv run python -u train.py \
@@ -100,7 +126,7 @@ uv run python -u train.py \
   --save-every 1000
 ```
 
-**Stage 3 — Master (target ~2200 ELO)**
+**Stage 5 — Master (target ~2200 ELO)**
 
 ```bash
 uv run python -u train.py \
@@ -112,6 +138,20 @@ uv run python -u train.py \
 ```
 
 You can increase `--games-per-iter` and `--mcts-sims` at later stages since the model benefits more from stronger self-play as it improves.
+
+### Training health indicators
+
+The training loop writes a CSV log to `checkpoints/training_log.csv` with per-iteration metrics. Use this to diagnose training health:
+
+| Metric              | Healthy Sign                                   | Problem Sign                                     |
+|---------------------|-------------------------------------------------|--------------------------------------------------|
+| `checkmates`        | Increasing over time                            | Stuck at 0 after many iterations                 |
+| `repetition_draws`  | Decreasing or low fraction                      | 100% of games end in repetition                  |
+| `avg_game_length`   | 40-150 moves, not monotonically decreasing      | Collapsing to <40 moves (repetition collapse)    |
+| `value_loss`        | >0.01, meaningfully contributing to total loss   | Near 0 (all games are draws, value head starved) |
+| `white_wins/black_wins` | Both >0, roughly balanced                   | Both stuck at 0 (no decisive games)              |
+
+If you see repetition collapse (all games ending in FIVEFOLD_REPETITION with short game lengths), the Dirichlet noise and repetition penalty should help. If it persists, try increasing `--c-puct` (e.g., 2.0-3.0) to encourage more exploration.
 
 ### Resume from checkpoint
 
@@ -140,7 +180,7 @@ The checkpoint restores model weights, optimizer state, learning rate schedule, 
 | Save interval          | `--save-every`         | 0 (disabled)             |
 | Resume                 | `--resume`             | none                     |
 
-Checkpoints are saved at iterations: **5K, 10K, 30K, 80K** (plus any `--save-every` interval).
+Checkpoints are saved at iterations: **10, 25, 50, 100, 250, 500, 1K, 2.5K, 5K, 10K, 30K, 80K** (plus any `--save-every` interval). A CSV training log is also written to `checkpoints/training_log.csv` with per-iteration metrics including game outcomes, termination types, and average game length.
 
 ## ELO Evaluation
 
@@ -199,13 +239,15 @@ A 95% confidence interval is computed using the Wilson score interval.
 
 ### Checkpoint to ELO mapping
 
-The goal is to identify checkpoints that correspond to the three target difficulty tiers:
+The goal is to identify checkpoints that correspond to the target difficulty tiers:
 
-| Target       | ELO  | Suggested approach                                  |
-|--------------|------|-----------------------------------------------------|
-| Intermediate | 1500 | Evaluate early checkpoints (5K) against depth 2-3   |
-| Advanced     | 2000 | Evaluate mid checkpoints (10K-30K) against depth 5  |
-| Master       | 2200 | Evaluate late checkpoints (30K-80K) against depth 8 |
+| Target       | ELO  | Suggested approach                                     |
+|--------------|------|--------------------------------------------------------|
+| Beginner     | 1000 | Evaluate very early checkpoints (50-500) vs depth 1    |
+| Intermediate | 1200 | Evaluate early checkpoints (500-2500) vs depth 1-2     |
+| Club Player  | 1500 | Evaluate mid checkpoints (2500-5K) vs depth 2-3        |
+| Advanced     | 2000 | Evaluate later checkpoints (5K-30K) vs depth 5         |
+| Master       | 2200 | Evaluate late checkpoints (30K-80K) vs depth 8         |
 
 Example output when evaluating multiple checkpoints:
 
@@ -224,6 +266,8 @@ Example output when evaluating multiple checkpoints:
 Once you've identified the right checkpoints, export them to ONNX for the Go runtime:
 
 ```bash
+uv run python export_onnx.py checkpoints/checkpoint_250.pt models/rl_1000.onnx
+uv run python export_onnx.py checkpoints/checkpoint_1000.pt models/rl_1200.onnx
 uv run python export_onnx.py checkpoints/checkpoint_5000.pt models/rl_1500.onnx
 uv run python export_onnx.py checkpoints/checkpoint_30000.pt models/rl_2000.onnx
 uv run python export_onnx.py checkpoints/checkpoint_80000.pt models/rl_2200.onnx
@@ -262,14 +306,19 @@ uv run pytest
 To train in stages with resume:
 
 ```
-1a. Train to 5K    uv run python -u train.py --verbose-self-play --iterations 5000 --mcts-sims 100 --save-every 500
-1b. Evaluate       uv run python evaluate.py checkpoints/checkpoint_5000.pt --stockfish-path stockfish
-1c. Train to 30K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_5000.pt --iterations 30000 --mcts-sims 200
-1d. Evaluate       uv run python evaluate.py checkpoints/checkpoint_30000.pt --stockfish-path stockfish
-1e. Train to 80K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_30000.pt --iterations 80000 --mcts-sims 400
-1f. Evaluate       uv run python evaluate.py checkpoints/checkpoint_80000.pt --stockfish-path stockfish
-2.  Export          uv run python export_onnx.py checkpoints/checkpoint_5000.pt models/rl_1500.onnx
-                    uv run python export_onnx.py checkpoints/checkpoint_30000.pt models/rl_2000.onnx
-                    uv run python export_onnx.py checkpoints/checkpoint_80000.pt models/rl_2200.onnx
+1a. Train to 500   uv run python -u train.py --verbose-self-play --iterations 500 --mcts-sims 100 --save-every 50
+1b. Evaluate       uv run python evaluate.py checkpoints/checkpoint_500.pt --stockfish-path stockfish --stockfish-depth 1
+1c. Train to 2500  uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_500.pt --iterations 2500 --mcts-sims 100 --save-every 250
+1d. Evaluate       uv run python evaluate.py checkpoints/checkpoint_2500.pt --stockfish-path stockfish --stockfish-depth 2
+1e. Train to 5K    uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_2500.pt --iterations 5000 --mcts-sims 150 --save-every 500
+1f. Evaluate       uv run python evaluate.py checkpoints/checkpoint_5000.pt --stockfish-path stockfish --stockfish-depth 3
+1g. Train to 30K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_5000.pt --iterations 30000 --mcts-sims 200
+1h. Train to 80K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_30000.pt --iterations 80000 --mcts-sims 400
+2.  Export          uv run python export_onnx.py <best_1000_elo>.pt models/rl_1000.onnx
+                    uv run python export_onnx.py <best_1200_elo>.pt models/rl_1200.onnx
+                    uv run python export_onnx.py <best_1500_elo>.pt models/rl_1500.onnx
+                    uv run python export_onnx.py <best_2000_elo>.pt models/rl_2000.onnx
+                    uv run python export_onnx.py <best_2200_elo>.pt models/rl_2200.onnx
 3.  Integrate       Copy .onnx files to internal/bot/models/ in the Go project
+4.  Monitor         Review checkpoints/training_log.csv for training health
 ```

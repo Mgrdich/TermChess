@@ -48,7 +48,10 @@ from replay_buffer import TrainingExample, ReplayBuffer
 # Temperature schedule constants
 EXPLORATION_MOVES = 30  # Number of moves to use high temperature
 HIGH_TEMPERATURE = 1.0  # Temperature for first N moves
-LOW_TEMPERATURE = 0.2   # Temperature for remaining moves
+LOW_TEMPERATURE = 0.4   # Temperature for remaining moves (was 0.2, increased for diversity)
+
+# Repetition draw penalty: discourage the model from learning to draw by repetition
+REPETITION_DRAW_PENALTY = -0.2  # Slight loss for both sides on repetition draws
 
 
 @dataclass
@@ -131,23 +134,29 @@ def _get_temperature(move_number: int) -> float:
 
 
 def _get_game_outcome(
-    board: chess.Board, perspective: bool
+    board: chess.Board, perspective: bool, termination: str = ""
 ) -> float:
     """
     Get the game outcome from a specific player's perspective.
 
+    Repetition draws are penalized with a slight negative value to
+    discourage the model from learning draw-by-repetition as a strategy.
+
     Args:
         board: Chess board at game end
         perspective: The player's perspective (chess.WHITE or chess.BLACK)
+        termination: How the game ended (used to detect repetition draws)
 
     Returns:
         +1.0 if the player won
         -1.0 if the player lost
-        0.0 for draws
+        0.0 for draws (or REPETITION_DRAW_PENALTY for repetition draws)
     """
     result = board.outcome()
     if result is None or result.winner is None:
-        # Draw
+        # Draw — penalize repetition draws to discourage this behavior
+        if termination in ("FIVEFOLD_REPETITION", "THREEFOLD_REPETITION"):
+            return REPETITION_DRAW_PENALTY
         return 0.0
 
     if result.winner == perspective:
@@ -157,7 +166,7 @@ def _get_game_outcome(
 
 def play_game(
     mcts: MCTS,
-    max_moves: int = 512
+    max_moves: int = 256
 ) -> GameData:
     """
     Play a single self-play game using MCTS.
@@ -166,9 +175,12 @@ def play_game(
     neural network and MCTS for move selection. Training examples are
     collected at each position.
 
+    The game also terminates early if a threefold repetition is detected,
+    to avoid wasting compute on repetitive games.
+
     Args:
         mcts: MCTS instance with neural network
-        max_moves: Maximum number of moves before declaring draw (default: 512)
+        max_moves: Maximum number of moves before declaring draw (default: 256)
 
     Returns:
         GameData containing training examples and game statistics
@@ -181,6 +193,9 @@ def play_game(
 
     move_number = 0
     while not board.is_game_over() and move_number < max_moves:
+        # Early termination on threefold repetition to avoid wasting compute
+        if board.can_claim_threefold_repetition():
+            break
         # Get temperature for this move
         temperature = _get_temperature(move_number)
 
@@ -218,6 +233,11 @@ def play_game(
         result_str = outcome.result()
         winner = outcome.winner
         termination = outcome.termination.name
+    elif board.can_claim_threefold_repetition():
+        # Early termination due to threefold repetition
+        result_str = "1/2-1/2"
+        winner = None
+        termination = "THREEFOLD_REPETITION"
     else:
         # Max moves reached
         result_str = "1/2-1/2"
@@ -227,7 +247,7 @@ def play_game(
     # Create training examples with correct value targets
     examples: List[TrainingExample] = []
     for board_state, policy, perspective in positions:
-        value = _get_game_outcome(board, perspective)
+        value = _get_game_outcome(board, perspective, termination)
         examples.append(TrainingExample(
             board_state=board_state,
             policy_target=policy,

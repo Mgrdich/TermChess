@@ -163,11 +163,16 @@ class MCTS:
     The search balances exploitation (high Q values) with exploration
     (high prior, low visit count) using the PUCT formula.
 
+    Dirichlet noise is added to the root node's priors to ensure exploration,
+    following the AlphaZero paper.
+
     Attributes:
         model: ChessNet neural network for position evaluation
         c_puct: Exploration constant (higher = more exploration)
         num_simulations: Number of MCTS simulations per search
         device: Torch device for neural network inference
+        dirichlet_alpha: Alpha parameter for Dirichlet noise at root
+        dirichlet_epsilon: Weight of Dirichlet noise vs network prior
     """
 
     def __init__(
@@ -175,7 +180,9 @@ class MCTS:
         model: ChessNet,
         c_puct: float = 1.5,
         num_simulations: int = 100,
-        device: Optional[torch.device] = None
+        device: Optional[torch.device] = None,
+        dirichlet_alpha: float = 0.3,
+        dirichlet_epsilon: float = 0.25
     ):
         """
         Initialize MCTS.
@@ -185,11 +192,15 @@ class MCTS:
             c_puct: Exploration constant for UCB formula (default: 1.5)
             num_simulations: Number of simulations per search (default: 100)
             device: Torch device (default: auto-detect)
+            dirichlet_alpha: Alpha for Dirichlet noise at root (default: 0.3)
+            dirichlet_epsilon: Noise weight at root (default: 0.25)
         """
         self.model = model
         self.c_puct = c_puct
         self.num_simulations = num_simulations
         self.device = device if device is not None else get_device()
+        self.dirichlet_alpha = dirichlet_alpha
+        self.dirichlet_epsilon = dirichlet_epsilon
 
         # Ensure model is on the correct device and in eval mode
         self.model = self.model.to(self.device)
@@ -437,12 +448,39 @@ class MCTS:
         # Propagate the value back up the tree
         self._backpropagate(node, value)
 
+    def _add_dirichlet_noise(self, root: MCTSNode) -> None:
+        """
+        Add Dirichlet noise to the root node's children priors.
+
+        This ensures exploration at the root, preventing the search from
+        collapsing to always picking the same moves. Following AlphaZero:
+            P(s, a) = (1 - epsilon) * P(s, a) + epsilon * Dir(alpha)
+
+        Args:
+            root: Root node (must be expanded with children)
+        """
+        if root.children is None or len(root.children) == 0:
+            return
+
+        moves = list(root.children.keys())
+        noise = np.random.dirichlet([self.dirichlet_alpha] * len(moves))
+
+        for i, move in enumerate(moves):
+            child = root.children[move]
+            child.prior_probability = (
+                (1 - self.dirichlet_epsilon) * child.prior_probability
+                + self.dirichlet_epsilon * noise[i]
+            )
+
     def search(self, board: chess.Board) -> Dict[chess.Move, int]:
         """
         Perform MCTS search from the given position.
 
         Runs `num_simulations` simulations, then returns the visit count
         for each legal move. Higher visit count = better move.
+
+        Dirichlet noise is added to the root node's priors to ensure
+        sufficient exploration during self-play training.
 
         Args:
             board: Chess board position to search from
@@ -456,6 +494,8 @@ class MCTS:
         # Expand root (needed to initialize children)
         if not root.is_terminal():
             self._expand(root)
+            # Add Dirichlet noise to root for exploration
+            self._add_dirichlet_noise(root)
 
         # Run simulations
         for _ in range(self.num_simulations):
