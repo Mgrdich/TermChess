@@ -14,8 +14,12 @@ import (
 type RLDifficulty int
 
 const (
-	// RLIntermediate targets approximately 1500 ELO.
-	RLIntermediate RLDifficulty = iota
+	// RLBeginner targets approximately 1000 ELO.
+	RLBeginner RLDifficulty = iota
+	// RLIntermediate targets approximately 1200 ELO.
+	RLIntermediate
+	// RLClub targets approximately 1500 ELO.
+	RLClub
 	// RLAdvanced targets approximately 2000 ELO.
 	RLAdvanced
 	// RLMaster targets approximately 2200 ELO.
@@ -25,8 +29,12 @@ const (
 // String returns a human-readable description of the RL difficulty level.
 func (d RLDifficulty) String() string {
 	switch d {
+	case RLBeginner:
+		return "RL Beginner (1000)"
 	case RLIntermediate:
-		return "RL Intermediate (1500)"
+		return "RL Intermediate (1200)"
+	case RLClub:
+		return "RL Club (1500)"
 	case RLAdvanced:
 		return "RL Advanced (2000)"
 	case RLMaster:
@@ -69,14 +77,18 @@ func NewRLEngine(difficulty RLDifficulty, opts ...EngineOption) (Engine, error) 
 	// Validate difficulty
 	var defaultTimeLimit time.Duration
 	switch difficulty {
+	case RLBeginner:
+		defaultTimeLimit = 3 * time.Second
 	case RLIntermediate:
+		defaultTimeLimit = 4 * time.Second
+	case RLClub:
 		defaultTimeLimit = 5 * time.Second
 	case RLAdvanced:
 		defaultTimeLimit = 8 * time.Second
 	case RLMaster:
 		defaultTimeLimit = 10 * time.Second
 	default:
-		return nil, fmt.Errorf("invalid RL difficulty: %d (expected RLIntermediate, RLAdvanced, or RLMaster)", difficulty)
+		return nil, fmt.Errorf("invalid RL difficulty: %d (expected RLBeginner through RLMaster)", difficulty)
 	}
 
 	cfg := &engineConfig{

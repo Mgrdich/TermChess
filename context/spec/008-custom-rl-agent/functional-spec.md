@@ -10,7 +10,7 @@
 
 **Problem:** The current Hard bot uses minimax with position evaluation, which provides a ceiling on difficulty. Experienced players need a stronger, more challenging opponent that plays in a more "human-like" strategic style.
 
-**Solution:** Train a custom reinforcement learning chess agent using AlphaZero-style self-play, providing three difficulty tiers (1500, 2000, 2200 ELO) that offer progressively challenging gameplay.
+**Solution:** Train a custom reinforcement learning chess agent using AlphaZero-style self-play, providing five difficulty tiers (1000, 1200, 1500, 2000, 2200 ELO) that offer progressively challenging gameplay.
 
 **Secondary Goal:** This serves as a hands-on deep learning project, with training runnable on Mac ARM (Apple Silicon) using PyTorch MPS.
 
@@ -27,7 +27,7 @@
 
 - **As a** user, **I want to** select an RL bot difficulty, **so that** I can play against a challenging AI trained via deep learning.
   - **Acceptance Criteria:**
-    - [ ] Three RL bots appear in the bot selection list: "RL Intermediate (1500)", "RL Advanced (2000)", "RL Master (2200)"
+    - [ ] Five RL bots appear in the bot selection list: "RL Beginner (1000)", "RL Intermediate (1200)", "RL Club (1500)", "RL Advanced (2000)", "RL Master (2200)"
     - [ ] RL bots are listed alongside existing bots (Easy, Medium, Hard) in a simple list
     - [ ] Selecting an RL bot starts a game against that bot
 
@@ -67,7 +67,9 @@
   - **Acceptance Criteria:**
     - [ ] Training uses PyTorch with MPS (Metal) acceleration on Mac ARM
     - [ ] AlphaZero-style self-play training loop is implemented
-    - [ ] Checkpoints are saved at intervals to produce different strength models (1500, 2000, 2200 ELO)
+    - [ ] Checkpoints are saved at intervals (10, 25, 50, 100, 250, 500, 1K, 2.5K, 5K, 10K, 30K, 80K) to produce different strength models (1000, 1200, 1500, 2000, 2200 ELO)
+    - [ ] Per-iteration metrics logged to CSV for training health monitoring
+    - [ ] Crash recovery via checkpoint_latest.pt and buffer_latest.npz auto-saved every iteration
     - [ ] Training script is documented with instructions for running on Mac ARM
     - [ ] Trained model files are portable and device-agnostic
 
@@ -85,7 +87,7 @@
 
 ### In-Scope
 
-- Three RL bot difficulties (1500, 2000, 2200 ELO) integrated into existing bot selection
+- Five RL bot difficulties (1000, 1200, 1500, 2000, 2200 ELO) integrated into existing bot selection
 - Info page accessible via shortcut explaining RL bot tiers
 - Quirky thinking messages for RL bots
 - RL bots available in Bot vs Bot mode

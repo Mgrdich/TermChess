@@ -47,7 +47,9 @@ func TestNewRLEngine_Defaults(t *testing.T) {
 		difficulty RLDifficulty
 		wantName   string
 	}{
-		{RLIntermediate, "RL Intermediate (1500)"},
+		{RLBeginner, "RL Beginner (1000)"},
+		{RLIntermediate, "RL Intermediate (1200)"},
+		{RLClub, "RL Club (1500)"},
 		{RLAdvanced, "RL Advanced (2000)"},
 		{RLMaster, "RL Master (2200)"},
 	}

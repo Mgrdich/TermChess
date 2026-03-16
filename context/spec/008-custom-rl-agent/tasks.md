@@ -6,8 +6,8 @@
 
 - [x] **Slice 1: Board encoder with tests**
   - [x] Initialize `training/` project with `uv init` and add dependencies (torch, numpy, python-chess, pytest)
-  - [x] Create `training/board_encoder.py` - convert chess position to 18-channel tensor
-  - [x] Create `training/test_board_encoder.py` - verify output shape [18, 8, 8], test known positions
+  - [x] Create `training/board_encoder.py` - convert chess position to 66-channel tensor (18 current + 4x12 history)
+  - [x] Create `training/test_board_encoder.py` - verify output shape [66, 8, 8], test known positions, test history encoding
   - [x] Verify encoder runs on MPS device
 
 - [x] **Slice 2: Neural network architecture with forward pass**
@@ -25,9 +25,18 @@
   - [x] Create `training/replay_buffer.py` - store training examples
   - [x] Verify can generate 10 self-play games end-to-end
 
-- [x] **Slice 5: Training loop (minimal)**
+- [x] **Slice 5: Training loop (full)**
   - [x] Create `training/train.py` - main training loop with MPS support
-  - [x] Implement 1 iteration: generate games → sample batches → train → save checkpoint
+  - [x] Implement iteration: generate games → sample batches → train → save checkpoint
+  - [x] Dirichlet noise at MCTS root for exploration
+  - [x] Repetition draw penalty (-0.2 value target)
+  - [x] Gradient clipping (max_norm=1.0)
+  - [x] Configurable value loss weight
+  - [x] Horizontal flip data augmentation (50% during sampling)
+  - [x] Move history encoding (last 4 positions)
+  - [x] Per-iteration CSV metrics log (`training_log.csv`)
+  - [x] Auto-save `checkpoint_latest.pt` + `buffer_latest.npz` every iteration (crash recovery)
+  - [x] Replay buffer save/load for resume
   - [x] Verify training runs for 100 iterations without errors
 
 - [x] **Slice 6: ONNX export**
@@ -53,7 +62,7 @@
 - [x] **Slice 9: ONNX Runtime integration** *(interface + encoder; ONNX session wiring in Slice 11)*
   - [x] Add `github.com/yalue/onnxruntime_go` dependency
   - [x] Define `rlInferenceSession` interface and stubbed `newOnnxSession()`
-  - [x] Create Go board encoder matching Python encoder exactly
+  - [x] Create Go board encoder matching Python encoder exactly (66 channels with history support)
   - [x] Unit test: encoder output matches Python reference
 
 - [x] **Slice 10: Inference and move selection** *(uses mock session; real ONNX in Slice 11)*
@@ -62,9 +71,11 @@
   - [x] Unit test with mock inference session
 
 - [ ] **Slice 11: Embed trained models**
-  - [ ] Export 1500/2000/2200 ELO models from training
-  - [ ] Embed models via `go:embed` in `internal/bot/models/`
-  - [ ] Update factory to load correct model based on difficulty
+  - [ ] Train to at least iteration 500 (target ~1000 ELO)
+  - [ ] Evaluate checkpoints against Stockfish to identify ELO targets
+  - [ ] Export 1000/1200/1500/2000/2200 ELO models to ONNX (export what's available, mark rest as unavailable)
+  - [ ] Embed available models via `go:embed` in `internal/bot/models/`
+  - [ ] Update factory to load correct model based on difficulty; return `ErrModelNotLoaded` for unavailable tiers
   - [ ] Verify RL bot can play a complete game
 
 ---
@@ -72,9 +83,10 @@
 ## Phase C: UI Integration
 
 - [ ] **Slice 12: Add RL bots to selection menu**
-  - [ ] Add "RL Intermediate (1500)", "RL Advanced (2000)", "RL Master (2200)" to bot list
+  - [ ] Add "RL Beginner (1000)", "RL Intermediate (1200)", "RL Club (1500)", "RL Advanced (2000)", "RL Master (2200)" to bot list
   - [ ] Wire selection to `NewRLEngine()` with appropriate difficulty
-  - [ ] Handle error case: display message if model unavailable
+  - [ ] Handle error case: display message if model unavailable (greyed out or "Model not yet trained")
+  - [ ] Unavailable tiers should be visible but not selectable
 
 - [ ] **Slice 13: RL thinking messages**
   - [ ] Create `internal/bot/rl_messages.go` with RL-themed messages
