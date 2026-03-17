@@ -42,11 +42,11 @@ Follow this process precisely.
 
 1.  **Confirm Target:** Once the spec is identified (e.g., `001-user-profile-picture-upload`), announce your task: "Okay, I will now create the technical considerations for **'User Profile Picture Upload'**."
 2.  **Read Documents:** Carefully read the `functional-spec.md` within the chosen directory AND the main `context/product/architecture.md` document.
-3.  **Identify Domain Expert (if applicable):** Based on the functional spec and architecture document, determine which technology stack(s) this feature will primarily involve (e.g., Python backend, React frontend, or both). Check if corresponding domain experts exist in `.claude/agents/domain-experts/`. Common experts include python-expert for Python/backend work and react-expert for React/frontend work.
+3.  **Identify available subagents (if applicable):** Based on the functional spec and architecture document, determine which technology stack(s) this feature will primarily involve (e.g., Python backend, React frontend, or both). Analyze the Task tool definition to extract all available subagent_type values with their descriptions to check that corresponding subagents exist.
 4.  **Analyze Codebase:** State your intention to review the code: "To ensure the plan is sound, I will also analyze the existing codebase for relevant context, such as existing services, data models, and utility functions."
-    - If domain expert(s) are available for the feature's technology stack, delegate the codebase analysis to the appropriate expert(s) using the Task tool with the appropriate `subagent_type` (e.g., "python-expert", "react-expert"). For features spanning multiple technologies, you may delegate to multiple experts sequentially or in parallel.
+    - If subagents are available for the feature's technology stack, delegate the codebase analysis to the appropriate expert(s) using the Task tool with the appropriate `subagent_type` (e.g., "python-expert", "react-expert"). For features spanning multiple technologies, you may delegate to multiple experts sequentially or in parallel.
     - Ask the expert(s) to analyze existing patterns, architectural conventions, technology-specific best practices, and provide recommendations for the technical approach.
-    - If no domain expert is available for the feature's technology, perform the analysis yourself.
+    - If no subagent is available for the feature's technology, perform the analysis yourself.
 
 ### Step 3: Propose and Draft the Technical Plan (Interactive)
 
@@ -58,6 +58,12 @@ Follow this process precisely.
 
 2.  **Detailed Implementation (Assume but Verify):**
     - Work through the sections of the template (System Changes, API, etc.).
+    - **LEVEL OF DETAIL:** Describe structures and contracts, not implementations. The spec should be reviewable and not go stale.
+      - For schemas: list table names, key columns, and relationships in a table format (no full DDL/ORM code)
+      - For APIs: specify endpoints, methods, and payload shapes (no handler code)
+      - For configs: list required env vars and their purpose (no full file contents)
+      - For files: specify paths and responsibilities (no full implementations)
+      - Reference official docs for exact syntax/requirements rather than duplicating them
     - **CRITICAL BEHAVIOR:** For each section, you must propose a specific implementation detail based on the architecture, state it as an assumption, and ask for approval.
     - Example: "For the database, the functional spec implies we need to store the image location. I'll **assume** we should add a new `avatar_url` (TEXT) column to the `users` table. **Is that assumption correct?**"
     - Example: "For the API, I'll propose a `POST /api/v1/users/me/avatar` endpoint that accepts a multipart/form-data request. **Does that fit the requirements?**"
@@ -74,4 +80,6 @@ Follow this process precisely.
 
 1.  **Identify Path:** The output path is the `technical-considerations.md` file inside the directory you identified in Step 1.
 2.  **Save File:** Once the user approves the draft, write the final content into this file.
-3.  **Conclude:** Announce the completion and the file's location: "The technical specification has been saved. You can find it at `context/spec/[directory-name]/technical-considerations.md`. Let’s break it into tasks with `/awos:tasks`"
+3.  **Check for New Capabilities:** Review the technical specification you just saved. Determine whether it introduces technologies, frameworks, tools, or testing approaches that are NOT already covered by the project’s existing architecture and specialist agents.
+    - **If new capabilities are needed:** Build a pre-filled `/awos:hire` command that includes the specific technologies and the spec context. Conclude with: "The technical specification has been saved to `context/spec/[directory-name]/technical-considerations.md`. This spec introduces new capabilities that may benefit from specialist agents. Run the following to set up the right agents, then break it into tasks with `/awos:tasks`:" followed by a code block containing `/awos:hire cover [directory-name]: need [comma-separated list of new technologies/capabilities identified]`.
+    - **If no new capabilities are needed:** Conclude with: "The technical specification has been saved to `context/spec/[directory-name]/technical-considerations.md`. Let’s break it into tasks with `/awos:tasks`."
