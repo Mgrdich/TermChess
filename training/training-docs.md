@@ -83,10 +83,11 @@ uv run python -u train.py \
   --iterations 500 \
   --games-per-iter 20 \
   --mcts-sims 100 \
-  --save-every 50
+  --save-every 50 \
+  --c-puct 2.5
 ```
 
-At ~1000 ELO the model should avoid blundering pieces, make basic captures, and play legal-looking chess. Evaluate early checkpoints against Stockfish depth 1.
+Use `--c-puct 2.5` in early stages to prevent repetition collapse. At ~1000 ELO the model should avoid blundering pieces, make basic captures, and play legal-looking chess. Evaluate early checkpoints against Stockfish depth 1.
 
 **Stage 2 — Intermediate (target ~1200 ELO)**
 
@@ -97,7 +98,8 @@ uv run python -u train.py \
   --iterations 2500 \
   --games-per-iter 20 \
   --mcts-sims 100 \
-  --save-every 250
+  --save-every 250 \
+  --c-puct 2.5
 ```
 
 At ~1200 ELO the model should have basic tactical awareness (pins, forks), develop pieces, and avoid trivial draws. Evaluate against Stockfish depth 1-2.
@@ -111,8 +113,11 @@ uv run python -u train.py \
   --iterations 5000 \
   --games-per-iter 30 \
   --mcts-sims 150 \
-  --save-every 500
+  --save-every 500 \
+  --c-puct 2.0
 ```
+
+By Stage 3 the model's policy is more reliable, so `--c-puct` can be reduced to 2.0.
 
 **Stage 4 — Advanced (target ~2000 ELO)**
 
@@ -151,7 +156,14 @@ The training loop writes a CSV log to `checkpoints/training_log.csv` with per-it
 | `value_loss`        | >0.01, meaningfully contributing to total loss   | Near 0 (all games are draws, value head starved) |
 | `white_wins/black_wins` | Both >0, roughly balanced                   | Both stuck at 0 (no decisive games)              |
 
-If you see repetition collapse (all games ending in FIVEFOLD_REPETITION with short game lengths), the Dirichlet noise and repetition penalty should help. If it persists, try increasing `--c-puct` (e.g., 2.0-3.0) to encourage more exploration.
+If you see repetition collapse (all games ending in FIVEFOLD_REPETITION with short game lengths), several mechanisms are in place to prevent it:
+
+- **Repetition draw penalty (-1.0):** Repetition draws are treated as full losses for both sides, creating strong incentive to avoid repetitive play.
+- **Dirichlet noise (epsilon=0.5):** 50% of root node priors come from random noise, forcing exploration of alternative moves even when the policy is biased.
+- **Extended exploration window:** High temperature (1.0) is maintained for the first 60 moves, with a moderate low temperature (0.6) afterwards, keeping games diverse throughout.
+- **No early threefold termination:** Games continue to fivefold repetition (handled automatically by python-chess) rather than stopping at threefold, so the model experiences the full cost of repetitive play.
+
+If collapse still occurs, try increasing `--c-puct` (e.g., 2.5-3.0) to further encourage MCTS exploration.
 
 ### What to expect at each training phase
 
@@ -199,7 +211,7 @@ The model develops basic tactical awareness — it can capture pieces intentiona
 **Evaluate at iteration 500:** Run against Stockfish depth 1. Target: win rate >30% → ~1000 ELO.
 
 **What's OK:** Mix of decisive games and draws. Checkmates appearing semi-regularly.
-**Red flag:** Value loss still near 0, zero checkmates after 250 iterations. Try increasing `--c-puct` to 2.0-3.0.
+**Red flag:** Value loss still near 0, zero checkmates after 250 iterations. Try increasing `--c-puct` to 2.5-3.0 or `--value-loss-weight 2.0`.
 
 #### Iterations 500-2500 (Piece development, ~1200 ELO)
 
@@ -258,9 +270,9 @@ Increase `--mcts-sims` to 400 and `--games-per-iter` to 100. Improvements will b
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| All games end in FIVEFOLD_REPETITION | Dirichlet noise too low, or model collapsed to repetitive policy | Increase `--c-puct` to 2.0-3.0, or restart from earlier checkpoint |
+| All games end in FIVEFOLD_REPETITION | Model collapsed to repetitive policy despite anti-repetition measures | Increase `--c-puct` to 2.5-3.0, or restart from earlier checkpoint. Current defaults already include -1.0 repetition penalty, 0.5 Dirichlet epsilon, and 60-move exploration window |
 | Policy loss stuck / not decreasing | Learning rate too low, or buffer too large (stale data dilutes signal) | Decrease `--buffer-size` to 100K, or increase `--lr` |
-| Value loss stays near 0 | All games are draws, value head is starved | Check that Dirichlet noise is working (games should be diverse). Increase repetition penalty |
+| Value loss stays near 0 | All games are draws, value head is starved | Check that Dirichlet noise is working (games should be diverse). Repetition penalty is already -1.0; if value loss is still near 0, try `--value-loss-weight 2.0` |
 | Policy loss oscillating wildly | Gradient explosions | Decrease `--lr`, gradient clipping should help (already enabled, max_norm=1.0) |
 | One side always wins | Asymmetric training signal | Likely fine — it can self-correct as both sides improve. Monitor over 10+ iterations |
 | Training very slow per iteration | MCTS simulations are bottleneck | Reduce `--mcts-sims` for early stages (100 is fine for <1500 ELO) |
@@ -304,6 +316,7 @@ The numbered checkpoints (e.g., `checkpoint_500.pt`) are still saved at mileston
 | Batches per iteration  | `--batches-per-iter`   | 10                       |
 | Replay buffer size     | `--buffer-size`        | 500K                     |
 | MCTS simulations/move  | `--mcts-sims`          | 400                      |
+| MCTS exploration       | `--c-puct`             | 1.5 (try 2.5 for early training) |
 | Learning rate          | `--lr` / `--lr-final`  | 0.001 -> 0.0001 (decay)  |
 | Optimizer              |                        | Adam (weight decay 1e-4) |
 | Verbose self-play      | `--verbose-self-play`  | off                      |
@@ -438,11 +451,11 @@ uv run pytest
 To train in stages with resume:
 
 ```
-1a. Train to 500   uv run python -u train.py --verbose-self-play --iterations 500 --mcts-sims 100 --save-every 50
+1a. Train to 500   uv run python -u train.py --verbose-self-play --iterations 500 --mcts-sims 100 --save-every 50 --c-puct 2.5
 1b. Evaluate       uv run python evaluate.py checkpoints/checkpoint_500.pt --stockfish-path stockfish --stockfish-depth 1
-1c. Train to 2500  uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_500.pt --iterations 2500 --mcts-sims 100 --save-every 250
+1c. Train to 2500  uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_500.pt --iterations 2500 --mcts-sims 100 --save-every 250 --c-puct 2.5
 1d. Evaluate       uv run python evaluate.py checkpoints/checkpoint_2500.pt --stockfish-path stockfish --stockfish-depth 2
-1e. Train to 5K    uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_2500.pt --iterations 5000 --mcts-sims 150 --save-every 500
+1e. Train to 5K    uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_2500.pt --iterations 5000 --mcts-sims 150 --save-every 500 --c-puct 2.0
 1f. Evaluate       uv run python evaluate.py checkpoints/checkpoint_5000.pt --stockfish-path stockfish --stockfish-depth 3
 1g. Train to 30K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_5000.pt --iterations 30000 --mcts-sims 200
 1h. Train to 80K   uv run python -u train.py --verbose-self-play --resume checkpoints/checkpoint_30000.pt --iterations 80000 --mcts-sims 400
