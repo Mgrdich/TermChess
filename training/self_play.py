@@ -12,8 +12,8 @@ produce training examples that capture:
 Temperature Schedule:
 ---------------------
 Following AlphaZero, we use a temperature schedule for move selection:
-- First 30 moves: temperature = 1.0 (more exploration)
-- After 30 moves: temperature = 0.2 (more exploitation)
+- First 60 moves: temperature = 1.0 (more exploration)
+- After 60 moves: temperature = 0.6 (more exploitation)
 
 This encourages diverse opening play while still playing strongly in the
 middle and endgame.
@@ -46,12 +46,12 @@ from replay_buffer import TrainingExample, ReplayBuffer
 
 
 # Temperature schedule constants
-EXPLORATION_MOVES = 30  # Number of moves to use high temperature
+EXPLORATION_MOVES = 60  # Number of moves to use high temperature (was 30)
 HIGH_TEMPERATURE = 1.0  # Temperature for first N moves
-LOW_TEMPERATURE = 0.4   # Temperature for remaining moves (was 0.2, increased for diversity)
+LOW_TEMPERATURE = 0.6   # Temperature for remaining moves (was 0.4)
 
 # Repetition draw penalty: discourage the model from learning to draw by repetition
-REPETITION_DRAW_PENALTY = -0.2  # Slight loss for both sides on repetition draws
+REPETITION_DRAW_PENALTY = -1.0  # Full loss for repetition draws (was -0.2)
 
 
 @dataclass
@@ -119,8 +119,8 @@ def _get_temperature(move_number: int) -> float:
     """
     Get the temperature for move selection based on move number.
 
-    Uses high temperature (1.0) for the first 30 moves to encourage
-    exploration, then low temperature (0.2) for remaining moves.
+    Uses high temperature (1.0) for the first 60 moves to encourage
+    exploration, then low temperature (0.6) for remaining moves.
 
     Args:
         move_number: The current move number (0-indexed, counts half-moves)
@@ -196,9 +196,6 @@ def play_game(
 
     move_number = 0
     while not board.is_game_over() and move_number < max_moves:
-        # Early termination on threefold repetition to avoid wasting compute
-        if board.can_claim_threefold_repetition():
-            break
         # Get temperature for this move
         temperature = _get_temperature(move_number)
 
@@ -239,11 +236,6 @@ def play_game(
         result_str = outcome.result()
         winner = outcome.winner
         termination = outcome.termination.name
-    elif board.can_claim_threefold_repetition():
-        # Early termination due to threefold repetition
-        result_str = "1/2-1/2"
-        winner = None
-        termination = "THREEFOLD_REPETITION"
     else:
         # Max moves reached
         result_str = "1/2-1/2"

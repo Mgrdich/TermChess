@@ -182,7 +182,7 @@ class MCTS:
         num_simulations: int = 100,
         device: Optional[torch.device] = None,
         dirichlet_alpha: float = 0.3,
-        dirichlet_epsilon: float = 0.25
+        dirichlet_epsilon: float = 0.5
     ):
         """
         Initialize MCTS.
@@ -193,7 +193,7 @@ class MCTS:
             num_simulations: Number of simulations per search (default: 100)
             device: Torch device (default: auto-detect)
             dirichlet_alpha: Alpha for Dirichlet noise at root (default: 0.3)
-            dirichlet_epsilon: Noise weight at root (default: 0.25)
+            dirichlet_epsilon: Noise weight at root (default: 0.5)
         """
         self.model = model
         self.c_puct = c_puct
