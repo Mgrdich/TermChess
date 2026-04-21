@@ -308,9 +308,11 @@ termchess/
 │   │   ├── random.go         # Easy bot (random moves)
 │   │   ├── minimax.go        # Medium/Hard bot (minimax + alpha-beta)
 │   │   └── eval.go           # Position evaluation
-│   ├── bvb/                   # Bot vs Bot game management
-│   │   ├── session.go        # Game session controller
-│   │   └── session_test.go
+│   ├── bvb/                  # Bot vs Bot game management
+│   │   ├── session.go        # Single-game controller
+│   │   ├── manager.go        # Multi-game queue
+│   │   ├── stats.go          # Aggregate statistics
+│   │   └── export.go         # Game export
 │   ├── ui/                   # Terminal UI (Bubbletea)
 │   │   ├── model.go          # Application state
 │   │   ├── view.go           # Screen rendering
@@ -319,8 +321,13 @@ termchess/
 │   │   ├── san.go            # SAN move parsing
 │   │   ├── save.go           # Game save/load
 │   │   └── *_test.go         # UI tests (83.5% coverage)
-│   └── util/                 # Utilities
+│   ├── updater/              # Self-upgrade via GitHub Releases
+│   │   └── updater.go
+│   ├── version/              # Build-time version metadata
+│   │   └── version.go
+│   └── util/                 # Cross-cutting utilities
 │       └── clipboard.go      # Cross-platform clipboard
+├── training/                 # Python RL training pipeline (uv-managed)
 ├── Makefile
 ├── go.mod
 └── README.md
@@ -351,9 +358,10 @@ termchess/
 - [x] Bot opponents (easy/medium/hard)
 - [x] Bot vs Bot spectator mode
 - [x] CLI distribution (install script, self-upgrade, self-uninstall)
+- [x] RL-trained agent — encoder, inference interface, difficulty tiers, training pipeline
 
 ### In Progress / Planned 🚧
-- [ ] RL-trained agent
+- [ ] RL ONNX Runtime integration in Go (spec 008 Slice 11 — consumes trained models at runtime)
 - [ ] Opening book integration
 - [ ] PGN import/export
 - [ ] Time controls

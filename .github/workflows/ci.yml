@@ -7,9 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  go:
+    name: Go build, lint & test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,8 +22,46 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libx11-dev xorg-dev xvfb
 
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
       - name: Build
         run: make build
 
       - name: Test
         run: make test
+
+  python:
+    name: Python lint, type-check & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: training
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy .
+
+      - name: Pytest
+        run: uv run pytest

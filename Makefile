@@ -7,7 +7,7 @@ LDFLAGS := -s -w \
     -X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE) \
     -X $(MODULE)/internal/version.GitCommit=$(GIT_COMMIT)
 
-.PHONY: build build-all checksums test run clean
+.PHONY: build build-all checksums test run clean lint lint-go lint-py py-test py-sync train export-onnx
 
 build:
 	go build -ldflags="$(LDFLAGS)" -o bin/termchess ./cmd/termchess
@@ -30,3 +30,23 @@ run:
 
 clean:
 	rm -rf bin/ dist/
+
+lint-go:
+	golangci-lint run ./...
+
+lint-py:
+	cd training && uv run ruff check . && uv run ruff format --check .
+
+lint: lint-go lint-py
+
+py-sync:
+	cd training && uv sync
+
+py-test: py-sync
+	cd training && uv run pytest
+
+train: py-sync
+	cd training && uv run python -u train.py $(ARGS)
+
+export-onnx: py-sync
+	cd training && uv run python -u export_onnx.py $(ARGS)

@@ -6,5 +6,27 @@
         "repo": "provectus/awos"
       }
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json, sys, re, os; d=json.load(sys.stdin); ti=d.get('tool_input',{}); p=(ti.get('file_path') or ti.get('notebook_path') or ''); b=os.path.basename(p); pats=[r'(^|/)\\.env($|\\.)', r'\\.pem$', r'\\.key$', r'\\.p12$', r'\\.pfx$', r'(^|/)credentials($|[._-])', r'(^|/)secrets?($|[._-])', r'(^|/)id_rsa($|\\.)', r'(^|/)id_ed25519($|\\.)', r'\\.aws/credentials', r'\\.kube/config$']; hit=next((x for x in pats if re.search(x, p) or re.search(x, b)), None); (print(f'Blocked by SEC-02 hook: {p} matches sensitive-file pattern {hit!r}.', file=sys.stderr), sys.exit(2)) if hit else sys.exit(0)\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json, sys, re; d=json.load(sys.stdin); cmd=d.get('tool_input',{}).get('command',''); pats=[r'(^|[\\s;|&<>])\\S*\\.env(\\s|$|\\.)', r'(^|[\\s;|&<>])\\S*\\.pem(\\s|$)', r'(^|[\\s;|&<>])\\S*\\.key(\\s|$)', r'(^|[\\s;|&<>])\\S*\\.p12(\\s|$)', r'(^|[\\s;|&<>])\\S*\\.pfx(\\s|$)', r'id_rsa', r'id_ed25519', r'\\.aws/credentials', r'\\.kube/config', r'(^|[\\s;|&])credentials(\\s|$|[._-])']; ops=r'(^|[\\s;|&])(cat|less|more|head|tail|bat|od|xxd|strings|hexdump|base64|curl|wget|scp|rsync|cp|mv)(\\s|$)'; hit=next((x for x in pats if re.search(x, cmd)), None); bad = hit is not None and re.search(ops, cmd) is not None; (print(f'Blocked by SEC-02 hook: shell command touches sensitive path (matched {hit!r}).', file=sys.stderr), sys.exit(2)) if bad else sys.exit(0)\""
+          }
+        ]
+      }
+    ]
   }
 }

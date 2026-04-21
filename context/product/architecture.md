@@ -7,7 +7,7 @@
 - **CLI Application:** Go + Bubbletea — Terminal UI, menus, keyboard input, board rendering
 - **Chess Engine:** Go — Board state, move validation, all chess rules, FEN import/export
 - **Built-in Bots:** Go — Easy/Medium/Hard using minimax with alpha-beta pruning
-- **RL Model Inference:** Go + ONNX Runtime — Load trained .onnx model directly in Go
+- **RL Model Inference:** Go + ONNX Runtime — Load trained .onnx model directly in Go *(pending: spec `008-custom-rl-agent` Slice 11 adds the `onnxruntime_go` dependency; encoder, inference interface, and selector are wired but `newOnnxSession()` currently returns `ErrModelNotLoaded`)*
 - **RL Training:** Python + PyTorch — Offline training, exports to ONNX
 - **External Engines:** UCI Protocol (stdin/stdout) — Stockfish, Komodo, etc.
 
@@ -66,15 +66,22 @@ termchess/
 │   │   ├── engine.go            # Engine interface
 │   │   ├── random.go            # Easy bot
 │   │   ├── minimax.go           # Medium/Hard bots
-│   │   ├── rl.go                # ONNX RL agent
-│   │   └── uci.go               # UCI engine adapter
+│   │   ├── rl.go                # ONNX RL agent (ONNX runtime pending)
+│   │   └── rl_encoder.go        # Board → tensor encoder (mirrors training/board_encoder.py)
+│   ├── bvb/                     # Bot vs Bot game management (session, manager, stats, export)
 │   ├── ui/
-│   │   ├── app.go               # Bubbletea app
+│   │   ├── model.go             # Bubbletea model (app state)
+│   │   ├── view.go              # Rendering (all screens)
+│   │   ├── update.go            # Event handling (all screens)
 │   │   ├── board.go             # Board rendering
-│   │   └── menu.go              # Menus & navigation
-│   └── config/
-│       ├── config.go            # Config loading/saving
-│       └── saves.go             # Game save/load
+│   │   └── san.go               # SAN move parser
+│   ├── config/
+│   │   ├── config.go            # Config loading/saving
+│   │   ├── paths.go             # OS-specific config dir
+│   │   └── savegame.go          # FEN savegame read/write
+│   ├── updater/                 # Self-upgrade via GitHub Releases
+│   ├── version/                 # Build-time version metadata
+│   └── util/                    # Cross-platform clipboard helper
 ├── training/                     # Python RL training (separate, managed by uv)
 │   ├── pyproject.toml
 │   ├── train.py
