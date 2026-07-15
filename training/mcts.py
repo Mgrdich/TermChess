@@ -28,15 +28,15 @@ After all simulations, return visit counts as move probabilities.
 """
 
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import chess
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-from board_encoder import encode_board_tensor, get_device, NUM_HISTORY_POSITIONS
-from model import ChessNet, POLICY_OUTPUT_SIZE
+from board_encoder import NUM_HISTORY_POSITIONS, encode_board_tensor, get_device
+from model import POLICY_OUTPUT_SIZE, ChessNet
 
 
 class MCTSNode:
@@ -60,8 +60,8 @@ class MCTSNode:
         self,
         state: chess.Board,
         parent: Optional["MCTSNode"] = None,
-        parent_move: Optional[chess.Move] = None,
-        prior: float = 0.0
+        parent_move: chess.Move | None = None,
+        prior: float = 0.0,
     ):
         """
         Initialize an MCTS node.
@@ -83,7 +83,7 @@ class MCTSNode:
 
         # Children: move -> MCTSNode
         # None means unexpanded, empty dict means terminal (no legal moves)
-        self.children: Optional[Dict[chess.Move, "MCTSNode"]] = None
+        self.children: dict[chess.Move, MCTSNode] | None = None
 
     @property
     def q_value(self) -> float:
@@ -180,9 +180,9 @@ class MCTS:
         model: ChessNet,
         c_puct: float = 1.5,
         num_simulations: int = 100,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
         dirichlet_alpha: float = 0.3,
-        dirichlet_epsilon: float = 0.5
+        dirichlet_epsilon: float = 0.5,
     ):
         """
         Initialize MCTS.
@@ -241,9 +241,8 @@ class MCTS:
         return mask
 
     def _evaluate_position(
-        self, board: chess.Board,
-        history: Optional[List[chess.Board]] = None
-    ) -> Tuple[Dict[chess.Move, float], float]:
+        self, board: chess.Board, history: list[chess.Board] | None = None
+    ) -> tuple[dict[chess.Move, float], float]:
         """
         Use the neural network to evaluate a position.
 
@@ -274,13 +273,13 @@ class MCTS:
         # Mask illegal moves by setting their logits to -inf
         legal_mask = self._get_legal_move_mask(board)
         masked_logits = policy_logits.clone()
-        masked_logits[legal_mask == 0] = float('-inf')
+        masked_logits[legal_mask == 0] = float("-inf")
 
         # Apply softmax to get probabilities (only legal moves will have non-zero prob)
         probs = F.softmax(masked_logits, dim=0)
 
         # Convert to dictionary of move -> probability
-        move_priors: Dict[chess.Move, float] = {}
+        move_priors: dict[chess.Move, float] = {}
         for move in board.legal_moves:
             idx = self._move_to_policy_index(move)
             move_priors[move] = probs[idx].item()
@@ -317,12 +316,7 @@ class MCTS:
 
         # Exploration term: encourages visiting less-explored nodes
         # with high prior probability
-        exploration = (
-            self.c_puct
-            * child.prior_probability
-            * math.sqrt(parent.visit_count)
-            / (1 + child.visit_count)
-        )
+        exploration = self.c_puct * child.prior_probability * math.sqrt(parent.visit_count) / (1 + child.visit_count)
 
         return q_value + exploration
 
@@ -343,10 +337,10 @@ class MCTS:
         assert node.children is not None, "Node must be expanded"
         assert len(node.children) > 0, "Node must have children"
 
-        best_score = float('-inf')
+        best_score = float("-inf")
         best_child = None
 
-        for move, child in node.children.items():
+        for _move, child in node.children.items():
             score = self._ucb_score(node, child)
             if score > best_score:
                 best_score = score
@@ -355,7 +349,7 @@ class MCTS:
         assert best_child is not None
         return best_child
 
-    def _get_node_history(self, node: MCTSNode) -> List[chess.Board]:
+    def _get_node_history(self, node: MCTSNode) -> list[chess.Board]:
         """
         Reconstruct the board history for a node by walking parent pointers
         and prepending the root's external history.
@@ -364,7 +358,7 @@ class MCTS:
             List of board states leading up to (but not including) this node's position.
         """
         # Collect states from root down to this node's parent
-        path_states: List[chess.Board] = []
+        path_states: list[chess.Board] = []
         current = node.parent
         while current is not None:
             path_states.append(current.state)
@@ -402,12 +396,7 @@ class MCTS:
             new_state.push(move)
 
             # Create child node
-            child = MCTSNode(
-                state=new_state,
-                parent=node,
-                parent_move=move,
-                prior=prior
-            )
+            child = MCTSNode(state=new_state, parent=node, parent_move=move, prior=prior)
             node.children[move] = child
 
         return value
@@ -427,7 +416,7 @@ class MCTS:
             node: Starting node (the leaf that was just expanded/evaluated)
             value: Value to propagate (from perspective of node's side to move)
         """
-        current = node
+        current: MCTSNode | None = node
         current_value = value
 
         while current is not None:
@@ -456,7 +445,7 @@ class MCTS:
         # === SELECTION PHASE ===
         # Walk down the tree using UCB until we reach a leaf
         while node.is_expanded() and not node.is_terminal():
-            if len(node.children) == 0:
+            if not node.children:
                 # No legal moves (shouldn't happen if not terminal, but be safe)
                 break
             node = self._select_child(node)
@@ -493,14 +482,10 @@ class MCTS:
         for i, move in enumerate(moves):
             child = root.children[move]
             child.prior_probability = (
-                (1 - self.dirichlet_epsilon) * child.prior_probability
-                + self.dirichlet_epsilon * noise[i]
-            )
+                1 - self.dirichlet_epsilon
+            ) * child.prior_probability + self.dirichlet_epsilon * noise[i]
 
-    def search(
-        self, board: chess.Board,
-        history: Optional[List[chess.Board]] = None
-    ) -> Dict[chess.Move, int]:
+    def search(self, board: chess.Board, history: list[chess.Board] | None = None) -> dict[chess.Move, int]:
         """
         Perform MCTS search from the given position.
 
@@ -540,11 +525,8 @@ class MCTS:
         return {move: child.visit_count for move, child in root.children.items()}
 
     def get_action_probabilities(
-        self,
-        board: chess.Board,
-        temperature: float = 1.0,
-        history: Optional[List[chess.Board]] = None
-    ) -> Tuple[List[chess.Move], np.ndarray]:
+        self, board: chess.Board, temperature: float = 1.0, history: list[chess.Board] | None = None
+    ) -> tuple[list[chess.Move], np.ndarray]:
         """
         Get move probabilities after MCTS search.
 
@@ -602,10 +584,7 @@ class MCTS:
         return moves, probs
 
     def select_move(
-        self,
-        board: chess.Board,
-        temperature: float = 1.0,
-        history: Optional[List[chess.Board]] = None
+        self, board: chess.Board, temperature: float = 1.0, history: list[chess.Board] | None = None
     ) -> chess.Move:
         """
         Select a move using MCTS search.

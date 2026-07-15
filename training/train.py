@@ -32,12 +32,11 @@ import logging
 import os
 import sys
 import time
-from dataclasses import dataclass, fields
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass, field, fields
+from typing import Optional
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
@@ -45,8 +44,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from board_encoder import get_device
 from model import ChessNet, create_model
 from replay_buffer import ReplayBuffer
-from self_play import SelfPlayManager, GameStats
-
+from self_play import GameStats, SelfPlayManager
 
 # Default training parameters (from technical requirements)
 DEFAULT_NUM_ITERATIONS = 80_000
@@ -101,7 +99,7 @@ class TrainingConfig:
 
     # Checkpointing
     checkpoint_dir: str = DEFAULT_CHECKPOINT_DIR
-    checkpoint_intervals: List[int] = None  # Uses DEFAULT_CHECKPOINT_INTERVALS
+    checkpoint_intervals: list[int] = field(default_factory=lambda: DEFAULT_CHECKPOINT_INTERVALS.copy())
     save_every_n_iterations: int = 0  # Also save every N iterations (0=disabled)
 
     # Logging
@@ -161,17 +159,14 @@ def setup_logging(verbose: bool = True) -> logging.Logger:
     if verbose:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.INFO)
-        console_format = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
+        console_format = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
         console_handler.setFormatter(console_format)
         logger.addHandler(console_handler)
 
     return logger
 
 
-def _compute_game_stats(game_stats: List["GameStats"]) -> Dict:
+def _compute_game_stats(game_stats: list["GameStats"]) -> dict:
     """Compute summary statistics from a list of game stats."""
     if not game_stats:
         return {}
@@ -182,8 +177,7 @@ def _compute_game_stats(game_stats: List["GameStats"]) -> Dict:
         "draws": sum(1 for s in game_stats if s.winner is None),
         "checkmates": sum(1 for s in game_stats if s.termination == "CHECKMATE"),
         "repetition_draws": sum(
-            1 for s in game_stats
-            if s.termination in ("FIVEFOLD_REPETITION", "THREEFOLD_REPETITION")
+            1 for s in game_stats if s.termination in ("FIVEFOLD_REPETITION", "THREEFOLD_REPETITION")
         ),
         "stalemates": sum(1 for s in game_stats if s.termination == "STALEMATE"),
         "max_moves_draws": sum(1 for s in game_stats if s.termination == "MAX_MOVES"),
@@ -206,11 +200,7 @@ def _append_csv_log(log_path: str, metrics: "TrainingMetrics") -> None:
         writer.writerow(row)
 
 
-def create_optimizer(
-    model: ChessNet,
-    initial_lr: float,
-    weight_decay: float
-) -> optim.Optimizer:
+def create_optimizer(model: ChessNet, initial_lr: float, weight_decay: float) -> optim.Optimizer:
     """
     Create Adam optimizer with weight decay.
 
@@ -222,18 +212,11 @@ def create_optimizer(
     Returns:
         Configured optimizer
     """
-    return optim.Adam(
-        model.parameters(),
-        lr=initial_lr,
-        weight_decay=weight_decay
-    )
+    return optim.Adam(model.parameters(), lr=initial_lr, weight_decay=weight_decay)
 
 
 def create_scheduler(
-    optimizer: optim.Optimizer,
-    initial_lr: float,
-    final_lr: float,
-    decay_steps: int
+    optimizer: optim.Optimizer, initial_lr: float, final_lr: float, decay_steps: int
 ) -> optim.lr_scheduler.LRScheduler:
     """
     Create learning rate scheduler for decay.
@@ -262,12 +245,12 @@ def create_scheduler(
 
 def compute_loss(
     model: ChessNet,
-    states: torch.Tensor,
-    policy_targets: torch.Tensor,
-    value_targets: torch.Tensor,
+    states: np.ndarray,
+    policy_targets: np.ndarray,
+    value_targets: np.ndarray,
     device: torch.device,
-    value_loss_weight: float = 1.0
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    value_loss_weight: float = 1.0,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute policy and value losses.
 
@@ -283,21 +266,21 @@ def compute_loss(
         Tuple of (policy_loss, value_loss, total_loss)
     """
     # Move data to device
-    states = torch.from_numpy(states).to(device)
-    policy_targets = torch.from_numpy(policy_targets).to(device)
-    value_targets = torch.from_numpy(value_targets).to(device)
+    states_t = torch.from_numpy(states).to(device)
+    policy_targets_t = torch.from_numpy(policy_targets).to(device)
+    value_targets_t = torch.from_numpy(value_targets).to(device)
 
     # Forward pass
-    policy_logits, value_pred = model(states)
+    policy_logits, value_pred = model(states_t)
 
     # Policy loss: Cross-entropy between predicted logits and MCTS policy
     # Note: policy_targets are probabilities, so we use cross_entropy with soft targets
     # Cross-entropy with soft targets: -sum(target * log_softmax(pred))
     log_probs = F.log_softmax(policy_logits, dim=1)
-    policy_loss = -torch.sum(policy_targets * log_probs, dim=1).mean()
+    policy_loss = -torch.sum(policy_targets_t * log_probs, dim=1).mean()
 
     # Value loss: MSE between predicted value and game outcome
-    value_loss = F.mse_loss(value_pred.squeeze(-1), value_targets)
+    value_loss = F.mse_loss(value_pred.squeeze(-1), value_targets_t)
 
     # Total loss: weighted combination
     # Value loss is scaled up to give the value head a stronger training signal,
@@ -315,8 +298,8 @@ def train_batch(
     value_targets: np.ndarray,
     device: torch.device,
     max_grad_norm: float = 1.0,
-    value_loss_weight: float = 1.0
-) -> Tuple[float, float, float]:
+    value_loss_weight: float = 1.0,
+) -> tuple[float, float, float]:
     """
     Train on a single batch.
 
@@ -337,8 +320,7 @@ def train_batch(
 
     # Compute loss
     policy_loss, value_loss, total_loss = compute_loss(
-        model, states, policy_targets, value_targets, device,
-        value_loss_weight=value_loss_weight
+        model, states, policy_targets, value_targets, device, value_loss_weight=value_loss_weight
     )
 
     # Backward pass
@@ -347,11 +329,7 @@ def train_batch(
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
     optimizer.step()
 
-    return (
-        policy_loss.item(),
-        value_loss.item(),
-        total_loss.item()
-    )
+    return (policy_loss.item(), value_loss.item(), total_loss.item())
 
 
 def train_iteration(
@@ -362,8 +340,8 @@ def train_iteration(
     batches_per_iteration: int,
     device: torch.device,
     max_grad_norm: float = 1.0,
-    value_loss_weight: float = 1.0
-) -> Tuple[float, float, float]:
+    value_loss_weight: float = 1.0,
+) -> tuple[float, float, float]:
     """
     Run one training iteration (multiple batches).
 
@@ -390,9 +368,14 @@ def train_iteration(
 
         # Train on batch
         p_loss, v_loss, t_loss = train_batch(
-            model, optimizer, states, policies, values, device,
+            model,
+            optimizer,
+            states,
+            policies,
+            values,
+            device,
             max_grad_norm=max_grad_norm,
-            value_loss_weight=value_loss_weight
+            value_loss_weight=value_loss_weight,
         )
 
         total_policy_loss += p_loss
@@ -401,11 +384,7 @@ def train_iteration(
 
     # Return averages
     n = batches_per_iteration
-    return (
-        total_policy_loss / n,
-        total_value_loss / n,
-        total_loss / n
-    )
+    return (total_policy_loss / n, total_value_loss / n, total_loss / n)
 
 
 def save_checkpoint(
@@ -415,7 +394,7 @@ def save_checkpoint(
     iteration: int,
     config: TrainingConfig,
     checkpoint_dir: str,
-    metrics: Optional[TrainingMetrics] = None
+    metrics: TrainingMetrics | None = None,
 ) -> str:
     """
     Save a training checkpoint.
@@ -436,10 +415,7 @@ def save_checkpoint(
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     # Build checkpoint path
-    checkpoint_path = os.path.join(
-        checkpoint_dir,
-        f"checkpoint_{iteration}.pt"
-    )
+    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_{iteration}.pt")
 
     # Prepare checkpoint data
     checkpoint = {
@@ -458,7 +434,7 @@ def save_checkpoint(
             "final_lr": config.final_lr,
             "weight_decay": config.weight_decay,
             "lr_decay_steps": config.lr_decay_steps,
-        }
+        },
     }
 
     if metrics is not None:
@@ -484,9 +460,8 @@ def save_checkpoint(
 
 
 def load_checkpoint(
-    checkpoint_path: str,
-    device: torch.device
-) -> Tuple[ChessNet, optim.Optimizer, optim.lr_scheduler.LRScheduler, int, Dict]:
+    checkpoint_path: str, device: torch.device
+) -> tuple[ChessNet, optim.Optimizer, optim.lr_scheduler.LRScheduler, int, dict]:
     """
     Load a training checkpoint.
 
@@ -502,19 +477,11 @@ def load_checkpoint(
     config_dict = checkpoint["config"]
 
     # Create model with same architecture
-    model = create_model(
-        num_blocks=config_dict["num_blocks"],
-        num_filters=config_dict["num_filters"],
-        device=device
-    )
+    model = create_model(num_blocks=config_dict["num_blocks"], num_filters=config_dict["num_filters"], device=device)
     model.load_state_dict(checkpoint["model_state_dict"])
 
     # Create optimizer
-    optimizer = create_optimizer(
-        model,
-        initial_lr=config_dict["initial_lr"],
-        weight_decay=config_dict["weight_decay"]
-    )
+    optimizer = create_optimizer(model, initial_lr=config_dict["initial_lr"], weight_decay=config_dict["weight_decay"])
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
     # Create scheduler using saved config (with fallback defaults)
@@ -538,7 +505,7 @@ def _save_latest(
     iteration: int,
     config: "TrainingConfig",
     buffer: ReplayBuffer,
-    metrics: Optional["TrainingMetrics"] = None
+    metrics: Optional["TrainingMetrics"] = None,
 ) -> None:
     """
     Save checkpoint_latest.pt and buffer_latest.npz for crash recovery.
@@ -566,7 +533,7 @@ def _save_latest(
             "final_lr": config.final_lr,
             "weight_decay": config.weight_decay,
             "lr_decay_steps": config.lr_decay_steps,
-        }
+        },
     }
     if metrics is not None:
         checkpoint["metrics"] = {
@@ -585,7 +552,7 @@ def _save_latest(
     buffer.save(buffer_path)
 
 
-def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet:
+def train(config: TrainingConfig, resume_from: str | None = None) -> ChessNet:
     """
     Main training loop.
 
@@ -600,35 +567,26 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
     device = get_device()
 
     logger.info(f"Starting training on device: {device}")
-    logger.info(f"Configuration: {config.num_iterations} iterations, "
-                f"{config.games_per_iteration} games/iter, "
-                f"batch_size={config.batch_size}")
+    logger.info(
+        f"Configuration: {config.num_iterations} iterations, "
+        f"{config.games_per_iteration} games/iter, "
+        f"batch_size={config.batch_size}"
+    )
 
     # Initialize or resume
     start_iteration = 0
 
     if resume_from is not None:
         logger.info(f"Resuming from checkpoint: {resume_from}")
-        model, optimizer, scheduler, start_iteration, _ = load_checkpoint(
-            resume_from, device
-        )
+        model, optimizer, scheduler, start_iteration, _ = load_checkpoint(resume_from, device)
         logger.info(f"Resumed at iteration {start_iteration}")
     else:
         # Create new model
-        model = create_model(
-            num_blocks=config.num_blocks,
-            num_filters=config.num_filters,
-            device=device
-        )
+        model = create_model(num_blocks=config.num_blocks, num_filters=config.num_filters, device=device)
 
         # Create optimizer and scheduler
         optimizer = create_optimizer(model, config.initial_lr, config.weight_decay)
-        scheduler = create_scheduler(
-            optimizer,
-            config.initial_lr,
-            config.final_lr,
-            config.lr_decay_steps
-        )
+        scheduler = create_scheduler(optimizer, config.initial_lr, config.final_lr, config.lr_decay_steps)
 
     logger.info(f"Model parameters: {model.count_parameters():,}")
 
@@ -651,11 +609,11 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
         num_simulations=config.mcts_simulations,
         c_puct=config.c_puct,
         max_moves=config.max_moves_per_game,
-        device=device
+        device=device,
     )
 
     # Track training metrics
-    all_metrics: List[TrainingMetrics] = []
+    all_metrics: list[TrainingMetrics] = []
 
     # Initialize CSV training log
     csv_log_path = os.path.join(config.checkpoint_dir, "training_log.csv")
@@ -669,10 +627,7 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
 
         # 1. Generate self-play games
         model.eval()
-        game_stats = manager.generate(
-            num_games=config.games_per_iteration,
-            verbose=config.verbose_self_play
-        )
+        game_stats = manager.generate(num_games=config.games_per_iteration, verbose=config.verbose_self_play)
         positions_generated = sum(s.num_moves for s in game_stats)
 
         # 2. Train on sampled batches (if buffer has enough examples)
@@ -687,7 +642,7 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
                 batches_per_iteration=config.batches_per_iteration,
                 device=device,
                 max_grad_norm=config.max_grad_norm,
-                value_loss_weight=config.value_loss_weight
+                value_loss_weight=config.value_loss_weight,
             )
 
             # Step the learning rate scheduler
@@ -762,14 +717,13 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
                 iteration=iteration + 1,
                 config=config,
                 checkpoint_dir=config.checkpoint_dir,
-                metrics=metrics
+                metrics=metrics,
             )
             logger.info(f"Saved checkpoint: {checkpoint_path}")
 
         # Always save latest checkpoint + buffer for crash recovery.
         # Overwrites each iteration so it doesn't accumulate disk space.
-        _save_latest(model, optimizer, scheduler, iteration + 1,
-                      config, buffer, metrics)
+        _save_latest(model, optimizer, scheduler, iteration + 1, config, buffer, metrics)
 
     # Save final checkpoint if not already saved
     final_iteration = config.num_iterations
@@ -781,7 +735,7 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
             iteration=final_iteration,
             config=config,
             checkpoint_dir=config.checkpoint_dir,
-            metrics=all_metrics[-1] if all_metrics else None
+            metrics=all_metrics[-1] if all_metrics else None,
         )
         logger.info(f"Saved final checkpoint: {checkpoint_path}")
 
@@ -793,129 +747,57 @@ def train(config: TrainingConfig, resume_from: Optional[str] = None) -> ChessNet
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="AlphaZero-style chess training",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        description="AlphaZero-style chess training", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     # Training loop parameters
     parser.add_argument(
-        "--iterations", "-i",
-        type=int,
-        default=DEFAULT_NUM_ITERATIONS,
-        help="Number of training iterations"
+        "--iterations", "-i", type=int, default=DEFAULT_NUM_ITERATIONS, help="Number of training iterations"
     )
     parser.add_argument(
-        "--games-per-iter", "-g",
+        "--games-per-iter",
+        "-g",
         type=int,
         default=DEFAULT_GAMES_PER_ITERATION,
-        help="Number of self-play games per iteration"
+        help="Number of self-play games per iteration",
     )
-    parser.add_argument(
-        "--batch-size", "-b",
-        type=int,
-        default=DEFAULT_BATCH_SIZE,
-        help="Training batch size"
-    )
+    parser.add_argument("--batch-size", "-b", type=int, default=DEFAULT_BATCH_SIZE, help="Training batch size")
     parser.add_argument(
         "--batches-per-iter",
         type=int,
         default=DEFAULT_BATCHES_PER_ITERATION,
-        help="Number of training batches per iteration"
+        help="Number of training batches per iteration",
     )
 
     # Replay buffer
-    parser.add_argument(
-        "--buffer-size",
-        type=int,
-        default=DEFAULT_BUFFER_SIZE,
-        help="Replay buffer size"
-    )
+    parser.add_argument("--buffer-size", type=int, default=DEFAULT_BUFFER_SIZE, help="Replay buffer size")
 
     # MCTS parameters
-    parser.add_argument(
-        "--mcts-sims",
-        type=int,
-        default=DEFAULT_MCTS_SIMULATIONS,
-        help="MCTS simulations per move"
-    )
-    parser.add_argument(
-        "--c-puct",
-        type=float,
-        default=1.5,
-        help="MCTS exploration constant"
-    )
+    parser.add_argument("--mcts-sims", type=int, default=DEFAULT_MCTS_SIMULATIONS, help="MCTS simulations per move")
+    parser.add_argument("--c-puct", type=float, default=1.5, help="MCTS exploration constant")
 
     # Optimizer parameters
+    parser.add_argument("--lr", type=float, default=DEFAULT_INITIAL_LR, help="Initial learning rate")
+    parser.add_argument("--lr-final", type=float, default=DEFAULT_FINAL_LR, help="Final learning rate after decay")
     parser.add_argument(
-        "--lr",
-        type=float,
-        default=DEFAULT_INITIAL_LR,
-        help="Initial learning rate"
-    )
-    parser.add_argument(
-        "--lr-final",
-        type=float,
-        default=DEFAULT_FINAL_LR,
-        help="Final learning rate after decay"
-    )
-    parser.add_argument(
-        "--weight-decay",
-        type=float,
-        default=DEFAULT_WEIGHT_DECAY,
-        help="Weight decay (L2 regularization)"
+        "--weight-decay", type=float, default=DEFAULT_WEIGHT_DECAY, help="Weight decay (L2 regularization)"
     )
 
     # Model architecture
-    parser.add_argument(
-        "--num-blocks",
-        type=int,
-        default=DEFAULT_NUM_BLOCKS,
-        help="Number of residual blocks"
-    )
-    parser.add_argument(
-        "--num-filters",
-        type=int,
-        default=DEFAULT_NUM_FILTERS,
-        help="Number of convolutional filters"
-    )
+    parser.add_argument("--num-blocks", type=int, default=DEFAULT_NUM_BLOCKS, help="Number of residual blocks")
+    parser.add_argument("--num-filters", type=int, default=DEFAULT_NUM_FILTERS, help="Number of convolutional filters")
 
     # Checkpointing
     parser.add_argument(
-        "--checkpoint-dir",
-        type=str,
-        default=DEFAULT_CHECKPOINT_DIR,
-        help="Directory to save checkpoints"
+        "--checkpoint-dir", type=str, default=DEFAULT_CHECKPOINT_DIR, help="Directory to save checkpoints"
     )
-    parser.add_argument(
-        "--save-every",
-        type=int,
-        default=0,
-        help="Save checkpoint every N iterations (0=disabled)"
-    )
-    parser.add_argument(
-        "--resume",
-        type=str,
-        default=None,
-        help="Path to checkpoint to resume from"
-    )
+    parser.add_argument("--save-every", type=int, default=0, help="Save checkpoint every N iterations (0=disabled)")
+    parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint to resume from")
 
     # Logging
-    parser.add_argument(
-        "--log-every",
-        type=int,
-        default=1,
-        help="Log metrics every N iterations"
-    )
-    parser.add_argument(
-        "--quiet", "-q",
-        action="store_true",
-        help="Reduce output verbosity"
-    )
-    parser.add_argument(
-        "--verbose-self-play",
-        action="store_true",
-        help="Log per-game self-play progress"
-    )
+    parser.add_argument("--log-every", type=int, default=1, help="Log metrics every N iterations")
+    parser.add_argument("--quiet", "-q", action="store_true", help="Reduce output verbosity")
+    parser.add_argument("--verbose-self-play", action="store_true", help="Log per-game self-play progress")
 
     return parser.parse_args()
 
@@ -942,7 +824,7 @@ def main():
         save_every_n_iterations=args.save_every,
         log_every_n_iterations=args.log_every,
         verbose=not args.quiet,
-        verbose_self_play=args.verbose_self_play
+        verbose_self_play=args.verbose_self_play,
     )
 
     # Run training

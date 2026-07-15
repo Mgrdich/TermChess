@@ -31,24 +31,22 @@ The value targets are determined after the game ends:
 - 0.0 for draws
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 import time
+from dataclasses import dataclass
 
 import chess
 import numpy as np
 import torch
 
-from board_encoder import encode_board, get_device, NUM_HISTORY_POSITIONS
-from model import ChessNet, create_model, POLICY_OUTPUT_SIZE
+from board_encoder import encode_board, get_device
 from mcts import MCTS
-from replay_buffer import TrainingExample, ReplayBuffer
-
+from model import POLICY_OUTPUT_SIZE, ChessNet
+from replay_buffer import ReplayBuffer, TrainingExample
 
 # Temperature schedule constants
 EXPLORATION_MOVES = 60  # Number of moves to use high temperature (was 30)
 HIGH_TEMPERATURE = 1.0  # Temperature for first N moves
-LOW_TEMPERATURE = 0.6   # Temperature for remaining moves (was 0.4)
+LOW_TEMPERATURE = 0.6  # Temperature for remaining moves (was 0.4)
 
 # Repetition draw penalty: discourage the model from learning to draw by repetition
 REPETITION_DRAW_PENALTY = -1.0  # Full loss for repetition draws (was -0.2)
@@ -66,9 +64,10 @@ class GameStats:
         termination: How the game ended (checkmate, stalemate, etc.)
         duration_seconds: Time taken to play the game
     """
+
     num_moves: int
     result: str
-    winner: Optional[bool]  # chess.WHITE (True), chess.BLACK (False), or None
+    winner: bool | None  # chess.WHITE (True), chess.BLACK (False), or None
     termination: str
     duration_seconds: float
 
@@ -82,13 +81,12 @@ class GameData:
         examples: List of training examples from the game
         stats: Game statistics
     """
-    examples: List[TrainingExample]
+
+    examples: list[TrainingExample]
     stats: GameStats
 
 
-def _moves_to_policy_vector(
-    visit_counts: Dict[chess.Move, int]
-) -> np.ndarray:
+def _moves_to_policy_vector(visit_counts: dict[chess.Move, int]) -> np.ndarray:
     """
     Convert MCTS visit counts to a policy vector.
 
@@ -133,9 +131,7 @@ def _get_temperature(move_number: int) -> float:
     return LOW_TEMPERATURE
 
 
-def _get_game_outcome(
-    board: chess.Board, perspective: bool, termination: str = ""
-) -> float:
+def _get_game_outcome(board: chess.Board, perspective: bool, termination: str = "") -> float:
     """
     Get the game outcome from a specific player's perspective.
 
@@ -164,10 +160,7 @@ def _get_game_outcome(
     return -1.0
 
 
-def play_game(
-    mcts: MCTS,
-    max_moves: int = 256
-) -> GameData:
+def play_game(mcts: MCTS, max_moves: int = 256) -> GameData:
     """
     Play a single self-play game using MCTS.
 
@@ -189,10 +182,10 @@ def play_game(
     board = chess.Board()
 
     # Store positions, policies, and whose turn it was
-    positions: List[Tuple[np.ndarray, np.ndarray, bool]] = []
+    positions: list[tuple[np.ndarray, np.ndarray, bool]] = []
 
     # Track board history for encoding previous positions
-    board_history: List[chess.Board] = []
+    board_history: list[chess.Board] = []
 
     move_number = 0
     while not board.is_game_over() and move_number < max_moves:
@@ -243,21 +236,13 @@ def play_game(
         termination = "MAX_MOVES"
 
     # Create training examples with correct value targets
-    examples: List[TrainingExample] = []
+    examples: list[TrainingExample] = []
     for board_state, policy, perspective in positions:
         value = _get_game_outcome(board, perspective, termination)
-        examples.append(TrainingExample(
-            board_state=board_state,
-            policy_target=policy,
-            value_target=value
-        ))
+        examples.append(TrainingExample(board_state=board_state, policy_target=policy, value_target=value))
 
     stats = GameStats(
-        num_moves=move_number,
-        result=result_str,
-        winner=winner,
-        termination=termination,
-        duration_seconds=duration
+        num_moves=move_number, result=result_str, winner=winner, termination=termination, duration_seconds=duration
     )
 
     return GameData(examples=examples, stats=stats)
@@ -269,9 +254,9 @@ def generate_games(
     num_simulations: int = 400,
     c_puct: float = 1.5,
     max_moves: int = 512,
-    device: Optional[torch.device] = None,
-    verbose: bool = True
-) -> Tuple[List[TrainingExample], List[GameStats]]:
+    device: torch.device | None = None,
+    verbose: bool = True,
+) -> tuple[list[TrainingExample], list[GameStats]]:
     """
     Generate multiple self-play games.
 
@@ -296,15 +281,10 @@ def generate_games(
         device = get_device()
 
     # Create MCTS instance
-    mcts = MCTS(
-        model=model,
-        c_puct=c_puct,
-        num_simulations=num_simulations,
-        device=device
-    )
+    mcts = MCTS(model=model, c_puct=c_puct, num_simulations=num_simulations, device=device)
 
-    all_examples: List[TrainingExample] = []
-    all_stats: List[GameStats] = []
+    all_examples: list[TrainingExample] = []
+    all_stats: list[GameStats] = []
 
     for game_idx in range(num_games):
         game_data = play_game(mcts, max_moves=max_moves)
@@ -318,7 +298,7 @@ def generate_games(
                 f"Game {game_idx + 1}/{num_games}: "
                 f"{stats.result} in {stats.num_moves} moves "
                 f"({stats.termination}) - {stats.duration_seconds:.1f}s",
-                flush=True
+                flush=True,
             )
 
     if verbose:
@@ -330,12 +310,12 @@ def generate_games(
         draws = sum(1 for s in all_stats if s.winner is None)
         total_time = sum(s.duration_seconds for s in all_stats)
 
-        print(f"\n--- Self-Play Summary ---", flush=True)
+        print("\n--- Self-Play Summary ---", flush=True)
         print(f"Games played: {num_games}", flush=True)
         print(f"Total positions: {total_positions}", flush=True)
         print(f"Average game length: {avg_moves:.1f} moves", flush=True)
         print(f"Results: White +{white_wins}, Black +{black_wins}, Draws ={draws}", flush=True)
-        print(f"Total time: {total_time:.1f}s ({total_time/num_games:.1f}s per game)", flush=True)
+        print(f"Total time: {total_time:.1f}s ({total_time / num_games:.1f}s per game)", flush=True)
 
     return all_examples, all_stats
 
@@ -347,9 +327,9 @@ def generate_games_to_buffer(
     num_simulations: int = 400,
     c_puct: float = 1.5,
     max_moves: int = 512,
-    device: Optional[torch.device] = None,
-    verbose: bool = True
-) -> List[GameStats]:
+    device: torch.device | None = None,
+    verbose: bool = True,
+) -> list[GameStats]:
     """
     Generate self-play games and add examples directly to a replay buffer.
 
@@ -376,7 +356,7 @@ def generate_games_to_buffer(
         c_puct=c_puct,
         max_moves=max_moves,
         device=device,
-        verbose=verbose
+        verbose=verbose,
     )
 
     buffer.add_batch(examples)
@@ -415,12 +395,12 @@ class SelfPlayManager:
     def __init__(
         self,
         model: ChessNet,
-        buffer: Optional[ReplayBuffer] = None,
+        buffer: ReplayBuffer | None = None,
         num_simulations: int = 400,
         c_puct: float = 1.5,
         max_moves: int = 512,
         buffer_size: int = 500_000,
-        device: Optional[torch.device] = None
+        device: torch.device | None = None,
     ):
         """
         Initialize the self-play manager.
@@ -444,7 +424,7 @@ class SelfPlayManager:
         # Statistics
         self.total_games = 0
         self.total_positions = 0
-        self.all_stats: List[GameStats] = []
+        self.all_stats: list[GameStats] = []
 
     def update_model(self, model: ChessNet) -> None:
         """
@@ -457,11 +437,7 @@ class SelfPlayManager:
         """
         self.model = model
 
-    def generate(
-        self,
-        num_games: int = 100,
-        verbose: bool = True
-    ) -> List[GameStats]:
+    def generate(self, num_games: int = 100, verbose: bool = True) -> list[GameStats]:
         """
         Generate self-play games and add to buffer.
 
@@ -480,7 +456,7 @@ class SelfPlayManager:
             c_puct=self.c_puct,
             max_moves=self.max_moves,
             device=self.device,
-            verbose=verbose
+            verbose=verbose,
         )
 
         self.total_games += num_games
@@ -489,9 +465,7 @@ class SelfPlayManager:
 
         return stats
 
-    def sample_batch(
-        self, batch_size: int
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def sample_batch(self, batch_size: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Sample a batch of training examples from the buffer.
 
@@ -503,7 +477,7 @@ class SelfPlayManager:
         """
         return self.buffer.sample(batch_size)
 
-    def get_statistics(self) -> Dict:
+    def get_statistics(self) -> dict:
         """
         Get summary statistics for all games generated.
 
@@ -511,11 +485,7 @@ class SelfPlayManager:
             Dict with summary statistics
         """
         if not self.all_stats:
-            return {
-                "total_games": 0,
-                "total_positions": 0,
-                "buffer_size": len(self.buffer)
-            }
+            return {"total_games": 0, "total_positions": 0, "buffer_size": len(self.buffer)}
 
         return {
             "total_games": self.total_games,
@@ -525,5 +495,5 @@ class SelfPlayManager:
             "white_wins": sum(1 for s in self.all_stats if s.winner == chess.WHITE),
             "black_wins": sum(1 for s in self.all_stats if s.winner == chess.BLACK),
             "draws": sum(1 for s in self.all_stats if s.winner is None),
-            "avg_game_time": np.mean([s.duration_seconds for s in self.all_stats])
+            "avg_game_time": np.mean([s.duration_seconds for s in self.all_stats]),
         }

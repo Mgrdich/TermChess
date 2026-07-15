@@ -22,7 +22,7 @@ The value_target is determined at the END of the game:
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+
 import numpy as np
 
 
@@ -54,9 +54,7 @@ _POLICY_FLIP_MAP = _build_flip_map()
 CASTLING_CHANNEL_PAIRS = [(13, 14), (15, 16)]
 
 
-def flip_board_horizontal(
-    board_state: np.ndarray, policy_target: np.ndarray
-) -> tuple:
+def flip_board_horizontal(board_state: np.ndarray, policy_target: np.ndarray) -> tuple:
     """
     Apply horizontal (file) flip augmentation to a training example.
 
@@ -97,6 +95,7 @@ class TrainingExample:
         policy_target: MCTS visit count distribution of shape [4096]
         value_target: Game outcome from current player's perspective [-1, 1]
     """
+
     board_state: np.ndarray
     policy_target: np.ndarray
     value_target: float
@@ -144,9 +143,9 @@ class ReplayBuffer:
 
         # Pre-allocate numpy arrays for efficient storage
         # These will be lazily initialized on first add
-        self.board_states: Optional[np.ndarray] = None
-        self.policy_targets: Optional[np.ndarray] = None
-        self.value_targets: Optional[np.ndarray] = None
+        self.board_states: np.ndarray | None = None
+        self.policy_targets: np.ndarray | None = None
+        self.value_targets: np.ndarray | None = None
 
         # Circular buffer tracking
         self.size = 0  # Current number of valid examples
@@ -162,12 +161,8 @@ class ReplayBuffer:
         board_shape = example.board_state.shape
         policy_shape = example.policy_target.shape
 
-        self.board_states = np.zeros(
-            (self.max_size,) + board_shape, dtype=np.float32
-        )
-        self.policy_targets = np.zeros(
-            (self.max_size,) + policy_shape, dtype=np.float32
-        )
+        self.board_states = np.zeros((self.max_size,) + board_shape, dtype=np.float32)
+        self.policy_targets = np.zeros((self.max_size,) + policy_shape, dtype=np.float32)
         self.value_targets = np.zeros(self.max_size, dtype=np.float32)
 
     def add(self, example: TrainingExample) -> None:
@@ -182,6 +177,9 @@ class ReplayBuffer:
         # Initialize arrays on first add
         if self.board_states is None:
             self._initialize_arrays(example)
+        assert self.board_states is not None
+        assert self.policy_targets is not None
+        assert self.value_targets is not None
 
         # Store the example at the current index
         self.board_states[self.index] = example.board_state
@@ -192,7 +190,7 @@ class ReplayBuffer:
         self.index = (self.index + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
 
-    def add_batch(self, examples: List[TrainingExample]) -> None:
+    def add_batch(self, examples: list[TrainingExample]) -> None:
         """
         Add multiple training examples to the buffer.
 
@@ -204,9 +202,7 @@ class ReplayBuffer:
         for example in examples:
             self.add(example)
 
-    def sample(
-        self, batch_size: int, augment: bool = True
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def sample(self, batch_size: int, augment: bool = True) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Sample a random batch of training examples.
 
@@ -231,13 +227,15 @@ class ReplayBuffer:
             raise ValueError("Cannot sample from empty buffer")
 
         if batch_size > self.size:
-            raise ValueError(
-                f"batch_size ({batch_size}) exceeds buffer size ({self.size})"
-            )
+            raise ValueError(f"batch_size ({batch_size}) exceeds buffer size ({self.size})")
 
         # Sample random indices without replacement
         indices = np.random.choice(self.size, size=batch_size, replace=False)
 
+        # size > 0 guarantees the arrays were initialized
+        assert self.board_states is not None
+        assert self.policy_targets is not None
+        assert self.value_targets is not None
         states = self.board_states[indices].copy()
         policies = self.policy_targets[indices].copy()
         values = self.value_targets[indices].copy()
@@ -246,13 +244,11 @@ class ReplayBuffer:
             # Apply horizontal flip to ~50% of examples
             flip_mask = np.random.random(batch_size) < 0.5
             for i in np.where(flip_mask)[0]:
-                states[i], policies[i] = flip_board_horizontal(
-                    states[i], policies[i]
-                )
+                states[i], policies[i] = flip_board_horizontal(states[i], policies[i])
 
         return states, policies, values
 
-    def sample_all(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def sample_all(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Return all examples in the buffer.
 
@@ -270,10 +266,14 @@ class ReplayBuffer:
         if self.size == 0:
             raise ValueError("Cannot sample from empty buffer")
 
+        # size > 0 guarantees the arrays were initialized
+        assert self.board_states is not None
+        assert self.policy_targets is not None
+        assert self.value_targets is not None
         return (
-            self.board_states[:self.size].copy(),
-            self.policy_targets[:self.size].copy(),
-            self.value_targets[:self.size].copy(),
+            self.board_states[: self.size].copy(),
+            self.policy_targets[: self.size].copy(),
+            self.value_targets[: self.size].copy(),
         )
 
     def __len__(self) -> int:
@@ -289,11 +289,13 @@ class ReplayBuffer:
         """
         if self.size == 0 or self.board_states is None:
             return
+        assert self.policy_targets is not None
+        assert self.value_targets is not None
         np.savez_compressed(
             path,
-            board_states=self.board_states[:self.size],
-            policy_targets=self.policy_targets[:self.size],
-            value_targets=self.value_targets[:self.size],
+            board_states=self.board_states[: self.size],
+            policy_targets=self.policy_targets[: self.size],
+            value_targets=self.value_targets[: self.size],
             size=np.array([self.size]),
             index=np.array([self.index]),
         )
@@ -320,16 +322,15 @@ class ReplayBuffer:
         if self.board_states is None:
             board_shape = saved_states.shape[1:]
             policy_shape = saved_policies.shape[1:]
-            self.board_states = np.zeros(
-                (self.max_size,) + board_shape, dtype=np.float32
-            )
-            self.policy_targets = np.zeros(
-                (self.max_size,) + policy_shape, dtype=np.float32
-            )
+            self.board_states = np.zeros((self.max_size,) + board_shape, dtype=np.float32)
+            self.policy_targets = np.zeros((self.max_size,) + policy_shape, dtype=np.float32)
             self.value_targets = np.zeros(self.max_size, dtype=np.float32)
 
         # Copy data (truncate if saved data exceeds max_size)
         n = min(saved_size, self.max_size)
+        assert self.board_states is not None
+        assert self.policy_targets is not None
+        assert self.value_targets is not None
         self.board_states[:n] = saved_states[:n]
         self.policy_targets[:n] = saved_policies[:n]
         self.value_targets[:n] = saved_values[:n]

@@ -38,22 +38,19 @@ import os
 import sys
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import chess
 import chess.engine
 import torch
 
 from board_encoder import get_device
-from model import ChessNet
 from mcts import MCTS
-
+from model import ChessNet
 
 # Approximate ELO ratings for Stockfish at various search depths.
 # These are rough reference points; actual strength depends on hardware
 # and Stockfish version.
-STOCKFISH_DEPTH_TO_ELO: Dict[int, int] = {
+STOCKFISH_DEPTH_TO_ELO: dict[int, int] = {
     1: 1300,
     2: 1500,
     3: 1700,
@@ -77,7 +74,7 @@ class GameResult:
     outcome: str  # "win", "draw", "loss" (from model's perspective)
     num_moves: int
     termination: str  # e.g. "checkmate", "stalemate", "max_moves", etc.
-    pgn_moves: List[str] = field(default_factory=list)
+    pgn_moves: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -87,7 +84,7 @@ class MatchResults:
     wins: int = 0
     draws: int = 0
     losses: int = 0
-    games: List[GameResult] = field(default_factory=list)
+    games: list[GameResult] = field(default_factory=list)
 
     @property
     def total_games(self) -> int:
@@ -166,7 +163,7 @@ def estimate_elo(
     score: float,
     num_games: int,
     stockfish_depth: int,
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """
     Estimate the model's ELO rating from its score against Stockfish.
 
@@ -220,9 +217,7 @@ def estimate_elo(
     return estimated_elo, ci_low_elo, ci_high_elo
 
 
-def _wilson_score_interval(
-    p: float, n: int, z: float = 1.96
-) -> Tuple[float, float]:
+def _wilson_score_interval(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
     """
     Compute the Wilson score confidence interval for a proportion.
 
@@ -302,7 +297,7 @@ def load_model_from_checkpoint(
 def _determine_outcome(
     board: chess.Board,
     model_is_white: bool,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """
     Determine the game outcome from the model's perspective.
 
@@ -390,12 +385,12 @@ def play_match(
     try:
         for game_num in range(1, num_games + 1):
             # Alternate colors: model plays white in odd games, black in even
-            model_is_white = (game_num % 2 == 1)
+            model_is_white = game_num % 2 == 1
             model_color = "white" if model_is_white else "black"
 
             board = chess.Board()
-            move_list: List[str] = []
-            board_history: List[chess.Board] = []
+            move_list: list[str] = []
+            board_history: list[chess.Board] = []
             move_count = 0
 
             while not board.is_game_over() and move_count < MAX_GAME_MOVES:
@@ -413,7 +408,9 @@ def play_match(
                             time=stockfish_time_limit,
                         ),
                     )
-                    move = sf_result.move
+                    sf_move = sf_result.move
+                    assert sf_move is not None, "Stockfish returned no move"
+                    move = sf_move
 
                 move_list.append(board.san(move))
                 board_history.append(board.copy())
@@ -557,15 +554,15 @@ def print_results(result: EvaluationResult) -> None:
     print(f"  Record:        W:{mr.wins}  D:{mr.draws}  L:{mr.losses}")
     print(f"  Score:         {mr.score_percentage:.1f}%")
     print(f"  vs Stockfish:  depth {result.stockfish_depth} (~{get_stockfish_elo(result.stockfish_depth)} ELO)")
-    print(f"  Estimated ELO: ~{result.estimated_elo:.0f} "
-          f"(95% CI: {result.elo_ci_low:.0f} - {result.elo_ci_high:.0f})")
+    print(f"  Estimated ELO: ~{result.estimated_elo:.0f} (95% CI: {result.elo_ci_low:.0f} - {result.elo_ci_high:.0f})")
     print(f"  MCTS sims:     {result.mcts_simulations}")
-    print(f"  Time:          {result.evaluation_time:.1f}s "
-          f"({result.evaluation_time / max(mr.total_games, 1):.1f}s/game)")
+    print(
+        f"  Time:          {result.evaluation_time:.1f}s ({result.evaluation_time / max(mr.total_games, 1):.1f}s/game)"
+    )
     print(f"{'=' * 60}")
 
 
-def print_summary_table(results: List[EvaluationResult]) -> None:
+def print_summary_table(results: list[EvaluationResult]) -> None:
     """
     Print a summary table mapping checkpoints to their estimated ELO.
 
@@ -599,7 +596,7 @@ def print_summary_table(results: List[EvaluationResult]) -> None:
     print(f"{'=' * (name_width + 65)}")
 
 
-def resolve_checkpoint_paths(patterns: List[str]) -> List[str]:
+def resolve_checkpoint_paths(patterns: list[str]) -> list[str]:
     """
     Resolve checkpoint path patterns (which may contain globs) to actual files.
 
@@ -612,7 +609,7 @@ def resolve_checkpoint_paths(patterns: List[str]) -> List[str]:
     Raises:
         SystemExit: If no checkpoint files are found.
     """
-    paths: List[str] = []
+    paths: list[str] = []
     for pattern in patterns:
         # Try glob expansion
         expanded = glob.glob(pattern)
@@ -701,7 +698,7 @@ def main():
     print(f"MCTS sims:  {args.mcts_simulations}")
 
     # Evaluate each checkpoint
-    all_results: List[EvaluationResult] = []
+    all_results: list[EvaluationResult] = []
 
     for checkpoint_path in checkpoint_paths:
         try:

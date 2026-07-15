@@ -36,8 +36,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # Import device detection from board_encoder
-from board_encoder import get_device, NUM_CHANNELS
-
+from board_encoder import NUM_CHANNELS, get_device
 
 # Default architecture parameters
 DEFAULT_NUM_BLOCKS = 6
@@ -75,18 +74,12 @@ class ResidualBlock(nn.Module):
             out_channels=num_filters,
             kernel_size=3,
             padding=1,
-            bias=False  # No bias needed when using BatchNorm
+            bias=False,  # No bias needed when using BatchNorm
         )
         self.bn1 = nn.BatchNorm2d(num_filters)
 
         # Second convolutional layer
-        self.conv2 = nn.Conv2d(
-            in_channels=num_filters,
-            out_channels=num_filters,
-            kernel_size=3,
-            padding=1,
-            bias=False
-        )
+        self.conv2 = nn.Conv2d(in_channels=num_filters, out_channels=num_filters, kernel_size=3, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(num_filters)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -148,11 +141,7 @@ class ChessNet(nn.Module):
         torch.Size([1, 1])
     """
 
-    def __init__(
-        self,
-        num_blocks: int = DEFAULT_NUM_BLOCKS,
-        num_filters: int = DEFAULT_NUM_FILTERS
-    ):
+    def __init__(self, num_blocks: int = DEFAULT_NUM_BLOCKS, num_filters: int = DEFAULT_NUM_FILTERS):
         super().__init__()
 
         self.num_blocks = num_blocks
@@ -168,7 +157,7 @@ class ChessNet(nn.Module):
             out_channels=num_filters,  # 128 output channels
             kernel_size=3,
             padding=1,
-            bias=False
+            bias=False,
         )
         self.initial_bn = nn.BatchNorm2d(num_filters)
 
@@ -177,9 +166,7 @@ class ChessNet(nn.Module):
         # =====================================================================
         # Stack of residual blocks that learn hierarchical features
         # Each block preserves spatial dimensions (8x8) and channel count
-        self.residual_blocks = nn.ModuleList([
-            ResidualBlock(num_filters) for _ in range(num_blocks)
-        ])
+        self.residual_blocks = nn.ModuleList([ResidualBlock(num_filters) for _ in range(num_blocks)])
 
         # =====================================================================
         # Policy Head
@@ -188,12 +175,7 @@ class ChessNet(nn.Module):
         # 4096 outputs = 64 possible from-squares x 64 possible to-squares
 
         # 1x1 convolution to reduce channels: 128 -> 2
-        self.policy_conv = nn.Conv2d(
-            in_channels=num_filters,
-            out_channels=2,
-            kernel_size=1,
-            bias=False
-        )
+        self.policy_conv = nn.Conv2d(in_channels=num_filters, out_channels=2, kernel_size=1, bias=False)
         self.policy_bn = nn.BatchNorm2d(2)
 
         # Fully connected layer: 2 * 8 * 8 = 128 -> 4096
@@ -205,12 +187,7 @@ class ChessNet(nn.Module):
         # Reduces to 1 channel, then predicts scalar position evaluation
 
         # 1x1 convolution to reduce channels: 128 -> 1
-        self.value_conv = nn.Conv2d(
-            in_channels=num_filters,
-            out_channels=1,
-            kernel_size=1,
-            bias=False
-        )
+        self.value_conv = nn.Conv2d(in_channels=num_filters, out_channels=1, kernel_size=1, bias=False)
         self.value_bn = nn.BatchNorm2d(1)
 
         # First fully connected layer: 1 * 8 * 8 = 64 -> 256
@@ -294,9 +271,7 @@ class ChessNet(nn.Module):
 
 
 def create_model(
-    num_blocks: int = DEFAULT_NUM_BLOCKS,
-    num_filters: int = DEFAULT_NUM_FILTERS,
-    device: torch.device | None = None
+    num_blocks: int = DEFAULT_NUM_BLOCKS, num_filters: int = DEFAULT_NUM_FILTERS, device: torch.device | None = None
 ) -> ChessNet:
     """
     Factory function to create and initialize a ChessNet model.
