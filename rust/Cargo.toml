@@ -11,3 +11,12 @@ members = [
     "crates/ui",
     "app",
 ]
+
+# The minimax bot's tactical tests run an iterative-deepening search under a
+# fixed wall-clock deadline (mirroring the Go tests). Unoptimized debug builds
+# are ~10-30x slower and can blow that deadline on slower CI runners, truncating
+# the search and returning a suboptimal move. Optimize test builds so the search
+# completes within budget, matching how the bot actually runs (release binary)
+# and how Go's compiled tests behave.
+[profile.test]
+opt-level = 3
