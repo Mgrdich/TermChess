@@ -369,7 +369,7 @@ impl fmt::Display for Board {
     /// Text representation from White's perspective (rank 8 at top). Uppercase for
     /// White pieces, lowercase for Black, `.` for empty squares.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let piece_chars: [u8; 7] = [b'.', b'P', b'N', b'B', b'R', b'Q', b'K'];
+        let piece_chars: [u8; 7] = *b".PNBRQK";
         let mut result = String::new();
 
         for rank in (0..8i32).rev() {
