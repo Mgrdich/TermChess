@@ -1,0 +1,16 @@
+[package]
+name = "ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+engine = { path = "../engine" }
+bot = { path = "../bot" }
+bvb = { path = "../bvb" }
+config = { path = "../config" }
+updater = { path = "../updater" }
+util = { path = "../util" }
+version = { path = "../version" }
+ratatui = "0.29"
+crossterm = "0.28"
+anyhow = "1"

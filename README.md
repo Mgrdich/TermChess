@@ -8,6 +8,19 @@ A terminal-based chess application written in Go. Play chess against friends loc
 >
 > This entire project — every line of code, all specifications, tests, and documentation — was created using [AWOS (Agentic Way of Software)](https://github.com/provectus/awos). Not a single line of manual code was written.
 
+## Two implementations (Go & Rust)
+
+TermChess ships as **two independent build roots that produce the same terminal chess TUI** and are kept in sync:
+
+| Implementation | Build root | Toolchain | Build | Run | Test |
+|----------------|-----------|-----------|-------|-----|------|
+| **Go** (original) | `go.mod` (repo root) | Go 1.21+ | `make build-go` | `make run-go` | `make test` |
+| **Rust** (port) | `rust/` Cargo workspace | cargo 1.95+ | `make build-rust` | `make run-rust` | `make test-rust` |
+
+Both implementations share the same features, screens, CLI flags, and on-disk config/savegame format. The Rust port lives entirely under `rust/` and never touches the Go tree. For the full crate ↔ Go-package mapping, the architectural changes, and current parity notes, see [docs/MIGRATION.md](docs/MIGRATION.md).
+
+> `make build` (with no suffix) remains an alias for the Go build so existing tooling keeps working.
+
 ## Features
 
 - **Interactive Terminal UI** — Full-featured TUI built with Bubbletea
