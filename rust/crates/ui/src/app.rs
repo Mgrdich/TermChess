@@ -1,13 +1,15 @@
 //! The `App` struct (port of Go `Model`) and the central update/effect logic.
 
+use std::cell::Cell;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use bvb::{PlaybackSpeed, SessionManager};
 use config::Config;
 use engine::{Board, Color, Move, Square};
+use rand::Rng;
 
 use crate::event::{AppEvent, Key};
 use crate::state::{BotDifficulty, BvBViewMode, GameType, SaveAction, Screen};
@@ -113,6 +115,11 @@ pub struct App {
     pub selected_square: Option<Square>,
     pub valid_moves: Vec<Square>,
     pub blink_on: bool,
+    /// Screen (column, row) of the board's top-left piece cell (file a, rank 8),
+    /// recorded during `draw` from the actual render area so mouse clicks map to
+    /// squares relative to where ratatui really draws the board. `None` until the
+    /// gameplay board has been drawn at least once.
+    pub board_origin: Cell<Option<(u16, u16)>>,
 
     // Update notification.
     pub update_available: String,
@@ -187,6 +194,7 @@ impl App {
             selected_square: None,
             valid_moves: Vec::new(),
             blink_on: false,
+            board_origin: Cell::new(None),
             update_available: String::new(),
             tx,
             bot_move_generation: 0,
@@ -592,7 +600,7 @@ pub fn build_main_menu_options() -> Vec<String> {
 }
 
 fn random_thinking_message() -> String {
-    let idx = pseudo_rand_u64() as usize % THINKING_MESSAGES.len();
+    let idx = rand::thread_rng().gen_range(0..THINKING_MESSAGES.len());
     THINKING_MESSAGES[idx].to_string()
 }
 
@@ -600,20 +608,10 @@ fn random_thinking_message() -> String {
 fn minimum_bot_delay(difficulty: BotDifficulty) -> Duration {
     match difficulty {
         BotDifficulty::Easy | BotDifficulty::Medium => {
-            let secs = 1.0 + pseudo_rand_fraction();
+            // 1-2s randomized delay, matching Go's rng.Float64() draw.
+            let secs = 1.0 + rand::thread_rng().gen::<f64>();
             Duration::from_secs_f64(secs)
         }
         BotDifficulty::Hard => Duration::from_secs(1),
     }
-}
-
-fn pseudo_rand_u64() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.subsec_nanos() as u64)
-        .unwrap_or(0)
-}
-
-fn pseudo_rand_fraction() -> f64 {
-    (pseudo_rand_u64() % 1000) as f64 / 1000.0
 }

@@ -19,7 +19,7 @@ run-go:
 	go run ./cmd/termchess
 
 build-rust:
-	cd rust && cargo build --release -p termchess
+	cd rust && TERMCHESS_VERSION="$(VERSION)" TERMCHESS_BUILD_DATE="$(BUILD_DATE)" TERMCHESS_GIT_COMMIT="$(GIT_COMMIT)" cargo build --release -p termchess
 
 run-rust:
 	cd rust && cargo run -p termchess

@@ -16,12 +16,26 @@ use ratatui::Frame;
 
 use crate::app::{App, MIN_TERMINAL_HEIGHT, MIN_TERMINAL_WIDTH};
 use crate::board::BoardRenderer;
-use crate::san::{format_move_history_san, format_san};
+use crate::san::format_move_history_san;
 use crate::state::{BvBViewMode, Screen};
 use crate::theme::theme_display_name;
 
+/// Number of header lines rendered before the board on the gameplay screen:
+/// the "TermChess" title line and a single blank line (see `render_gameplay`).
+/// The board's first rank (rank 8) is drawn at this row offset from the screen top.
+const GAMEPLAY_HEADER_LINES: u16 = 2;
+
 impl App {
     // ---- style helpers ----
+
+    /// Divider line used between grouped menu/settings sections
+    /// (Go `renderMenuSeparator`, view.go:156-159).
+    fn settings_separator_line(&self) -> Line<'static> {
+        Line::styled(
+            "  ────────────────".to_string(),
+            Style::default().fg(self.theme.menu_separator),
+        )
+    }
 
     fn title_style(&self) -> Style {
         Style::default()
@@ -88,6 +102,11 @@ impl App {
     pub fn draw(&self, frame: &mut Frame) {
         let area = frame.area();
 
+        // Reset the recorded board origin each frame; only the gameplay screen
+        // (below) records a live value. This keeps stale coordinates from a prior
+        // screen out of the mouse mapping.
+        self.board_origin.set(None);
+
         if self.term_width > 0
             && self.term_height > 0
             && (self.term_width < MIN_TERMINAL_WIDTH || self.term_height < MIN_TERMINAL_HEIGHT)
@@ -119,7 +138,22 @@ impl App {
                 true,
             ),
             Screen::FenInput => self.render_fen_input(),
-            Screen::GamePlay => self.render_gameplay(),
+            Screen::GamePlay => {
+                // Record where the board's top-left piece cell (a8) actually lands
+                // so mouse clicks map relative to the real render, not a hardcoded
+                // lipgloss-derived constant. The paragraph is drawn at `area`; the
+                // gameplay view emits GAMEPLAY_HEADER_LINES header lines (title +
+                // blank) before the board, and each rank line is prefixed by a
+                // 2-char rank label when coordinates are shown.
+                if self.board.is_some() {
+                    let coords_offset: u16 = if self.config.show_coords { 2 } else { 0 };
+                    self.board_origin.set(Some((
+                        area.x + coords_offset,
+                        area.y + GAMEPLAY_HEADER_LINES,
+                    )));
+                }
+                self.render_gameplay()
+            }
             Screen::GameOver => self.render_game_over(),
             Screen::Settings => self.render_settings(),
             Screen::SavePrompt => self.render_save_prompt(),
@@ -333,6 +367,15 @@ impl App {
             );
             lines.extend(text.lines);
 
+            // Move history in SAN near the board (Go renderGamePlay:590-598).
+            if self.config.show_move_history && !self.move_history.is_empty() {
+                lines.push(Line::from(""));
+                lines.push(Line::styled(
+                    format_move_history_san(&self.move_history),
+                    self.menu_normal_style(),
+                ));
+            }
+
             lines.push(Line::from(""));
             let (turn_text, turn_style) = if board.active_color == Color::Black {
                 (
@@ -447,6 +490,11 @@ impl App {
                 Span::styled(cursor.to_string(), self.cursor_style()),
                 Span::styled(text, style),
             ]));
+            // Group separators mirror Go renderSettings (view.go:806-811, 836-838):
+            // Display group (0-2) | Info group (3-4) | Theme (5).
+            if i == 2 || i == 4 {
+                lines.push(self.settings_separator_line());
+            }
         }
 
         // Theme (index 5)
@@ -902,6 +950,31 @@ impl App {
         lines.push(self.title_line("TermChess - Bot vs Bot"));
         lines.push(Line::from(""));
 
+        let cols = self.bvb_grid_cols.max(1) as usize;
+        let rows = self.bvb_grid_rows.max(1) as usize;
+
+        // Terminal-too-small check (Go view.go:1231-1244): each cell needs ~14
+        // width and ~11 height, plus 8 lines for header/footer.
+        let min_width = cols * 14;
+        let min_height = rows * 11 + 8;
+        if self.term_width > 0
+            && self.term_height > 0
+            && ((self.term_width as usize) < min_width || (self.term_height as usize) < min_height)
+        {
+            lines.push(Line::styled(
+                format!(
+                    "Terminal too small for {}x{} grid (need {}x{}, have {}x{})",
+                    rows, cols, min_width, min_height, self.term_width, self.term_height
+                ),
+                self.error_style(),
+            ));
+            lines.push(Line::styled(
+                "Press Tab to switch to single-board view".to_string(),
+                self.error_style(),
+            ));
+            return lines;
+        }
+
         let mgr = self.bvb_manager.as_ref().unwrap();
         let sessions = mgr.sessions();
         if sessions.is_empty() {
@@ -909,7 +982,7 @@ impl App {
             return lines;
         }
 
-        let boards_per_page = (self.bvb_grid_rows * self.bvb_grid_cols).max(1) as usize;
+        let boards_per_page = (rows * cols).max(1);
         let total_pages = sessions.len().div_ceil(boards_per_page);
         let page_idx = self.bvb_page_index.min(total_pages.saturating_sub(1));
         let start_idx = page_idx * boards_per_page;
@@ -933,10 +1006,28 @@ impl App {
 
         self.append_live_stats(&mut lines);
 
-        // Render each visible board compactly, stacked vertically.
-        for session in &sessions[start_idx..end_idx] {
-            self.append_compact_board(&mut lines, session);
-            lines.push(Line::from(""));
+        // Render the visible boards as a fixed-size R×C grid so the layout does
+        // not shift as games finish (Go renderBoardGrid, view.go:1364-1390).
+        let cells: Vec<(Vec<String>, bool)> = sessions[start_idx..end_idx]
+            .iter()
+            .map(|session| self.build_compact_cell(session))
+            .collect();
+        let cell_height = crate::app::BVB_CELL_HEIGHT;
+        for row_cells in cells.chunks(cols) {
+            for row in 0..cell_height {
+                let mut spans: Vec<Span<'static>> = Vec::new();
+                for (cell, finished) in row_cells {
+                    // Finished games get a dimmed foreground (Go view.go:1482-1485).
+                    let style = if *finished {
+                        Style::default().fg(self.theme.help_text)
+                    } else {
+                        Style::default()
+                    };
+                    // Mirror Go's per-cell horizontal Margin(0,1).
+                    spans.push(Span::styled(format!(" {} ", cell[row]), style));
+                }
+                lines.push(Line::from(spans));
+            }
         }
 
         if total_pages > 1 {
@@ -1316,13 +1407,19 @@ impl App {
         ));
     }
 
-    fn append_compact_board(&self, lines: &mut Vec<Line<'static>>, session: &Arc<GameSession>) {
+    /// Builds one compact board cell as fixed-size plain-text lines plus a
+    /// finished flag, mirroring Go `renderCompactBoardCell` (view.go:1411-1488).
+    /// The result is exactly `BVB_CELL_HEIGHT` lines, each `BVB_CELL_WIDTH` wide.
+    fn build_compact_cell(&self, session: &Arc<GameSession>) -> (Vec<String>, bool) {
         let board = session.current_board();
         let move_count = session.current_move_history().len();
-        lines.push(Line::styled(
-            format!("Game {}", session.game_number()),
-            self.title_style(),
-        ));
+        let is_finished = session.is_finished();
+
+        let mut cell: Vec<String> = Vec::new();
+        // Line 1: game header.
+        cell.push(format!("Game {}", session.game_number()));
+
+        // Lines 2-9: compact board (no coords/colors).
         let compact_cfg = config::Config {
             use_unicode: self.config.use_unicode,
             show_coords: false,
@@ -1332,16 +1429,38 @@ impl App {
             theme: self.config.theme.clone(),
         };
         let renderer = BoardRenderer::new(&compact_cfg);
-        lines.extend(renderer.render(&board, None, &[], false).lines);
-        lines.push(Line::from(format!("Moves: {}", move_count)));
-        if session.is_finished() {
-            if let Some(result) = session.result() {
-                lines.push(Line::from(result.winner));
-            }
+        for line in renderer.render(&board, None, &[], false).lines {
+            cell.push(line_plain_text(&line));
         }
-        // Header (1) + board (8/9) + status (1) makes up to BVB_CELL_HEIGHT lines;
-        // the fixed height keeps the grid from shifting as games finish.
-        let _ = crate::app::BVB_CELL_HEIGHT;
+
+        // Status line (always shows move count).
+        cell.push(format!("Moves: {}", move_count));
+
+        // Result line (winner for finished, empty placeholder otherwise).
+        if is_finished {
+            match session.result() {
+                Some(result) => cell.push(result.winner),
+                None => cell.push(String::new()),
+            }
+        } else {
+            cell.push(String::new());
+        }
+
+        // Spacing line.
+        cell.push(String::new());
+
+        // Pad or truncate to exactly BVB_CELL_HEIGHT lines.
+        while cell.len() < crate::app::BVB_CELL_HEIGHT {
+            cell.push(String::new());
+        }
+        cell.truncate(crate::app::BVB_CELL_HEIGHT);
+
+        // Normalize each line to exactly BVB_CELL_WIDTH display columns.
+        for line in cell.iter_mut() {
+            *line = fit_display_width(line, crate::app::BVB_CELL_WIDTH);
+        }
+
+        (cell, is_finished)
     }
 
     fn append_live_stats(&self, lines: &mut Vec<Line<'static>>) {
@@ -1553,6 +1672,44 @@ fn render_progress_bar(completed: i32, total: i32, width: i32) -> String {
     )
 }
 
+/// Concatenates a line's span contents into plain text (drops styling).
+fn line_plain_text(line: &Line) -> String {
+    line.spans.iter().map(|s| s.content.as_ref()).collect()
+}
+
+/// Display width of a string in terminal columns (unicode-aware).
+fn display_width(s: &str) -> usize {
+    Span::raw(s).width()
+}
+
+/// Pads with spaces or truncates by characters so `s` occupies exactly `width`
+/// display columns, mirroring Go's lipgloss width normalization + `truncateToWidth`.
+fn fit_display_width(s: &str, width: usize) -> String {
+    let w = display_width(s);
+    if w == width {
+        return s.to_string();
+    }
+    if w < width {
+        let mut out = s.to_string();
+        out.push_str(&" ".repeat(width - w));
+        return out;
+    }
+    let mut out = String::new();
+    let mut cur = 0usize;
+    for ch in s.chars() {
+        let cw = display_width(ch.encode_utf8(&mut [0u8; 4]));
+        if cur + cw > width {
+            break;
+        }
+        out.push(ch);
+        cur += cw;
+    }
+    if cur < width {
+        out.push_str(&" ".repeat(width - cur));
+    }
+    out
+}
+
 /// Parses a string into an integer, ignoring non-digits (Go `parseConcurrencyValue`).
 fn parse_concurrency_value(s: &str) -> i32 {
     let mut val = 0i32;
@@ -1647,8 +1804,33 @@ fn compute_captured_pieces(board: &Board) -> (String, String) {
     (white_captured, black_captured)
 }
 
-// Keep format_san / format_move_history_san referenced for the move-history SAN path.
-#[allow(dead_code)]
-fn _san_refs(b: &Board, m: Move) -> (String, String) {
-    (format_san(b, m), format_move_history_san(&[m]))
+#[cfg(test)]
+mod grid_cell_tests {
+    use super::{display_width, fit_display_width};
+
+    #[test]
+    fn pads_short_line_to_exact_width() {
+        let out = fit_display_width("Game 1", 22);
+        assert_eq!(display_width(&out), 22);
+        assert!(out.starts_with("Game 1"));
+    }
+
+    #[test]
+    fn truncates_long_line_to_exact_width() {
+        let long = "x".repeat(40);
+        let out = fit_display_width(&long, 22);
+        assert_eq!(out.chars().count(), 22);
+        assert_eq!(display_width(&out), 22);
+    }
+
+    #[test]
+    fn exact_width_is_unchanged() {
+        let s = "y".repeat(22);
+        assert_eq!(fit_display_width(&s, 22), s);
+    }
+
+    #[test]
+    fn empty_line_pads_to_full_width() {
+        assert_eq!(display_width(&fit_display_width("", 22)), 22);
+    }
 }

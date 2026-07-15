@@ -55,6 +55,17 @@ pub trait InferenceSession {
     fn close(&self) -> Result<(), String>;
 }
 
+/// Creates an ONNX inference session from model bytes (Go `newOnnxSession`,
+/// rl.go:210-217). This is the bridge point where the ONNX session will be
+/// constructed from embedded model bytes. It returns an error until the ONNX
+/// Runtime is wired up (spec 008 Slice 11).
+#[allow(dead_code)]
+fn new_onnx_session(_bytes: &[u8]) -> Result<Box<dyn InferenceSession>, EngineError> {
+    Err(EngineError::Config(
+        "ONNX Runtime not yet configured: run with embedded models".to_string(),
+    ))
+}
+
 /// RL-based chess engine. When `session` is `None`, `select_move` returns
 /// [`EngineError::ModelNotLoaded`].
 pub struct RlEngine {

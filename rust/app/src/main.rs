@@ -103,7 +103,7 @@ fn handle_upgrade(args: &[String]) -> u8 {
 
     let confirm_downgrade = || -> bool {
         print!(
-            "\u{26a0} {} is older than your current version. Continue? [y/N] ",
+            "\u{26a0} {} is older than your current version. It might be buggier than a summer porch. Continue? [y/N] ",
             target_version
         );
         let _ = io::stdout().flush();
