@@ -44,7 +44,7 @@ func TestFormatSAN_PawnCaptures(t *testing.T) {
 
 	for _, moveStr := range moves {
 		move, _ := engine.ParseMove(moveStr)
-		testBoard.MakeMove(move)
+		_ = testBoard.MakeMove(move)
 	}
 
 	// Now Black can capture with exd4
@@ -92,7 +92,7 @@ func TestFormatSAN_PieceMove(t *testing.T) {
 			testBoard := engine.NewBoard()
 			for _, setupMove := range tt.setup {
 				move, _ := engine.ParseMove(setupMove)
-				testBoard.MakeMove(move)
+				_ = testBoard.MakeMove(move)
 			}
 
 			move, err := engine.ParseMove(tt.moveStr)
@@ -116,7 +116,7 @@ func TestFormatSAN_PieceCaptures(t *testing.T) {
 
 	for _, moveStr := range moves {
 		move, _ := engine.ParseMove(moveStr)
-		testBoard.MakeMove(move)
+		_ = testBoard.MakeMove(move)
 	}
 
 	// Black's knight captures on d5
@@ -158,7 +158,7 @@ func TestFormatSAN_Castling(t *testing.T) {
 			testBoard := engine.NewBoard()
 			for _, setupMove := range tt.setup {
 				move, _ := engine.ParseMove(setupMove)
-				testBoard.MakeMove(move)
+				_ = testBoard.MakeMove(move)
 			}
 
 			move, err := engine.ParseMove(tt.moveStr)
@@ -345,7 +345,7 @@ func TestFormatMoveHistory(t *testing.T) {
 			t.Fatalf("Failed to parse move %s: %v", moveStr, err)
 		}
 
-		m.board.MakeMove(move)
+		_ = m.board.MakeMove(move)
 		m.moveHistory = append(m.moveHistory, move)
 	}
 
@@ -412,7 +412,7 @@ func TestMoveHistoryReplayAccuracy(t *testing.T) {
 			t.Errorf("Move %d: expected %s, got %s", i+1, expectedSAN[i], san)
 		}
 
-		m.board.MakeMove(move)
+		_ = m.board.MakeMove(move)
 		m.moveHistory = append(m.moveHistory, move)
 	}
 

@@ -288,11 +288,11 @@ func (b *Board) ToFEN() string {
 
 	// Field 5: Halfmove clock
 	fen.WriteRune(' ')
-	fen.WriteString(fmt.Sprintf("%d", b.HalfMoveClock))
+	fmt.Fprintf(&fen, "%d", b.HalfMoveClock)
 
 	// Field 6: Fullmove number
 	fen.WriteRune(' ')
-	fen.WriteString(fmt.Sprintf("%d", b.FullMoveNum))
+	fmt.Fprintf(&fen, "%d", b.FullMoveNum)
 
 	return fen.String()
 }

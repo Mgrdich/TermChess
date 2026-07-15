@@ -78,7 +78,7 @@ func TestResumePromptSelection(t *testing.T) {
 	// Create a saved game
 	board := engine.NewBoard()
 	_ = config.SaveGame(board)
-	defer config.DeleteSaveGame()
+	defer func() { _ = config.DeleteSaveGame() }()
 
 	testCfg := DefaultConfig()
 	model := NewModel(testCfg)

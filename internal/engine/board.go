@@ -184,7 +184,6 @@ func (b *Board) applyMove(m Move) {
 	// Handle en passant capture: remove the captured pawn
 	// En passant is detected when a pawn moves to the en passant square
 	// The captured pawn is on the same file as destination, but different rank
-	var enPassantCapturedPawnSq Square = NoSquare
 	if piece.Type() == Pawn && oldEnPassantSq >= 0 && m.To == Square(oldEnPassantSq) {
 		// White captures: captured pawn is one rank below (rank - 1)
 		// Black captures: captured pawn is one rank above (rank + 1)
@@ -194,7 +193,7 @@ func (b *Board) applyMove(m Move) {
 		} else {
 			capturedPawnRank++ // Black captures pawn above
 		}
-		enPassantCapturedPawnSq = NewSquare(m.To.File(), capturedPawnRank)
+		enPassantCapturedPawnSq := NewSquare(m.To.File(), capturedPawnRank)
 		capturedPawn := b.Squares[enPassantCapturedPawnSq]
 		// --- Zobrist: XOR out the captured pawn ---
 		b.Hash ^= hashPiece(capturedPawn, enPassantCapturedPawnSq)
@@ -222,7 +221,8 @@ func (b *Board) applyMove(m Move) {
 	// Handle castling: if king moves 2 squares horizontally, also move the rook
 	if piece.Type() == King {
 		fileDiff := m.To.File() - m.From.File()
-		if fileDiff == 2 {
+		switch fileDiff {
+		case 2:
 			// Kingside castling: move rook from h-file to f-file
 			rookFromFile := 7 // h-file
 			rookToFile := 5   // f-file
@@ -235,7 +235,7 @@ func (b *Board) applyMove(m Move) {
 			b.Hash ^= hashPiece(rook, rookTo)
 			b.Squares[rookTo] = rook
 			b.Squares[rookFrom] = Piece(Empty)
-		} else if fileDiff == -2 {
+		case -2:
 			// Queenside castling: move rook from a-file to d-file
 			rookFromFile := 0 // a-file
 			rookToFile := 3   // d-file

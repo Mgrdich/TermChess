@@ -66,7 +66,7 @@ func TestSaveGame(t *testing.T) {
 	}
 
 	// Clean up
-	os.Remove(path)
+	_ = os.Remove(path)
 }
 
 // TestSaveGameCreatesDirectory tests that SaveGame creates the .termchess directory
@@ -76,7 +76,7 @@ func TestSaveGameCreatesDirectory(t *testing.T) {
 	saveDir := filepath.Dir(path)
 
 	// Remove the directory if it exists (to test creation)
-	os.RemoveAll(saveDir)
+	_ = os.RemoveAll(saveDir)
 
 	// Create a board and save it
 	board := engine.NewBoard()
@@ -91,7 +91,7 @@ func TestSaveGameCreatesDirectory(t *testing.T) {
 	}
 
 	// Clean up
-	os.Remove(path)
+	_ = os.Remove(path)
 }
 
 // TestLoadGame tests loading a saved game
@@ -99,7 +99,7 @@ func TestLoadGame(t *testing.T) {
 	// Create a board with a known position (after 1.e4)
 	originalBoard := engine.NewBoard()
 	move, _ := engine.ParseMove("e2e4")
-	originalBoard.MakeMove(move)
+	_ = originalBoard.MakeMove(move)
 
 	// Save the board
 	err := SaveGame(originalBoard)
@@ -121,14 +121,14 @@ func TestLoadGame(t *testing.T) {
 
 	// Clean up
 	path, _ := SaveGamePath()
-	os.Remove(path)
+	_ = os.Remove(path)
 }
 
 // TestLoadGameNonExistent tests loading when no save file exists
 func TestLoadGameNonExistent(t *testing.T) {
 	// Ensure no save file exists
 	path, _ := SaveGamePath()
-	os.Remove(path)
+	_ = os.Remove(path)
 
 	// Try to load - should return error
 	_, err := LoadGame()
@@ -142,7 +142,7 @@ func TestLoadGameInvalidFEN(t *testing.T) {
 	// Write invalid FEN to save file
 	path, _ := SaveGamePath()
 	saveDir := filepath.Dir(path)
-	os.MkdirAll(saveDir, 0755)
+	_ = os.MkdirAll(saveDir, 0755)
 
 	err := os.WriteFile(path, []byte("invalid fen string"), 0644)
 	if err != nil {
@@ -156,7 +156,7 @@ func TestLoadGameInvalidFEN(t *testing.T) {
 	}
 
 	// Clean up
-	os.Remove(path)
+	_ = os.Remove(path)
 }
 
 // TestSaveLoadRoundTrip tests that save and load preserve the game state
@@ -226,7 +226,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 
 	// Clean up
 	path, _ := SaveGamePath()
-	os.Remove(path)
+	_ = os.Remove(path)
 }
 
 // TestDeleteSaveGame tests deleting the save file
@@ -260,7 +260,7 @@ func TestDeleteSaveGame(t *testing.T) {
 func TestDeleteSaveGameNonExistent(t *testing.T) {
 	// Ensure no save file exists
 	path, _ := SaveGamePath()
-	os.Remove(path)
+	_ = os.Remove(path)
 
 	// Delete should not return error
 	err := DeleteSaveGame()
@@ -273,7 +273,7 @@ func TestDeleteSaveGameNonExistent(t *testing.T) {
 func TestSaveGameExists(t *testing.T) {
 	// Ensure no save file exists initially
 	path, _ := SaveGamePath()
-	os.Remove(path)
+	_ = os.Remove(path)
 
 	// Should return false
 	if SaveGameExists() {
@@ -293,7 +293,7 @@ func TestSaveGameExists(t *testing.T) {
 	}
 
 	// Clean up
-	os.Remove(path)
+	_ = os.Remove(path)
 }
 
 // TestSaveGameFilePermissions tests that the save file has correct permissions
@@ -319,5 +319,5 @@ func TestSaveGameFilePermissions(t *testing.T) {
 	}
 
 	// Clean up
-	os.Remove(path)
+	_ = os.Remove(path)
 }

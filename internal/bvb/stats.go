@@ -56,11 +56,12 @@ func ComputeStats(results []GameResult, whiteName, blackName string) *AggregateS
 
 	for _, r := range results {
 		// Count wins.
-		if r.Winner == "Draw" {
+		switch r.Winner {
+		case "Draw":
 			stats.Draws++
-		} else if r.Winner == whiteName {
+		case whiteName:
 			stats.WhiteWins++
-		} else if r.Winner == blackName {
+		case blackName:
 			stats.BlackWins++
 		}
 

@@ -151,7 +151,7 @@ func TestRenderGameOver(t *testing.T) {
 	moves := []string{"f2f3", "e7e5", "g2g4", "d8h4"}
 	for _, moveStr := range moves {
 		move, _ := engine.ParseMove(moveStr)
-		board.MakeMove(move)
+		_ = board.MakeMove(move)
 	}
 
 	m := NewModel(DefaultConfig())
@@ -610,7 +610,7 @@ func TestGetGameResultMessage(t *testing.T) {
 				moves := []string{"f2f3", "e7e5", "g2g4", "d8h4"}
 				for _, m := range moves {
 					move, _ := engine.ParseMove(m)
-					board.MakeMove(move)
+					_ = board.MakeMove(move)
 				}
 				return board
 			},
@@ -1471,12 +1471,12 @@ func TestParseGridDimensions(t *testing.T) {
 		{"2x3", 2, 3, false},
 		{"2x4", 2, 4, false},
 		{"1X1", 1, 1, false},
-		{"3x3", 0, 0, true},  // exceeds 8
-		{"22", 0, 0, true},   // no separator
-		{"0x1", 0, 0, true},  // zero rows
-		{"2x0", 0, 0, true},  // zero cols
-		{"x1", 0, 0, true},   // empty rows
-		{"2x", 0, 0, true},   // empty cols
+		{"3x3", 0, 0, true}, // exceeds 8
+		{"22", 0, 0, true},  // no separator
+		{"0x1", 0, 0, true}, // zero rows
+		{"2x0", 0, 0, true}, // zero cols
+		{"x1", 0, 0, true},  // empty rows
+		{"2x", 0, 0, true},  // empty cols
 	}
 
 	for _, tt := range tests {

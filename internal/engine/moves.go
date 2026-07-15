@@ -38,7 +38,7 @@ func ParseMove(s string) (Move, error) {
 	to := NewSquare(toFile, toRank)
 
 	// Parse promotion if present
-	var promotion PieceType = Empty
+	var promotion = Empty
 	if len(s) == 5 {
 		switch s[4] {
 		case 'q':

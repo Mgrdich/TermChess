@@ -190,7 +190,7 @@ func TestNewRandomEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 
 	t.Run("CustomTimeLimit", func(t *testing.T) {
@@ -215,7 +215,7 @@ func TestNewRandomEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 
 	t.Run("InvalidTimeLimit", func(t *testing.T) {
@@ -249,7 +249,7 @@ func TestNewRandomEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 
 	t.Run("MultipleOptions", func(t *testing.T) {
@@ -268,7 +268,7 @@ func TestNewRandomEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 }
 
@@ -307,7 +307,7 @@ func TestNewMinimaxEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 
 	t.Run("HardDifficulty", func(t *testing.T) {
@@ -343,7 +343,7 @@ func TestNewMinimaxEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 
 	t.Run("EasyDifficultyInvalid", func(t *testing.T) {
@@ -385,7 +385,7 @@ func TestNewMinimaxEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 
 	t.Run("CustomTimeLimit", func(t *testing.T) {
@@ -410,7 +410,7 @@ func TestNewMinimaxEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 
 	t.Run("InvalidSearchDepth", func(t *testing.T) {
@@ -477,7 +477,7 @@ func TestNewMinimaxEngine(t *testing.T) {
 		}
 
 		// Clean up
-		engine.Close()
+		_ = engine.Close()
 	})
 }
 

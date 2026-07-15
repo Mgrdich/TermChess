@@ -297,7 +297,7 @@ func (m Model) renderMainMenu() string {
 		}
 
 		cursor := "  " // Two spaces for non-selected items
-		optionText := option
+		var optionText string
 
 		// Check if this is the "Resume Game" option
 		isResumeGame := option == "Resume Game"
@@ -335,7 +335,7 @@ func (m Model) renderMainMenu() string {
 			}
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 	}
 
 	// Render help text
@@ -408,7 +408,7 @@ func (m Model) renderGameTypeSelect() string {
 	// All game type options are primary actions
 	for i, option := range m.menuOptions {
 		cursor := "  " // Two spaces for non-selected items
-		optionText := option
+		var optionText string
 
 		if i == m.menuSelection {
 			// Highlight the selected item with prominent focus indicator
@@ -419,7 +419,7 @@ func (m Model) renderGameTypeSelect() string {
 			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 	}
 
 	// Render help text
@@ -471,7 +471,7 @@ func (m Model) renderBotSelect() string {
 	// Render menu options with cursor indicator for selected item
 	for i, option := range m.menuOptions {
 		cursor := "  " // Two spaces for non-selected items
-		optionText := option
+		var optionText string
 
 		if i == m.menuSelection {
 			// Highlight the selected item with focus indicator
@@ -482,7 +482,7 @@ func (m Model) renderBotSelect() string {
 			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 	}
 
 	// Render help text
@@ -534,7 +534,7 @@ func (m Model) renderColorSelect() string {
 	// Render menu options with cursor indicator for selected item
 	for i, option := range m.menuOptions {
 		cursor := "  " // Two spaces for non-selected items
-		optionText := option
+		var optionText string
 
 		if i == m.menuSelection {
 			// Highlight the selected item with focus indicator
@@ -545,7 +545,7 @@ func (m Model) renderColorSelect() string {
 			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 	}
 
 	// Render help text
@@ -830,7 +830,7 @@ func (m Model) renderSettings() string {
 			optionText = m.menuItemStyle().Render(optionText)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 	}
 
 	// Add separator before theme option
@@ -849,7 +849,7 @@ func (m Model) renderSettings() string {
 	} else {
 		themeText = m.menuItemStyle().Render(themeText)
 	}
-	b.WriteString(fmt.Sprintf("%s%s\n", themeCursor, themeText))
+	fmt.Fprintf(&b, "%s%s\n", themeCursor, themeText)
 
 	// Render help text
 	helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter/space: toggle/cycle")
@@ -1019,7 +1019,7 @@ func (m Model) renderDrawPrompt() string {
 	// Render each option with cursor indicator
 	for i, option := range options {
 		cursor := "  " // Two spaces for non-selected items
-		optionText := option
+		var optionText string
 
 		if i == m.drawPromptSelection {
 			// Highlight the selected item with focus indicator
@@ -1030,7 +1030,7 @@ func (m Model) renderDrawPrompt() string {
 			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 	}
 
 	// Render help text
@@ -1082,7 +1082,7 @@ func (m Model) renderBvBBotSelect() string {
 	// Render menu options with cursor indicator for selected item
 	for i, option := range m.menuOptions {
 		cursor := "  "
-		optionText := option
+		var optionText string
 
 		if i == m.menuSelection {
 			cursor = m.cursorStyle().Render(">> ")
@@ -1091,7 +1091,7 @@ func (m Model) renderBvBBotSelect() string {
 			optionText = m.menuPrimaryStyle().Render(option)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 	}
 
 	// Show the already-selected White difficulty when selecting Black
@@ -1184,7 +1184,7 @@ func (m Model) renderBvBGameMode() string {
 		// Show menu options
 		for i, option := range m.menuOptions {
 			cursor := "  "
-			optionText := option
+			var optionText string
 
 			if i == m.menuSelection {
 				cursor = m.cursorStyle().Render(">> ")
@@ -1193,7 +1193,7 @@ func (m Model) renderBvBGameMode() string {
 				optionText = m.menuPrimaryStyle().Render(option)
 			}
 
-			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+			fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 		}
 
 		helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
@@ -1550,7 +1550,7 @@ func (m Model) renderBvBGridConfig() string {
 	} else {
 		for i, option := range m.menuOptions {
 			cursor := "  "
-			optionText := option
+			var optionText string
 
 			if i == m.menuSelection {
 				cursor = m.cursorStyle().Render(">> ")
@@ -1559,7 +1559,7 @@ func (m Model) renderBvBGridConfig() string {
 				optionText = m.menuPrimaryStyle().Render(option)
 			}
 
-			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+			fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 		}
 
 		helpText := m.renderHelpText("ESC: back | arrows/jk: navigate | enter: select")
@@ -2281,7 +2281,7 @@ func (m Model) renderBvBViewModeSelect() string {
 			optionText = m.menuPrimaryStyle().Render(opt.name)
 		}
 
-		b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+		fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 
 		// Show description
 		descText := opt.description
@@ -2529,13 +2529,14 @@ func (m Model) formatMoveHistory() string {
 
 		// Format white's move
 		whiteSAN := FormatSAN(board, m.moveHistory[i])
-		board.MakeMove(m.moveHistory[i])
+		// moveHistory holds already-played legal moves, so MakeMove cannot fail.
+		_ = board.MakeMove(m.moveHistory[i])
 
 		// Format black's move (if exists)
 		if i+1 < len(m.moveHistory) {
 			blackSAN := FormatSAN(board, m.moveHistory[i+1])
-			board.MakeMove(m.moveHistory[i+1])
-			b.WriteString(fmt.Sprintf("%d. %s %s", moveNum, whiteSAN, blackSAN))
+			_ = board.MakeMove(m.moveHistory[i+1])
+			fmt.Fprintf(&b, "%d. %s %s", moveNum, whiteSAN, blackSAN)
 
 			// Add space only if there are more moves to come
 			if i+2 < len(m.moveHistory) {
@@ -2543,7 +2544,7 @@ func (m Model) formatMoveHistory() string {
 			}
 		} else {
 			// Only white's move (game in progress)
-			b.WriteString(fmt.Sprintf("%d. %s", moveNum, whiteSAN))
+			fmt.Fprintf(&b, "%d. %s", moveNum, whiteSAN)
 		}
 	}
 
@@ -2757,7 +2758,7 @@ func (m Model) renderBvBConcurrencySelect() string {
 				optionText = m.menuPrimaryStyle().Render(opt.name)
 			}
 
-			b.WriteString(fmt.Sprintf("%s%s\n", cursor, optionText))
+			fmt.Fprintf(&b, "%s%s\n", cursor, optionText)
 			b.WriteString(descStyle.Render(opt.description))
 			b.WriteString("\n")
 		}

@@ -60,13 +60,14 @@ func (m *SessionManager) ExportStats(whiteBot, blackBot string) *SessionExport {
 
 		// Determine result string for export
 		var resultStr string
-		if result.Winner == "Draw" {
+		switch result.Winner {
+		case "Draw":
 			resultStr = "Draw"
 			export.Draws++
-		} else if result.Winner == m.whiteName {
+		case m.whiteName:
 			resultStr = "White"
 			export.WhiteWins++
-		} else {
+		default:
 			resultStr = "Black"
 			export.BlackWins++
 		}

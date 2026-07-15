@@ -53,7 +53,7 @@ func (r *BoardRenderer) RenderWithSelection(b *engine.Board, selectedSquare *eng
 	for rank := 7; rank >= 0; rank-- {
 		// Show rank number if coordinates are enabled
 		if r.config.ShowCoords {
-			result.WriteString(fmt.Sprintf("%d ", rank+1))
+			fmt.Fprintf(&result, "%d ", rank+1)
 		}
 
 		// Render pieces for this rank (files a-h, which are 0-7)

@@ -91,7 +91,8 @@ func filterChecks(board *engine.Board, moves []engine.Move) []engine.Move {
 	for _, m := range moves {
 		// Make move on a copy and check if opponent is in check
 		boardCopy := board.Copy()
-		boardCopy.MakeMove(m)
+		// m comes from legal move generation, so MakeMove cannot fail here.
+		_ = boardCopy.MakeMove(m)
 
 		// After making the move, check if the NEW active color (opponent) is in check
 		if boardCopy.InCheck() {

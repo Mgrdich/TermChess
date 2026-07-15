@@ -14,7 +14,7 @@ func TestRandomEngine_SelectMove_ReturnsLegalMove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Create board from starting position
 	board := engine.NewBoard()
@@ -50,7 +50,7 @@ func TestRandomEngine_SelectMove_NoLegalMoves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Create board in checkmate position (no legal moves)
 	// FEN: 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1
@@ -83,7 +83,7 @@ func TestRandomEngine_SelectMove_ForcedMove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Create board with only one legal move
 	// FEN: 7k/8/6K1/8/8/8/8/7R b - - 0 1
@@ -118,7 +118,7 @@ func TestRandomEngine_SelectMove_Timeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Create a context that's already cancelled
 	ctx, cancel := context.WithCancel(context.Background())
@@ -166,7 +166,7 @@ func TestRandomEngine_Name(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Verify Name() returns "Easy Bot"
 	if eng.Name() != "Easy Bot" {
@@ -204,7 +204,7 @@ func TestRandomEngine_Info(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Cast to Inspectable to access Info()
 	inspectable, ok := eng.(Inspectable)
@@ -253,7 +253,7 @@ func TestNewRandomEngine_DefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Cast to *randomEngine to access timeLimit
 	randomEng, ok := eng.(*randomEngine)
@@ -273,7 +273,7 @@ func TestNewRandomEngine_CustomTimeLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Cast to *randomEngine to access timeLimit
 	randomEng, ok := eng.(*randomEngine)
@@ -293,7 +293,7 @@ func TestRandomEngine_SelectMove_DistributionAcrossMoves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Create board from starting position
 	board := engine.NewBoard()
@@ -346,7 +346,7 @@ func TestRandomEngine_SelectMove_VariousPositions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Test with various chess positions
 	testCases := []struct {
@@ -424,7 +424,7 @@ func TestRandomEngine_SelectMove_CapturesBias(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Run 1000 trials for statistical significance
 	captureCount := 0
@@ -470,7 +470,7 @@ func TestRandomEngine_SelectMove_ChecksBias(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Run 1000 trials for statistical significance
 	checkCount := 0
@@ -484,7 +484,7 @@ func TestRandomEngine_SelectMove_ChecksBias(t *testing.T) {
 
 		// Check if the move gives check
 		boardCopy := board.Copy()
-		boardCopy.MakeMove(move)
+		_ = boardCopy.MakeMove(move)
 		if boardCopy.InCheck() {
 			checkCount++
 		}
@@ -510,7 +510,7 @@ func TestRandomEngine_SelectMove_RandomFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create engine: %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Run 50 trials
 	movesSeen := make(map[string]int)
@@ -577,7 +577,7 @@ func TestFilterChecks(t *testing.T) {
 	// Verify all returned moves actually give check
 	for _, move := range checks {
 		boardCopy := board.Copy()
-		boardCopy.MakeMove(move)
+		_ = boardCopy.MakeMove(move)
 		if !boardCopy.InCheck() {
 			t.Errorf("filterChecks returned non-check move: %v", move)
 		}

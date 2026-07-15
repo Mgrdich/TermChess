@@ -59,11 +59,11 @@ func TestEvaluate_StartPosition(t *testing.T) {
 
 func TestEvaluate_MaterialAdvantage(t *testing.T) {
 	tests := []struct {
-		name     string
-		fen      string
-		wantMin  float64
-		wantMax  float64
-		desc     string
+		name    string
+		fen     string
+		wantMin float64
+		wantMax float64
+		desc    string
 	}{
 		{
 			name:    "WhiteExtraQueen",
@@ -977,8 +977,8 @@ func TestCountNonPawnMaterial(t *testing.T) {
 			expected: 5.0,
 		},
 		{
-			name:     "MixedPieces",
-			fen:      "rnb1k3/8/8/8/8/8/8/RNB1K3 w - - 0 1",
+			name: "MixedPieces",
+			fen:  "rnb1k3/8/8/8/8/8/8/RNB1K3 w - - 0 1",
 			// White: R(5) + N(3) + B(3.25) = 11.25
 			// Black: R(5) + N(3) + B(3.25) = 11.25
 			// Total = 22.5
@@ -990,8 +990,8 @@ func TestCountNonPawnMaterial(t *testing.T) {
 			expected: 0.0,
 		},
 		{
-			name:     "AllQueensAndRooks",
-			fen:      "r2qk2r/8/8/8/8/8/8/R2QK2R w - - 0 1",
+			name: "AllQueensAndRooks",
+			fen:  "r2qk2r/8/8/8/8/8/8/R2QK2R w - - 0 1",
 			// White: R(5) + Q(9) + R(5) = 19
 			// Black: R(5) + Q(9) + R(5) = 19
 			// Total = 38
@@ -1066,7 +1066,7 @@ func TestKingPhaseInterpolation_EndgameCenter(t *testing.T) {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
 
-	scoreEndgame := evaluatePiecePositions(board, 0.0)   // Pure endgame
+	scoreEndgame := evaluatePiecePositions(board, 0.0)    // Pure endgame
 	scoreMiddlegame := evaluatePiecePositions(board, 1.0) // Pure middlegame
 
 	// In endgame, center king gets positive bonus (+0.2 from endgame table)
@@ -1116,8 +1116,8 @@ func TestKingPhaseInterpolation_HalfPhase(t *testing.T) {
 
 	scoreHalf := evaluatePiecePositions(board, 0.5)
 
-	mgBonus := kingMiddlegameTable[6]  // 0.3
-	egBonus := kingEndgameTable[6]     // -0.4
+	mgBonus := kingMiddlegameTable[6]          // 0.3
+	egBonus := kingEndgameTable[6]             // -0.4
 	expectedBonus := 0.5*mgBonus + 0.5*egBonus // -0.05
 
 	if math.Abs(scoreHalf-expectedBonus) > 0.001 {
@@ -1331,7 +1331,7 @@ func TestKingDistance(t *testing.T) {
 		sq2      int
 		expected float64
 	}{
-		{name: "same_square", sq1: 28, sq2: 28, expected: 0.0},       // e4 to e4
+		{name: "same_square", sq1: 28, sq2: 28, expected: 0.0},      // e4 to e4
 		{name: "adjacent_file", sq1: 28, sq2: 29, expected: 1.0},    // e4 to f4
 		{name: "adjacent_rank", sq1: 28, sq2: 36, expected: 1.0},    // e4 to e5
 		{name: "diagonal", sq1: 28, sq2: 37, expected: 1.0},         // e4 to f5

@@ -86,7 +86,7 @@ func TestMoveHistoryDisabled(t *testing.T) {
 			t.Fatalf("Failed to parse move %s: %v", moveStr, err)
 		}
 
-		m.board.MakeMove(move)
+		_ = m.board.MakeMove(move)
 		m.moveHistory = append(m.moveHistory, move)
 	}
 
@@ -114,7 +114,7 @@ func TestMoveHistoryResetsOnNewGame(t *testing.T) {
 
 	for _, moveStr := range moves {
 		move, _ := engine.ParseMove(moveStr)
-		m.board.MakeMove(move)
+		_ = m.board.MakeMove(move)
 		m.moveHistory = append(m.moveHistory, move)
 	}
 
@@ -159,7 +159,7 @@ func TestCastlingInMoveHistory(t *testing.T) {
 			t.Fatalf("Failed to parse move %s: %v", moveStr, err)
 		}
 
-		m.board.MakeMove(move)
+		_ = m.board.MakeMove(move)
 		m.moveHistory = append(m.moveHistory, move)
 	}
 
@@ -201,7 +201,7 @@ func TestPromotionInMoveHistory(t *testing.T) {
 		t.Fatalf("Failed to parse move: %v", err)
 	}
 
-	m.board.MakeMove(move)
+	_ = m.board.MakeMove(move)
 	m.moveHistory = append(m.moveHistory, move)
 
 	history := m.formatMoveHistory()
