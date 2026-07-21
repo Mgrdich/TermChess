@@ -184,7 +184,7 @@ func TestSquareFromMouse_SquareWidth(t *testing.T) {
 
 	// Test e4 square - both character positions should map to the same square
 	baseX := boardStartXWithCoords + 4*squareWidth // file e = 4
-	baseY := boardStartY + 4                        // rank 4 (7-4=3, so row offset 4)
+	baseY := boardStartY + 4                       // rank 4 (7-4=3, so row offset 4)
 
 	// First character of the square
 	sq1 := squareFromMouse(baseX, baseY, config)

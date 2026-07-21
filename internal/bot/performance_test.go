@@ -21,7 +21,7 @@ func BenchmarkEasyBot(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create Easy bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	ctx := context.Background()
 
@@ -47,7 +47,7 @@ func BenchmarkMediumBot_Depth4(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create Medium bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	ctx := context.Background()
 
@@ -73,7 +73,7 @@ func BenchmarkHardBot_Depth6(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create Hard bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	ctx := context.Background()
 
@@ -136,7 +136,7 @@ func TestTimeLimit_EasyBot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Easy bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	for _, pos := range positions {
 		t.Run(pos.name, func(t *testing.T) {
@@ -198,7 +198,7 @@ func TestTimeLimit_MediumBot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Medium bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	for _, pos := range positions {
 		t.Run(pos.name, func(t *testing.T) {
@@ -260,7 +260,7 @@ func TestTimeLimit_HardBot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Hard bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	for _, pos := range positions {
 		t.Run(pos.name, func(t *testing.T) {
@@ -320,7 +320,7 @@ func TestTimeLimit_MediumBot_WithTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Medium bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	// Create a context with a very short timeout (100ms)
 	// This tests that the bot respects context cancellation
@@ -370,7 +370,7 @@ func TestTimeLimit_HardBot_WithTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Hard bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	// Create a context with a short timeout (200ms)
 	// This tests that the bot respects context cancellation

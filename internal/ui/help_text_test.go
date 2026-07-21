@@ -146,10 +146,10 @@ func TestShowHelpTextPersistence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
-	defer os.Remove(configPath)
+	defer func() { _ = os.Remove(configPath) }()
 
 	// Clean up before test to start fresh
-	os.Remove(configPath)
+	_ = os.Remove(configPath)
 
 	// Phase 1: Start app with default config
 	m1 := NewModel(LoadConfig())
@@ -202,7 +202,7 @@ func TestHelpTextToggleAffectsAllScreens(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
-	defer os.Remove(configPath)
+	defer func() { _ = os.Remove(configPath) }()
 
 	m := NewModel(DefaultConfig())
 

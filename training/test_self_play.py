@@ -8,26 +8,25 @@ These tests verify that:
 4. Multiple games can be generated end-to-end
 """
 
+import chess
 import numpy as np
 import pytest
-import chess
-import torch
 
-from board_encoder import encode_board, NUM_CHANNELS, get_device
-from model import create_model, POLICY_OUTPUT_SIZE
+from board_encoder import NUM_CHANNELS, get_device
 from mcts import MCTS
+from model import POLICY_OUTPUT_SIZE, create_model
 from replay_buffer import ReplayBuffer, TrainingExample
 from self_play import (
-    play_game,
-    generate_games,
-    generate_games_to_buffer,
-    SelfPlayManager,
-    _moves_to_policy_vector,
-    _get_temperature,
-    _get_game_outcome,
     EXPLORATION_MOVES,
     HIGH_TEMPERATURE,
     LOW_TEMPERATURE,
+    SelfPlayManager,
+    _get_game_outcome,
+    _get_temperature,
+    _moves_to_policy_vector,
+    generate_games,
+    generate_games_to_buffer,
+    play_game,
 )
 
 
@@ -47,7 +46,7 @@ class TestReplayBuffer:
         example = TrainingExample(
             board_state=np.zeros((NUM_CHANNELS, 8, 8), dtype=np.float32),
             policy_target=np.zeros(POLICY_OUTPUT_SIZE, dtype=np.float32),
-            value_target=1.0
+            value_target=1.0,
         )
 
         buffer.add(example)
@@ -61,7 +60,7 @@ class TestReplayBuffer:
             TrainingExample(
                 board_state=np.ones((NUM_CHANNELS, 8, 8), dtype=np.float32) * i,
                 policy_target=np.ones(POLICY_OUTPUT_SIZE, dtype=np.float32) * i,
-                value_target=float(i) / 10
+                value_target=float(i) / 10,
             )
             for i in range(10)
         ]
@@ -78,7 +77,7 @@ class TestReplayBuffer:
             example = TrainingExample(
                 board_state=np.ones((NUM_CHANNELS, 8, 8), dtype=np.float32) * i,
                 policy_target=np.zeros(POLICY_OUTPUT_SIZE, dtype=np.float32),
-                value_target=float(i)
+                value_target=float(i),
             )
             buffer.add(example)
 
@@ -96,11 +95,11 @@ class TestReplayBuffer:
         buffer = ReplayBuffer(max_size=100)
 
         # Add 50 examples
-        for i in range(50):
+        for _ in range(50):
             example = TrainingExample(
                 board_state=np.random.randn(NUM_CHANNELS, 8, 8).astype(np.float32),
                 policy_target=np.random.randn(POLICY_OUTPUT_SIZE).astype(np.float32),
-                value_target=np.random.uniform(-1, 1)
+                value_target=np.random.uniform(-1, 1),
             )
             buffer.add(example)
 
@@ -125,7 +124,7 @@ class TestReplayBuffer:
         example = TrainingExample(
             board_state=np.zeros((NUM_CHANNELS, 8, 8), dtype=np.float32),
             policy_target=np.zeros(POLICY_OUTPUT_SIZE, dtype=np.float32),
-            value_target=0.0
+            value_target=0.0,
         )
         buffer.add(example)
 
@@ -136,11 +135,11 @@ class TestReplayBuffer:
         """Test clearing the buffer."""
         buffer = ReplayBuffer(max_size=100)
 
-        for i in range(10):
+        for _ in range(10):
             example = TrainingExample(
                 board_state=np.zeros((NUM_CHANNELS, 8, 8), dtype=np.float32),
                 policy_target=np.zeros(POLICY_OUTPUT_SIZE, dtype=np.float32),
-                value_target=0.0
+                value_target=0.0,
             )
             buffer.add(example)
 
@@ -232,7 +231,7 @@ class TestSelfPlay:
         return MCTS(
             model=model,
             num_simulations=10,  # Very few for speed
-            c_puct=1.5
+            c_puct=1.5,
         )
 
     def test_play_single_game(self, mcts):
@@ -262,7 +261,7 @@ class TestSelfPlay:
             num_games=3,
             num_simulations=10,
             max_moves=30,  # Short games for testing
-            verbose=False
+            verbose=False,
         )
 
         # Should have 3 games worth of stats
@@ -280,13 +279,8 @@ class TestSelfPlay:
         """Test that games are correctly added to buffer."""
         buffer = ReplayBuffer(max_size=10000)
 
-        stats = generate_games_to_buffer(
-            model=model,
-            buffer=buffer,
-            num_games=2,
-            num_simulations=10,
-            max_moves=30,
-            verbose=False
+        generate_games_to_buffer(
+            model=model, buffer=buffer, num_games=2, num_simulations=10, max_moves=30, verbose=False
         )
 
         # Buffer should have examples
@@ -329,11 +323,7 @@ class TestSelfPlayManager:
 
     def test_manager_initialization(self, model):
         """Test manager initializes correctly."""
-        manager = SelfPlayManager(
-            model=model,
-            num_simulations=10,
-            buffer_size=1000
-        )
+        manager = SelfPlayManager(model=model, num_simulations=10, buffer_size=1000)
 
         assert manager.total_games == 0
         assert manager.total_positions == 0
@@ -341,11 +331,7 @@ class TestSelfPlayManager:
 
     def test_manager_generate(self, model):
         """Test manager can generate games."""
-        manager = SelfPlayManager(
-            model=model,
-            num_simulations=10,
-            buffer_size=1000
-        )
+        manager = SelfPlayManager(model=model, num_simulations=10, buffer_size=1000)
 
         stats = manager.generate(num_games=2, verbose=False)
 
@@ -355,11 +341,7 @@ class TestSelfPlayManager:
 
     def test_manager_sample_batch(self, model):
         """Test manager can sample batches after generation."""
-        manager = SelfPlayManager(
-            model=model,
-            num_simulations=10,
-            buffer_size=1000
-        )
+        manager = SelfPlayManager(model=model, num_simulations=10, buffer_size=1000)
 
         manager.generate(num_games=2, verbose=False)
 
@@ -371,11 +353,7 @@ class TestSelfPlayManager:
 
     def test_manager_get_statistics(self, model):
         """Test manager statistics collection."""
-        manager = SelfPlayManager(
-            model=model,
-            num_simulations=10,
-            buffer_size=1000
-        )
+        manager = SelfPlayManager(model=model, num_simulations=10, buffer_size=1000)
 
         manager.generate(num_games=3, verbose=False)
 
@@ -390,11 +368,7 @@ class TestSelfPlayManager:
 
     def test_manager_update_model(self, model):
         """Test that model can be updated."""
-        manager = SelfPlayManager(
-            model=model,
-            num_simulations=10,
-            buffer_size=1000
-        )
+        manager = SelfPlayManager(model=model, num_simulations=10, buffer_size=1000)
 
         # Create a new model
         device = get_device()
@@ -431,7 +405,7 @@ class TestEndToEnd:
             num_games=10,
             num_simulations=10,  # Minimal for speed
             max_moves=50,  # Cap game length
-            verbose=False
+            verbose=False,
         )
 
         # Verify we got 10 games

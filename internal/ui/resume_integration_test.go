@@ -13,8 +13,8 @@ import (
 // TestResumeGameIntegrationFlow tests the complete resume game flow with new menu-based approach
 func TestResumeGameIntegrationFlow(t *testing.T) {
 	// Cleanup before and after
-	defer config.DeleteSaveGame()
-	config.DeleteSaveGame()
+	defer func() { _ = config.DeleteSaveGame() }()
+	_ = config.DeleteSaveGame()
 
 	// Step 1: Create and save a game in progress
 	board := engine.NewBoard()
@@ -123,8 +123,8 @@ func TestResumeGameIntegrationFlow(t *testing.T) {
 // TestResumeGameSelectNo tests navigating to a different menu option instead of Resume Game
 func TestResumeGameSelectNo(t *testing.T) {
 	// Cleanup before and after
-	defer config.DeleteSaveGame()
-	config.DeleteSaveGame()
+	defer func() { _ = config.DeleteSaveGame() }()
+	_ = config.DeleteSaveGame()
 
 	// Create a saved game
 	board := engine.NewBoard()
@@ -176,8 +176,8 @@ func TestResumeGameSelectNo(t *testing.T) {
 // TestResumeGameLoadError tests error handling when resuming a corrupted saved game
 func TestResumeGameLoadError(t *testing.T) {
 	// Cleanup before and after
-	defer config.DeleteSaveGame()
-	config.DeleteSaveGame()
+	defer func() { _ = config.DeleteSaveGame() }()
+	_ = config.DeleteSaveGame()
 
 	// Create a corrupted save file
 	savePath, _ := config.SaveGamePath()

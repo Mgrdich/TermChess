@@ -13,26 +13,25 @@ Uses small/fast configuration for testing (few simulations, small batches).
 
 import os
 import tempfile
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-from board_encoder import get_device, NUM_CHANNELS
-from model import create_model, POLICY_OUTPUT_SIZE, ChessNet
+from board_encoder import NUM_CHANNELS, get_device
+from model import POLICY_OUTPUT_SIZE, ChessNet, create_model
 from replay_buffer import ReplayBuffer, TrainingExample
 from train import (
     TrainingConfig,
     TrainingMetrics,
     compute_loss,
-    train_batch,
-    train_iteration,
-    save_checkpoint,
-    load_checkpoint,
     create_optimizer,
     create_scheduler,
+    load_checkpoint,
+    save_checkpoint,
     train,
+    train_batch,
+    train_iteration,
 )
 
 
@@ -54,12 +53,7 @@ class TestTrainingConfig:
 
     def test_custom_config(self):
         """Test that custom config values are respected."""
-        config = TrainingConfig(
-            num_iterations=100,
-            games_per_iteration=10,
-            batch_size=32,
-            buffer_size=1000
-        )
+        config = TrainingConfig(num_iterations=100, games_per_iteration=10, batch_size=32, buffer_size=1000)
 
         assert config.num_iterations == 100
         assert config.games_per_iteration == 10
@@ -106,9 +100,7 @@ class TestLossComputation:
         """Test that loss computation produces correct shapes."""
         states, policies, values = sample_batch
 
-        policy_loss, value_loss, total_loss = compute_loss(
-            model, states, policies, values, device
-        )
+        policy_loss, value_loss, total_loss = compute_loss(model, states, policies, values, device)
 
         # All losses should be scalar tensors
         assert policy_loss.dim() == 0
@@ -119,9 +111,7 @@ class TestLossComputation:
         """Test that loss values are reasonable."""
         states, policies, values = sample_batch
 
-        policy_loss, value_loss, total_loss = compute_loss(
-            model, states, policies, values, device
-        )
+        policy_loss, value_loss, total_loss = compute_loss(model, states, policies, values, device)
 
         # Losses should be positive
         assert policy_loss.item() >= 0
@@ -142,9 +132,7 @@ class TestLossComputation:
         initial_weights = model.initial_conv.weight.clone()
 
         # Train one batch
-        p_loss, v_loss, t_loss = train_batch(
-            model, optimizer, states, policies, values, device
-        )
+        p_loss, v_loss, t_loss = train_batch(model, optimizer, states, policies, values, device)
 
         # Weights should have changed
         assert not torch.equal(model.initial_conv.weight, initial_weights)
@@ -173,7 +161,7 @@ class TestTrainingIteration:
         """Create a buffer with some examples."""
         buffer = ReplayBuffer(max_size=1000)
 
-        for i in range(100):
+        for _ in range(100):
             # Create valid probability distribution for policy
             policy = np.random.rand(POLICY_OUTPUT_SIZE).astype(np.float32)
             policy = policy / policy.sum()
@@ -181,7 +169,7 @@ class TestTrainingIteration:
             example = TrainingExample(
                 board_state=np.random.randn(NUM_CHANNELS, 8, 8).astype(np.float32),
                 policy_target=policy,
-                value_target=np.random.uniform(-1, 1)
+                value_target=np.random.uniform(-1, 1),
             )
             buffer.add(example)
 
@@ -197,7 +185,7 @@ class TestTrainingIteration:
             buffer=filled_buffer,
             batch_size=16,
             batches_per_iteration=5,
-            device=device
+            device=device,
         )
 
         # Losses should be reasonable
@@ -222,16 +210,10 @@ class TestCheckpointing:
 
     def test_save_checkpoint(self, model, device):
         """Test that checkpoints can be saved."""
-        config = TrainingConfig(
-            num_iterations=100,
-            num_blocks=2,
-            num_filters=32
-        )
+        config = TrainingConfig(num_iterations=100, num_blocks=2, num_filters=32)
 
         optimizer = create_optimizer(model, config.initial_lr, config.weight_decay)
-        scheduler = create_scheduler(
-            optimizer, config.initial_lr, config.final_lr, config.lr_decay_steps
-        )
+        scheduler = create_scheduler(optimizer, config.initial_lr, config.final_lr, config.lr_decay_steps)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             checkpoint_path = save_checkpoint(
@@ -240,7 +222,7 @@ class TestCheckpointing:
                 scheduler=scheduler,
                 iteration=50,
                 config=config,
-                checkpoint_dir=tmpdir
+                checkpoint_dir=tmpdir,
             )
 
             # Check file was created
@@ -249,16 +231,10 @@ class TestCheckpointing:
 
     def test_load_checkpoint(self, model, device):
         """Test that checkpoints can be loaded."""
-        config = TrainingConfig(
-            num_iterations=100,
-            num_blocks=2,
-            num_filters=32
-        )
+        config = TrainingConfig(num_iterations=100, num_blocks=2, num_filters=32)
 
         optimizer = create_optimizer(model, config.initial_lr, config.weight_decay)
-        scheduler = create_scheduler(
-            optimizer, config.initial_lr, config.final_lr, config.lr_decay_steps
-        )
+        scheduler = create_scheduler(optimizer, config.initial_lr, config.final_lr, config.lr_decay_steps)
 
         # Modify model weights
         with torch.no_grad():
@@ -272,21 +248,17 @@ class TestCheckpointing:
                 scheduler=scheduler,
                 iteration=50,
                 config=config,
-                checkpoint_dir=tmpdir
+                checkpoint_dir=tmpdir,
             )
 
             # Load checkpoint
-            loaded_model, loaded_opt, loaded_sched, iteration, config_dict = \
-                load_checkpoint(checkpoint_path, device)
+            loaded_model, loaded_opt, loaded_sched, iteration, config_dict = load_checkpoint(checkpoint_path, device)
 
             # Verify iteration
             assert iteration == 50
 
             # Verify model weights match
-            assert torch.equal(
-                model.initial_conv.weight.cpu(),
-                loaded_model.initial_conv.weight.cpu()
-            )
+            assert torch.equal(model.initial_conv.weight.cpu(), loaded_model.initial_conv.weight.cpu())
 
             # Verify config
             assert config_dict["num_blocks"] == 2
@@ -297,9 +269,7 @@ class TestCheckpointing:
         config = TrainingConfig(num_blocks=2, num_filters=32)
 
         optimizer = create_optimizer(model, config.initial_lr, config.weight_decay)
-        scheduler = create_scheduler(
-            optimizer, config.initial_lr, config.final_lr, config.lr_decay_steps
-        )
+        scheduler = create_scheduler(optimizer, config.initial_lr, config.final_lr, config.lr_decay_steps)
 
         metrics = TrainingMetrics(
             iteration=50,
@@ -310,7 +280,7 @@ class TestCheckpointing:
             positions_generated=5000,
             buffer_size=10000,
             learning_rate=0.001,
-            iteration_time=60.0
+            iteration_time=60.0,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -321,7 +291,7 @@ class TestCheckpointing:
                 iteration=50,
                 config=config,
                 checkpoint_dir=tmpdir,
-                metrics=metrics
+                metrics=metrics,
             )
 
             # Load and verify metrics are saved
@@ -342,25 +312,16 @@ class TestLearningRateScheduler:
     def test_scheduler_creation(self, model):
         """Test that scheduler is created correctly."""
         optimizer = create_optimizer(model, initial_lr=0.001, weight_decay=1e-4)
-        scheduler = create_scheduler(
-            optimizer,
-            initial_lr=0.001,
-            final_lr=0.0001,
-            decay_steps=100
-        )
+        scheduler = create_scheduler(optimizer, initial_lr=0.001, final_lr=0.0001, decay_steps=100)
 
-        # Initial LR should be 0.001
+        # Scheduler should be created and initial LR should be 0.001
+        assert scheduler is not None
         assert optimizer.param_groups[0]["lr"] == 0.001
 
     def test_scheduler_decay(self, model):
         """Test that scheduler decays LR at the right step."""
         optimizer = create_optimizer(model, initial_lr=0.001, weight_decay=1e-4)
-        scheduler = create_scheduler(
-            optimizer,
-            initial_lr=0.001,
-            final_lr=0.0001,
-            decay_steps=100
-        )
+        scheduler = create_scheduler(optimizer, initial_lr=0.001, final_lr=0.0001, decay_steps=100)
 
         # Step 99 times (before decay)
         for _ in range(99):
@@ -402,7 +363,7 @@ class TestEndToEnd:
                 checkpoint_dir=tmpdir,
                 checkpoint_intervals=[50, 100],  # Save at 50 and 100
                 log_every_n_iterations=25,
-                verbose=False
+                verbose=False,
             )
 
             # Run training
@@ -433,7 +394,7 @@ class TestEndToEnd:
                 checkpoint_dir=tmpdir,
                 checkpoint_intervals=[50],
                 log_every_n_iterations=50,
-                verbose=False
+                verbose=False,
             )
 
             train(config1)
@@ -457,7 +418,7 @@ class TestEndToEnd:
                 checkpoint_dir=tmpdir,
                 checkpoint_intervals=[100],
                 log_every_n_iterations=50,
-                verbose=False
+                verbose=False,
             )
 
             model = train(config2, resume_from=checkpoint_path)
@@ -489,7 +450,7 @@ class TestEndToEnd:
                 checkpoint_dir=tmpdir,
                 checkpoint_intervals=[20],
                 log_every_n_iterations=5,
-                verbose=False
+                verbose=False,
             )
 
             model = train(config)
@@ -529,7 +490,7 @@ class TestTrainingMetrics:
             positions_generated=5000,
             buffer_size=10000,
             learning_rate=0.001,
-            iteration_time=60.0
+            iteration_time=60.0,
         )
 
         assert metrics.iteration == 100

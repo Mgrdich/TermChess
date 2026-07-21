@@ -3,13 +3,13 @@ package bot
 import "github.com/Mgrdich/TermChess/internal/engine"
 
 const (
-	pieceChannels        = 12
-	currentPosChannels   = 18
-	numHistoryPositions  = 4
-	numChannels          = currentPosChannels + numHistoryPositions*pieceChannels // 66
-	boardSize            = 8
-	encodingSize         = numChannels * boardSize * boardSize // 4224
-	policySize           = 4096                                // 64 * 64 from-to squares
+	pieceChannels       = 12
+	currentPosChannels  = 18
+	numHistoryPositions = 4
+	numChannels         = currentPosChannels + numHistoryPositions*pieceChannels // 66
+	boardSize           = 8
+	encodingSize        = numChannels * boardSize * boardSize // 4224
+	policySize          = 4096                                // 64 * 64 from-to squares
 )
 
 // encodeBoard converts a chess board position and its history into a 66-channel
@@ -18,18 +18,18 @@ const (
 //
 // Channel layout:
 //
-//	 0-5:  White pieces (Pawn, Knight, Bishop, Rook, Queen, King) — current position
-//	 6-11: Black pieces — current position
-//	 12:   Side to move (1.0 if White to move)
-//	 13:   White kingside castling available
-//	 14:   White queenside castling available
-//	 15:   Black kingside castling available
-//	 16:   Black queenside castling available
-//	 17:   En passant file (column filled with 1.0 if en passant available)
-//	 18-29: Piece planes for position t-1 (most recent history)
-//	 30-41: Piece planes for position t-2
-//	 42-53: Piece planes for position t-3
-//	 54-65: Piece planes for position t-4
+//	0-5:  White pieces (Pawn, Knight, Bishop, Rook, Queen, King) — current position
+//	6-11: Black pieces — current position
+//	12:   Side to move (1.0 if White to move)
+//	13:   White kingside castling available
+//	14:   White queenside castling available
+//	15:   Black kingside castling available
+//	16:   Black queenside castling available
+//	17:   En passant file (column filled with 1.0 if en passant available)
+//	18-29: Piece planes for position t-1 (most recent history)
+//	30-41: Piece planes for position t-2
+//	42-53: Piece planes for position t-3
+//	54-65: Piece planes for position t-4
 func encodeBoard(board *engine.Board, history []*engine.Board) []float32 {
 	encoding := make([]float32, encodingSize)
 

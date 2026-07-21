@@ -16,8 +16,6 @@ We use several carefully chosen positions to test MCTS behavior:
 3. Terminal positions: Should handle checkmate/stalemate correctly
 """
 
-import math
-
 import chess
 import numpy as np
 import pytest
@@ -25,8 +23,7 @@ import torch
 
 from board_encoder import get_device
 from mcts import MCTS, MCTSNode
-from model import ChessNet, create_model
-
+from model import create_model
 
 # =============================================================================
 # Test Positions
@@ -62,6 +59,7 @@ CHECKMATE_FEN = "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3"
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def device():
     """Get the compute device."""
@@ -91,6 +89,7 @@ def high_sim_mcts(model):
 # =============================================================================
 # MCTSNode Tests
 # =============================================================================
+
 
 class TestMCTSNode:
     """Tests for the MCTSNode class."""
@@ -179,6 +178,7 @@ class TestMCTSNode:
 # MCTS Basic Tests
 # =============================================================================
 
+
 class TestMCTSBasic:
     """Basic functionality tests for MCTS."""
 
@@ -260,6 +260,7 @@ class TestMCTSBasic:
 # MCTS UCB Tests
 # =============================================================================
 
+
 class TestMCTSUCB:
     """Tests for UCB score calculation."""
 
@@ -308,6 +309,7 @@ class TestMCTSUCB:
 # =============================================================================
 # Temperature Tests
 # =============================================================================
+
 
 class TestTemperature:
     """Tests for temperature effects on move selection."""
@@ -370,9 +372,11 @@ class TestTemperature:
         entropy_low = entropy(probs_low)
         entropy_high = entropy(probs_high)
 
-        # Note: This may not always hold due to randomness in search
-        # but generally high temp should give higher entropy
-        # We'll just check both are valid distributions
+        # Note: high temp giving higher entropy may not always hold due to
+        # randomness in search, so we only assert both entropies are valid
+        # (non-negative) and both are proper probability distributions.
+        assert entropy_low >= 0
+        assert entropy_high >= 0
         assert np.isclose(probs_low.sum(), 1.0)
         assert np.isclose(probs_high.sum(), 1.0)
 
@@ -380,6 +384,7 @@ class TestTemperature:
 # =============================================================================
 # Mate-in-1 Tests (Tactical)
 # =============================================================================
+
 
 class TestMateInOne:
     """Tests for mate-in-1 detection."""
@@ -410,9 +415,10 @@ class TestMateInOne:
         mate_rank = next(i for i, (m, _) in enumerate(sorted_moves) if m == mate_move) + 1
         if mate_rank > 3:
             import warnings
+
             warnings.warn(
-                f"Mate move Qe8# ranked {mate_rank} (visits: {mate_visits}). "
-                "With a trained model, it should rank #1."
+                f"Mate move Qe8# ranked {mate_rank} (visits: {mate_visits}). With a trained model, it should rank #1.",
+                stacklevel=2,
             )
 
     def test_finds_back_rank_mate(self, high_sim_mcts):
@@ -439,9 +445,10 @@ class TestMateInOne:
         mate_rank = next(i for i, (m, _) in enumerate(sorted_moves) if m == mate_move) + 1
         if mate_rank > 3:
             import warnings
+
             warnings.warn(
-                f"Mate move Rd8# ranked {mate_rank} (visits: {mate_visits}). "
-                "With a trained model, it should rank #1."
+                f"Mate move Rd8# ranked {mate_rank} (visits: {mate_visits}). With a trained model, it should rank #1.",
+                stacklevel=2,
             )
 
     def test_mate_has_overwhelming_visits(self, high_sim_mcts):
@@ -460,9 +467,11 @@ class TestMateInOne:
         # We make this a warning rather than assertion for robustness
         if mate_ratio < 0.5:
             import warnings
+
             warnings.warn(
                 f"Mate move only got {mate_ratio:.1%} of visits. "
-                "This may indicate MCTS isn't finding the mate consistently."
+                "This may indicate MCTS isn't finding the mate consistently.",
+                stacklevel=2,
             )
 
     def test_select_move_returns_legal(self, high_sim_mcts):
@@ -482,6 +491,7 @@ class TestMateInOne:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestIntegration:
     """Integration tests for MCTS with neural network."""
@@ -565,6 +575,7 @@ class TestIntegration:
 # Edge Case Tests
 # =============================================================================
 
+
 class TestEdgeCases:
     """Tests for edge cases and error handling."""
 
@@ -611,6 +622,7 @@ class TestEdgeCases:
 # Performance Tests (Optional)
 # =============================================================================
 
+
 class TestPerformance:
     """Performance-related tests (can be slow)."""
 
@@ -644,6 +656,7 @@ class TestPerformance:
 # =============================================================================
 # Move Encoding Tests
 # =============================================================================
+
 
 class TestMoveEncoding:
     """Tests for move-to-policy-index conversion."""

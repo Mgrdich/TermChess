@@ -1,0 +1,17 @@
+[package]
+name = "termchess"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "termchess"
+path = "src/main.rs"
+
+[dependencies]
+ui = { path = "../crates/ui" }
+config = { path = "../crates/config" }
+version = { path = "../crates/version" }
+engine = { path = "../crates/engine" }
+bot = { path = "../crates/bot" }
+updater = { path = "../crates/updater" }
+anyhow = "1"

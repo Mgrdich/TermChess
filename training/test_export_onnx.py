@@ -10,8 +10,6 @@ This module tests the ONNX export functionality to ensure:
 """
 
 import os
-import tempfile
-from pathlib import Path
 
 import numpy as np
 import onnx
@@ -19,21 +17,21 @@ import onnxruntime as ort
 import pytest
 import torch
 
-from model import ChessNet, create_model
 from board_encoder import NUM_CHANNELS
-from train import save_checkpoint, TrainingConfig
 from export_onnx import (
-    export_to_onnx,
-    verify_onnx_model,
-    compare_outputs,
-    get_model_info,
-    load_checkpoint_for_export,
-    export_checkpoint,
+    DEFAULT_OPSET_VERSION,
     INPUT_NAME,
     OUTPUT_POLICY_NAME,
     OUTPUT_VALUE_NAME,
-    DEFAULT_OPSET_VERSION,
+    compare_outputs,
+    export_checkpoint,
+    export_to_onnx,
+    get_model_info,
+    load_checkpoint_for_export,
+    verify_onnx_model,
 )
+from model import ChessNet
+from train import TrainingConfig, save_checkpoint
 
 
 @pytest.fixture
@@ -59,8 +57,7 @@ def checkpoint_path(model, tmp_path):
         num_iterations=100,
     )
 
-    # Save checkpoint
-    checkpoint_file = tmp_path / "test_checkpoint.pt"
+    # Save checkpoint (written to checkpoint_dir as checkpoint_100.pt)
     save_checkpoint(
         model=model,
         optimizer=optimizer,
@@ -157,10 +154,7 @@ class TestOnnxRuntimeLoading:
         output_path = str(tmp_path / "model.onnx")
         export_to_onnx(model, output_path)
 
-        session = ort.InferenceSession(
-            output_path,
-            providers=["CPUExecutionProvider"]
-        )
+        session = ort.InferenceSession(output_path, providers=["CPUExecutionProvider"])
 
         assert session is not None
 
@@ -169,10 +163,7 @@ class TestOnnxRuntimeLoading:
         output_path = str(tmp_path / "model.onnx")
         export_to_onnx(model, output_path)
 
-        session = ort.InferenceSession(
-            output_path,
-            providers=["CPUExecutionProvider"]
-        )
+        session = ort.InferenceSession(output_path, providers=["CPUExecutionProvider"])
 
         # Create test input
         test_input = np.random.randn(1, NUM_CHANNELS, 8, 8).astype(np.float32)
@@ -187,10 +178,7 @@ class TestOnnxRuntimeLoading:
         output_path = str(tmp_path / "model.onnx")
         export_to_onnx(model, output_path)
 
-        session = ort.InferenceSession(
-            output_path,
-            providers=["CPUExecutionProvider"]
-        )
+        session = ort.InferenceSession(output_path, providers=["CPUExecutionProvider"])
 
         # Test with batch size 1
         test_input = np.random.randn(1, NUM_CHANNELS, 8, 8).astype(np.float32)
@@ -249,10 +237,7 @@ class TestOutputComparison:
         model.eval()
         export_to_onnx(model, output_path)
 
-        session = ort.InferenceSession(
-            output_path,
-            providers=["CPUExecutionProvider"]
-        )
+        session = ort.InferenceSession(output_path, providers=["CPUExecutionProvider"])
 
         # Test multiple random inputs
         for _ in range(10):
@@ -355,10 +340,7 @@ class TestExportCheckpoint:
         output_path = str(tmp_path / "exported.onnx")
 
         success = export_checkpoint(
-            checkpoint_path=checkpoint_path,
-            output_path=output_path,
-            verify=True,
-            verbose=False
+            checkpoint_path=checkpoint_path, output_path=output_path, verify=True, verbose=False
         )
 
         assert success
@@ -368,12 +350,7 @@ class TestExportCheckpoint:
         """export_checkpoint should create valid ONNX file."""
         output_path = str(tmp_path / "exported.onnx")
 
-        export_checkpoint(
-            checkpoint_path=checkpoint_path,
-            output_path=output_path,
-            verify=False,
-            verbose=False
-        )
+        export_checkpoint(checkpoint_path=checkpoint_path, output_path=output_path, verify=False, verbose=False)
 
         # Verify the file
         onnx_model = onnx.load(output_path)
@@ -384,10 +361,7 @@ class TestExportCheckpoint:
         output_path = str(tmp_path / "exported.onnx")
 
         success = export_checkpoint(
-            checkpoint_path=checkpoint_path,
-            output_path=output_path,
-            verify=False,
-            verbose=False
+            checkpoint_path=checkpoint_path, output_path=output_path, verify=False, verbose=False
         )
 
         assert success
@@ -401,10 +375,7 @@ class TestDynamicBatchSize:
         output_path = str(tmp_path / "model.onnx")
         export_to_onnx(model, output_path)
 
-        session = ort.InferenceSession(
-            output_path,
-            providers=["CPUExecutionProvider"]
-        )
+        session = ort.InferenceSession(output_path, providers=["CPUExecutionProvider"])
 
         # Test various batch sizes
         for batch_size in [1, 5, 10, 25, 50, 100]:

@@ -47,11 +47,11 @@ type Config struct {
 // and user-friendliness.
 func DefaultConfig() Config {
 	return Config{
-		UseUnicode:      false,     // ASCII for maximum compatibility (change to true to test Unicode)
-		ShowCoords:      true,      // Show a-h, 1-8 labels
-		UseColors:       true,      // Use colors if terminal supports
-		ShowMoveHistory: false,     // Hidden by default
-		ShowHelpText:    true,      // Show help text by default
+		UseUnicode:      false,        // ASCII for maximum compatibility (change to true to test Unicode)
+		ShowCoords:      true,         // Show a-h, 1-8 labels
+		UseColors:       true,         // Use colors if terminal supports
+		ShowMoveHistory: false,        // Hidden by default
+		ShowHelpText:    true,         // Show help text by default
 		Theme:           DefaultTheme, // Classic theme by default
 	}
 }
@@ -89,10 +89,10 @@ type GameConfig struct {
 func defaultConfigFile() ConfigFile {
 	return ConfigFile{
 		Display: DisplayConfig{
-			UseUnicode:      false,     // ASCII for maximum compatibility
-			ShowCoordinates: true,      // Show a-h, 1-8 labels
-			UseColors:       true,      // Use colors if terminal supports
-			ShowMoveHistory: false,     // Hidden by default
+			UseUnicode:      false,        // ASCII for maximum compatibility
+			ShowCoordinates: true,         // Show a-h, 1-8 labels
+			UseColors:       true,         // Use colors if terminal supports
+			ShowMoveHistory: false,        // Hidden by default
 			Theme:           DefaultTheme, // Classic theme by default
 		},
 		Game: GameConfig{
@@ -198,7 +198,7 @@ func LoadGameConfig() GameConfig {
 // SaveConfig writes the configuration to ~/.termchess/config.toml.
 // It creates the ~/.termchess/ directory if it doesn't exist.
 // Returns an error if the file cannot be written.
-func SaveConfig(config Config) error {
+func SaveConfig(config Config) (err error) {
 	// Get the config directory path
 	configDir, err := GetConfigDir()
 	if err != nil {
@@ -224,7 +224,11 @@ func SaveConfig(config Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close config file: %w", cerr)
+		}
+	}()
 
 	// Encode the config to TOML and write to file
 	encoder := toml.NewEncoder(file)

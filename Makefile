@@ -7,10 +7,25 @@ LDFLAGS := -s -w \
     -X $(MODULE)/internal/version.BuildDate=$(BUILD_DATE) \
     -X $(MODULE)/internal/version.GitCommit=$(GIT_COMMIT)
 
-.PHONY: build build-all checksums test run clean lint lint-go lint-py py-test py-sync train export-onnx
+.PHONY: build build-all checksums test run clean lint lint-go lint-py py-test py-sync train export-onnx build-go run-go build-rust run-rust test-rust
 
 build:
 	go build -ldflags="$(LDFLAGS)" -o bin/termchess ./cmd/termchess
+
+build-go:
+	go build -ldflags="$(LDFLAGS)" -o bin/termchess ./cmd/termchess
+
+run-go:
+	go run ./cmd/termchess
+
+build-rust:
+	cd rust && TERMCHESS_VERSION="$(VERSION)" TERMCHESS_BUILD_DATE="$(BUILD_DATE)" TERMCHESS_GIT_COMMIT="$(GIT_COMMIT)" cargo build --release -p termchess
+
+run-rust:
+	cd rust && cargo run -p termchess
+
+test-rust:
+	cd rust && cargo test
 
 build-all:
 	@mkdir -p dist

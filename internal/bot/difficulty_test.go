@@ -104,13 +104,13 @@ func TestDifficulty_MediumVsEasy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Easy bot: %v", err)
 	}
-	defer easyBot.Close()
+	defer func() { _ = easyBot.Close() }()
 
 	mediumBot, err := NewMinimaxEngine(Medium)
 	if err != nil {
 		t.Fatalf("Failed to create Medium bot: %v", err)
 	}
-	defer mediumBot.Close()
+	defer func() { _ = mediumBot.Close() }()
 
 	// Run games
 	numGames := 10
@@ -177,13 +177,13 @@ func TestDifficulty_HardVsMedium(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Medium bot: %v", err)
 	}
-	defer mediumBot.Close()
+	defer func() { _ = mediumBot.Close() }()
 
 	hardBot, err := NewMinimaxEngine(Hard, WithTimeLimit(1*time.Second), WithSearchDepth(4))
 	if err != nil {
 		t.Fatalf("Failed to create Hard bot: %v", err)
 	}
-	defer hardBot.Close()
+	defer func() { _ = hardBot.Close() }()
 
 	// Run games (reduced from 10 to 3 for faster testing)
 	numGames := 3
@@ -257,13 +257,13 @@ func TestDifficulty_EasyVsEasy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create Easy bot 1: %v", err)
 	}
-	defer easyBot1.Close()
+	defer func() { _ = easyBot1.Close() }()
 
 	easyBot2, err := NewRandomEngine()
 	if err != nil {
 		t.Fatalf("Failed to create Easy bot 2: %v", err)
 	}
-	defer easyBot2.Close()
+	defer func() { _ = easyBot2.Close() }()
 
 	// Run games
 	numGames := 5

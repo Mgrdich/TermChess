@@ -60,7 +60,7 @@ func TestNewRLEngine_Defaults(t *testing.T) {
 			if err != nil {
 				t.Fatalf("NewRLEngine(%d) error = %v, want nil", tc.difficulty, err)
 			}
-			defer eng.Close()
+			defer func() { _ = eng.Close() }()
 
 			if eng.Name() != tc.wantName {
 				t.Errorf("Name() = %q, want %q", eng.Name(), tc.wantName)
@@ -88,7 +88,7 @@ func TestNewRLEngine_WithTimeLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRLEngine with WithTimeLimit error = %v, want nil", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	rlEng, ok := eng.(*rlEngine)
 	if !ok {
@@ -107,7 +107,7 @@ func TestRLEngine_SelectMove_ReturnsModelNotLoaded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRLEngine error = %v, want nil", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	board := engine.NewBoard()
 
@@ -148,7 +148,7 @@ func TestRLEngine_Info(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRLEngine error = %v, want nil", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	inspectable, ok := eng.(Inspectable)
 	if !ok {
@@ -322,7 +322,7 @@ func TestRLEngine_SelectMove_WithMockSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRLEngine error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Inject mock session with a policy that favors e2e4 (index 796)
 	policy := make([]float32, policySize)
@@ -381,7 +381,7 @@ func TestRLEngine_SelectMove_SingleLegalMove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRLEngine error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Use a FEN position where only one move is legal
 	// "K1k5/8/8/8/8/8/8/1r6 w - - 0 1"
@@ -423,7 +423,7 @@ func TestRLEngine_SelectMove_InferenceError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRLEngine error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	rlEng := eng.(*rlEngine)
 	rlEng.session = &mockInferenceSession{

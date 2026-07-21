@@ -86,12 +86,12 @@ func TestDifferentMovesProduceDifferentHashes(t *testing.T) {
 	// Play e2e4
 	board1 := NewBoard()
 	move1, _ := ParseMove("e2e4")
-	board1.MakeMove(move1)
+	_ = board1.MakeMove(move1)
 
 	// Play d2d4
 	board2 := NewBoard()
 	move2, _ := ParseMove("d2d4")
-	board2.MakeMove(move2)
+	_ = board2.MakeMove(move2)
 
 	if board1.Hash == board2.Hash {
 		t.Error("expected different moves to produce different hashes")
@@ -108,7 +108,7 @@ func TestHistoryGrows(t *testing.T) {
 
 	// Make a move
 	move1, _ := ParseMove("e2e4")
-	board.MakeMove(move1)
+	_ = board.MakeMove(move1)
 
 	if len(board.History) != 2 {
 		t.Errorf("expected History length 2 after one move, got %d", len(board.History))
@@ -116,7 +116,7 @@ func TestHistoryGrows(t *testing.T) {
 
 	// Make another move
 	move2, _ := ParseMove("e7e5")
-	board.MakeMove(move2)
+	_ = board.MakeMove(move2)
 
 	if len(board.History) != 3 {
 		t.Errorf("expected History length 3 after two moves, got %d", len(board.History))
@@ -168,7 +168,7 @@ func TestThreefoldRepetitionWithStartingPosition(t *testing.T) {
 	}
 	for _, moveStr := range moves {
 		move, _ := ParseMove(moveStr)
-		board.MakeMove(move)
+		_ = board.MakeMove(move)
 	}
 
 	if countOccurrences() != 2 {
@@ -187,7 +187,7 @@ func TestThreefoldRepetitionWithStartingPosition(t *testing.T) {
 	}
 	for _, moveStr := range moves2 {
 		move, _ := ParseMove(moveStr)
-		board.MakeMove(move)
+		_ = board.MakeMove(move)
 	}
 
 	if countOccurrences() != 3 {
@@ -208,7 +208,7 @@ func TestMultipleGamesHaveIndependentHistory(t *testing.T) {
 
 	// Make moves on board1 only
 	move, _ := ParseMove("e2e4")
-	board1.MakeMove(move)
+	_ = board1.MakeMove(move)
 
 	// board1 history should grow, board2 should be unchanged
 	if len(board1.History) != 2 {
@@ -260,7 +260,7 @@ func TestSamePositionSameHash(t *testing.T) {
 	moves1 := []string{"g1f3", "b8c6", "b1c3", "g8f6"}
 	for _, moveStr := range moves1 {
 		move, _ := ParseMove(moveStr)
-		board1.MakeMove(move)
+		_ = board1.MakeMove(move)
 	}
 
 	// Path 2: b1c3, g8f6, g1f3, b8c6
@@ -268,7 +268,7 @@ func TestSamePositionSameHash(t *testing.T) {
 	moves2 := []string{"b1c3", "g8f6", "g1f3", "b8c6"}
 	for _, moveStr := range moves2 {
 		move, _ := ParseMove(moveStr)
-		board2.MakeMove(move)
+		_ = board2.MakeMove(move)
 	}
 
 	// Both should have the same hash (same position, same side to move, same castling, no EP)
@@ -280,7 +280,7 @@ func TestSamePositionSameHash(t *testing.T) {
 func TestCopyPreservesHash(t *testing.T) {
 	board := NewBoard()
 	move, _ := ParseMove("e2e4")
-	board.MakeMove(move)
+	_ = board.MakeMove(move)
 
 	boardCopy := board.Copy()
 
@@ -295,14 +295,14 @@ func TestCaptureChangesHash(t *testing.T) {
 	moves := []string{"e2e4", "d7d5"}
 	for _, moveStr := range moves {
 		move, _ := ParseMove(moveStr)
-		board.MakeMove(move)
+		_ = board.MakeMove(move)
 	}
 
 	hashBeforeCapture := board.Hash
 
 	// Capture: e4xd5
 	captureMove, _ := ParseMove("e4d5")
-	board.MakeMove(captureMove)
+	_ = board.MakeMove(captureMove)
 
 	if board.Hash == hashBeforeCapture {
 		t.Error("expected hash to change after capture")
@@ -327,7 +327,7 @@ func TestCastlingChangesHash(t *testing.T) {
 
 	// Kingside castle: e1g1
 	castleMove, _ := ParseMove("e1g1")
-	board.MakeMove(castleMove)
+	_ = board.MakeMove(castleMove)
 
 	if board.Hash == hashBeforeCastling {
 		t.Error("expected hash to change after castling")
@@ -346,14 +346,14 @@ func TestEnPassantCaptureChangesHash(t *testing.T) {
 	moves := []string{"e2e4", "a7a6", "e4e5", "d7d5"}
 	for _, moveStr := range moves {
 		move, _ := ParseMove(moveStr)
-		board.MakeMove(move)
+		_ = board.MakeMove(move)
 	}
 
 	// Now white can capture en passant: e5xd6
 	hashBeforeEp := board.Hash
 
 	epMove, _ := ParseMove("e5d6")
-	board.MakeMove(epMove)
+	_ = board.MakeMove(epMove)
 
 	if board.Hash == hashBeforeEp {
 		t.Error("expected hash to change after en passant capture")
@@ -386,7 +386,7 @@ func TestPromotionChangesHash(t *testing.T) {
 
 	// Promote: a7a8q
 	promoteMove, _ := ParseMove("a7a8q")
-	board.MakeMove(promoteMove)
+	_ = board.MakeMove(promoteMove)
 
 	if board.Hash == hashBeforePromotion {
 		t.Error("expected hash to change after promotion")
@@ -406,13 +406,13 @@ func TestEnPassantFileAffectsHash(t *testing.T) {
 	// Position 1: after e2e4
 	board1 := NewBoard()
 	move1, _ := ParseMove("e2e4")
-	board1.MakeMove(move1)
+	_ = board1.MakeMove(move1)
 	// Now Black to move, ep square is e3
 
 	// Position 2: after d2d4
 	board2 := NewBoard()
 	move2, _ := ParseMove("d2d4")
-	board2.MakeMove(move2)
+	_ = board2.MakeMove(move2)
 	// Now Black to move, ep square is d3
 
 	// Hashes should be different (different pawn positions AND different ep files)

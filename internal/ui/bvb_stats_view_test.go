@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -149,7 +148,7 @@ func TestComputeCapturedPieces(t *testing.T) {
 				b.Squares[engine.NewSquare(1, 6)] = engine.Piece(engine.Empty) // b7 pawn
 				return b
 			},
-			expectWhitePieces: "\u2655\u2658", // ♕♘
+			expectWhitePieces: "\u2655\u2658",       // ♕♘
 			expectBlackPieces: "\u265c\u265f\u265f", // ♜♟♟
 		},
 	}
@@ -223,9 +222,9 @@ func TestFormatLastMovesEdgeCases(t *testing.T) {
 		{From: engine.NewSquare(4, 1), To: engine.NewSquare(4, 3)},
 	}
 	got := formatLastMoves(moves, 0)
-	// With n=0, should return no moves
-	if !strings.Contains(got, "") {
-		// This is expected - n=0 means show 0 moves
+	// With n=0, should return no moves.
+	if got != "" {
+		t.Errorf("formatLastMoves with n=0 should return empty string, got %q", got)
 	}
 
 	// Test with very large n

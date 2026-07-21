@@ -16,10 +16,10 @@ func TestSettingsConfigPersistence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
-	defer os.Remove(configPath)
+	defer func() { _ = os.Remove(configPath) }()
 
 	// Clean up before test to start fresh
-	os.Remove(configPath)
+	_ = os.Remove(configPath)
 
 	// Phase 1: Start app (loads default config)
 	m1 := NewModel(DefaultConfig())
@@ -83,10 +83,10 @@ func TestSettingsToggleAllOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
-	defer os.Remove(configPath)
+	defer func() { _ = os.Remove(configPath) }()
 
 	// Start with fresh config
-	os.Remove(configPath)
+	_ = os.Remove(configPath)
 
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings
@@ -130,7 +130,7 @@ func TestSettingsStatusMessages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config.GetConfigPath() failed: %v", err)
 	}
-	defer os.Remove(configPath)
+	defer func() { _ = os.Remove(configPath) }()
 
 	m := NewModel(DefaultConfig())
 	m.screen = ScreenSettings

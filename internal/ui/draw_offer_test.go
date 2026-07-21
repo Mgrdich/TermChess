@@ -179,7 +179,7 @@ func TestDrawOfferBlackCanOffer(t *testing.T) {
 
 	// Make a move to switch to Black's turn
 	move, _ := engine.ParseMove("e2e4")
-	m.board.MakeMove(move)
+	_ = m.board.MakeMove(move)
 
 	// Black offers a draw
 	m.input = "offerdraw"
@@ -220,7 +220,7 @@ func TestDrawOfferBothPlayersCanOfferOnce(t *testing.T) {
 
 	// Make a move to switch to Black's turn
 	move, _ := engine.ParseMove("e2e4")
-	m.board.MakeMove(move)
+	_ = m.board.MakeMove(move)
 
 	// Black offers a draw (should work since Black hasn't offered yet)
 	m.input = "offerdraw"

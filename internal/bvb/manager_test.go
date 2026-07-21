@@ -178,8 +178,8 @@ func TestCalculateDefaultConcurrencyWithCPU(t *testing.T) {
 		{"2 CPUs", 2, 2},
 
 		// Tier 2: numCPU <= 4, use numCPU * 1.5
-		{"3 CPUs", 3, 4},  // 3 * 1.5 = 4.5 -> 4
-		{"4 CPUs", 4, 6},  // 4 * 1.5 = 6
+		{"3 CPUs", 3, 4}, // 3 * 1.5 = 4.5 -> 4
+		{"4 CPUs", 4, 6}, // 4 * 1.5 = 6
 
 		// Tier 3: numCPU > 4, use numCPU * 2
 		{"5 CPUs", 5, 10},   // 5 * 2 = 10

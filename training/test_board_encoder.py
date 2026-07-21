@@ -16,18 +16,18 @@ import pytest
 import torch
 
 from board_encoder import (
+    BLACK_PIECE_OFFSET,
+    CASTLING_BK_CHANNEL,
+    CASTLING_BQ_CHANNEL,
+    CASTLING_WK_CHANNEL,
+    CASTLING_WQ_CHANNEL,
+    EN_PASSANT_CHANNEL,
+    NUM_CHANNELS,
+    SIDE_TO_MOVE_CHANNEL,
+    WHITE_PIECE_OFFSET,
     encode_board,
     encode_board_tensor,
     get_device,
-    NUM_CHANNELS,
-    WHITE_PIECE_OFFSET,
-    BLACK_PIECE_OFFSET,
-    SIDE_TO_MOVE_CHANNEL,
-    CASTLING_WK_CHANNEL,
-    CASTLING_WQ_CHANNEL,
-    CASTLING_BK_CHANNEL,
-    CASTLING_BQ_CHANNEL,
-    EN_PASSANT_CHANNEL,
 )
 
 
@@ -39,9 +39,7 @@ class TestOutputShape:
         board = chess.Board()
         encoded = encode_board(board)
 
-        assert encoded.shape == (NUM_CHANNELS, 8, 8), (
-            f"Expected shape (NUM_CHANNELS, 8, 8), got {encoded.shape}"
-        )
+        assert encoded.shape == (NUM_CHANNELS, 8, 8), f"Expected shape (NUM_CHANNELS, 8, 8), got {encoded.shape}"
 
     def test_output_shape_empty_board(self):
         """An empty board should still produce shape [18, 8, 8]."""
@@ -70,9 +68,7 @@ class TestStartingPosition:
         white_pawn_channel = encoded[WHITE_PIECE_OFFSET + 0]  # Pawn is piece_type 1, index 0
 
         # Check rank 1 (index 1) has all pawns
-        assert np.all(white_pawn_channel[1, :] == 1.0), (
-            "White pawns should be on rank 1 (second row)"
-        )
+        assert np.all(white_pawn_channel[1, :] == 1.0), "White pawns should be on rank 1 (second row)"
         # Check other ranks are empty
         assert np.sum(white_pawn_channel[0, :]) == 0, "Rank 0 should have no white pawns"
         assert np.sum(white_pawn_channel[2:, :]) == 0, "Ranks 2-7 should have no white pawns"
@@ -86,9 +82,7 @@ class TestStartingPosition:
         black_pawn_channel = encoded[BLACK_PIECE_OFFSET + 0]
 
         # Check rank 6 has all pawns
-        assert np.all(black_pawn_channel[6, :] == 1.0), (
-            "Black pawns should be on rank 6 (seventh row)"
-        )
+        assert np.all(black_pawn_channel[6, :] == 1.0), "Black pawns should be on rank 6 (seventh row)"
         # Check other ranks are empty
         assert np.sum(black_pawn_channel[:6, :]) == 0, "Ranks 0-5 should have no black pawns"
         assert np.sum(black_pawn_channel[7, :]) == 0, "Rank 7 should have no black pawns"
@@ -155,9 +149,7 @@ class TestSideToMove:
         encoded = encode_board(board)
 
         side_to_move = encoded[SIDE_TO_MOVE_CHANNEL]
-        assert np.all(side_to_move == 1.0), (
-            "Side to move channel should be all 1s when White to move"
-        )
+        assert np.all(side_to_move == 1.0), "Side to move channel should be all 1s when White to move"
 
     def test_black_to_move(self):
         """After one move, Black is to move (channel 12 all 0s)."""
@@ -166,9 +158,7 @@ class TestSideToMove:
         encoded = encode_board(board)
 
         side_to_move = encoded[SIDE_TO_MOVE_CHANNEL]
-        assert np.all(side_to_move == 0.0), (
-            "Side to move channel should be all 0s when Black to move"
-        )
+        assert np.all(side_to_move == 0.0), "Side to move channel should be all 0s when Black to move"
 
     def test_white_to_move_after_two_moves(self):
         """After two moves, White is to move again."""
@@ -178,9 +168,7 @@ class TestSideToMove:
         encoded = encode_board(board)
 
         side_to_move = encoded[SIDE_TO_MOVE_CHANNEL]
-        assert np.all(side_to_move == 1.0), (
-            "Side to move channel should be all 1s when White to move"
-        )
+        assert np.all(side_to_move == 1.0), "Side to move channel should be all 1s when White to move"
 
 
 class TestCastlingRights:
@@ -245,9 +233,7 @@ class TestEnPassant:
         encoded = encode_board(board)
 
         ep_channel = encoded[EN_PASSANT_CHANNEL]
-        assert np.all(ep_channel == 0.0), (
-            "En passant channel should be all 0s in starting position"
-        )
+        assert np.all(ep_channel == 0.0), "En passant channel should be all 0s in starting position"
 
     def test_en_passant_after_pawn_push(self):
         """After a double pawn push, the en passant file should be marked."""
@@ -259,9 +245,7 @@ class TestEnPassant:
 
         # En passant square is e3, so file e (index 4) should be marked
         # The entire column should be 1s
-        assert np.all(ep_channel[:, 4] == 1.0), (
-            "E-file should be marked for en passant after e4"
-        )
+        assert np.all(ep_channel[:, 4] == 1.0), "E-file should be marked for en passant after e4"
         # Other columns should be 0
         assert np.sum(ep_channel[:, :4]) == 0, "Files a-d should have no en passant"
         assert np.sum(ep_channel[:, 5:]) == 0, "Files f-h should have no en passant"
@@ -276,9 +260,7 @@ class TestEnPassant:
         ep_channel = encoded[EN_PASSANT_CHANNEL]
 
         # En passant square is a6, so file a (index 0) should be marked
-        assert np.all(ep_channel[:, 0] == 1.0), (
-            "A-file should be marked for en passant after a5"
-        )
+        assert np.all(ep_channel[:, 0] == 1.0), "A-file should be marked for en passant after a5"
 
     def test_en_passant_disappears_after_other_move(self):
         """En passant opportunity disappears after the next move."""
@@ -290,9 +272,7 @@ class TestEnPassant:
         ep_channel = encoded[EN_PASSANT_CHANNEL]
 
         # En passant is no longer available
-        assert np.all(ep_channel == 0.0), (
-            "En passant should disappear after opponent's move"
-        )
+        assert np.all(ep_channel == 0.0), "En passant should disappear after opponent's move"
 
 
 class TestDeterminism:
@@ -306,9 +286,7 @@ class TestDeterminism:
         encoded1 = encode_board(board1)
         encoded2 = encode_board(board2)
 
-        assert np.array_equal(encoded1, encoded2), (
-            "Same position should produce identical encodings"
-        )
+        assert np.array_equal(encoded1, encoded2), "Same position should produce identical encodings"
 
     def test_encoding_reproducible_after_moves(self):
         """Reaching the same position via different move orders should give same encoding."""
@@ -383,10 +361,7 @@ class TestDeviceDetection:
 class TestMPSDevice:
     """Tests for MPS (Apple Silicon) device compatibility."""
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_encoder_runs_on_mps(self):
         """Encoder should work on MPS device (Mac ARM)."""
         board = chess.Board()
@@ -397,10 +372,7 @@ class TestMPSDevice:
         assert tensor.device.type == "mps"
         assert tensor.shape == torch.Size([NUM_CHANNELS, 8, 8])
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_mps_tensor_values_correct(self):
         """MPS tensor should have same values as CPU tensor."""
         board = chess.Board()
@@ -413,10 +385,7 @@ class TestMPSDevice:
 
         assert torch.allclose(cpu_tensor, mps_on_cpu)
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_complex_position_on_mps(self):
         """Test a more complex position on MPS."""
         # Sicilian Defense position

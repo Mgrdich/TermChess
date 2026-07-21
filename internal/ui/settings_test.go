@@ -59,7 +59,7 @@ func TestSettingsToggle(t *testing.T) {
 	// Clean up any existing config file after test
 	defer func() {
 		configPath, _ := config.GetConfigPath()
-		os.Remove(configPath)
+		_ = os.Remove(configPath)
 	}()
 
 	m := NewModel(DefaultConfig())

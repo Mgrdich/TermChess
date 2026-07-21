@@ -1732,7 +1732,7 @@ func (m Model) handleBvBGamePlayKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					if err != nil {
 						m.statusMsg = fmt.Sprintf("FEN: %s (Failed to copy: %v)", fen, err)
 					} else {
-						m.statusMsg = fmt.Sprintf("FEN copied to clipboard")
+						m.statusMsg = "FEN copied to clipboard"
 					}
 				}
 			}

@@ -230,11 +230,11 @@ func TestBotSelectNavigation(t *testing.T) {
 // TestColorSelection tests the color selection flow
 func TestColorSelection(t *testing.T) {
 	tests := []struct {
-		name           string
-		selection      int
-		option         string
-		expectedColor  engine.Color
-		expectBotMove  bool
+		name          string
+		selection     int
+		option        string
+		expectedColor engine.Color
+		expectBotMove bool
 	}{
 		{"Play as White", 0, "Play as White", engine.White, false},
 		{"Play as Black", 1, "Play as Black", engine.Black, true},

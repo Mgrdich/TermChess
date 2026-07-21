@@ -23,17 +23,14 @@ The script will:
 import argparse
 import os
 import sys
-from pathlib import Path
-from typing import Tuple
 
 import numpy as np
-import torch
 import onnx
 import onnxruntime as ort
+import torch
 
-from model import ChessNet, create_model
 from board_encoder import NUM_CHANNELS
-
+from model import ChessNet
 
 # Default ONNX opset version (18 is the minimum supported by PyTorch 2.x ONNX exporter)
 DEFAULT_OPSET_VERSION = 18
@@ -46,7 +43,7 @@ OUTPUT_VALUE_NAME = "value"
 
 def load_checkpoint_for_export(
     checkpoint_path: str,
-    device: torch.device = torch.device("cpu")
+    device: torch.device | None = None,
 ) -> ChessNet:
     """
     Load a PyTorch checkpoint for ONNX export.
@@ -62,6 +59,9 @@ def load_checkpoint_for_export(
         FileNotFoundError: If checkpoint file does not exist
         KeyError: If checkpoint is missing required keys
     """
+    if device is None:
+        device = torch.device("cpu")
+
     if not os.path.exists(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
 
@@ -82,11 +82,7 @@ def load_checkpoint_for_export(
     return model
 
 
-def export_to_onnx(
-    model: ChessNet,
-    output_path: str,
-    opset_version: int = DEFAULT_OPSET_VERSION
-) -> None:
+def export_to_onnx(model: ChessNet, output_path: str, opset_version: int = DEFAULT_OPSET_VERSION) -> None:
     """
     Export a ChessNet model to ONNX format.
 
@@ -114,7 +110,7 @@ def export_to_onnx(
     # Export to ONNX
     torch.onnx.export(
         model,
-        dummy_input,
+        (dummy_input,),
         output_path,
         input_names=[INPUT_NAME],
         output_names=[OUTPUT_POLICY_NAME, OUTPUT_VALUE_NAME],
@@ -155,12 +151,8 @@ def verify_onnx_model(onnx_path: str) -> onnx.ModelProto:
 
 
 def compare_outputs(
-    pytorch_model: ChessNet,
-    onnx_path: str,
-    test_input: torch.Tensor,
-    rtol: float = 1e-5,
-    atol: float = 1e-5
-) -> Tuple[bool, str]:
+    pytorch_model: ChessNet, onnx_path: str, test_input: torch.Tensor, rtol: float = 1e-5, atol: float = 1e-5
+) -> tuple[bool, str]:
     """
     Compare PyTorch and ONNX model outputs.
 
@@ -180,10 +172,7 @@ def compare_outputs(
         pt_policy, pt_value = pytorch_model(test_input)
 
     # Get ONNX outputs
-    ort_session = ort.InferenceSession(
-        onnx_path,
-        providers=["CPUExecutionProvider"]
-    )
+    ort_session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
     ort_inputs = {INPUT_NAME: test_input.detach().cpu().numpy()}
     ort_outputs = ort_session.run(None, ort_inputs)
     ort_policy, ort_value = ort_outputs
@@ -226,24 +215,18 @@ def get_model_info(onnx_path: str) -> dict:
     # Get input info
     inputs = []
     for inp in onnx_model.graph.input:
-        shape = [dim.dim_value if dim.dim_value > 0 else "dynamic"
-                 for dim in inp.type.tensor_type.shape.dim]
-        inputs.append({
-            "name": inp.name,
-            "shape": shape,
-            "dtype": onnx.TensorProto.DataType.Name(inp.type.tensor_type.elem_type)
-        })
+        shape = [dim.dim_value if dim.dim_value > 0 else "dynamic" for dim in inp.type.tensor_type.shape.dim]
+        inputs.append(
+            {"name": inp.name, "shape": shape, "dtype": onnx.TensorProto.DataType.Name(inp.type.tensor_type.elem_type)}
+        )
 
     # Get output info
     outputs = []
     for out in onnx_model.graph.output:
-        shape = [dim.dim_value if dim.dim_value > 0 else "dynamic"
-                 for dim in out.type.tensor_type.shape.dim]
-        outputs.append({
-            "name": out.name,
-            "shape": shape,
-            "dtype": onnx.TensorProto.DataType.Name(out.type.tensor_type.elem_type)
-        })
+        shape = [dim.dim_value if dim.dim_value > 0 else "dynamic" for dim in out.type.tensor_type.shape.dim]
+        outputs.append(
+            {"name": out.name, "shape": shape, "dtype": onnx.TensorProto.DataType.Name(out.type.tensor_type.elem_type)}
+        )
 
     return {
         "file_size_bytes": file_size,
@@ -278,7 +261,7 @@ def export_checkpoint(
     output_path: str,
     opset_version: int = DEFAULT_OPSET_VERSION,
     verify: bool = True,
-    verbose: bool = True
+    verbose: bool = True,
 ) -> bool:
     """
     Export a checkpoint to ONNX format with verification.
@@ -353,39 +336,18 @@ def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Export ChessNet PyTorch model to ONNX format",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    parser.add_argument(
-        "checkpoint",
-        type=str,
-        help="Path to PyTorch checkpoint (.pt file)"
-    )
+    parser.add_argument("checkpoint", type=str, help="Path to PyTorch checkpoint (.pt file)")
 
-    parser.add_argument(
-        "output",
-        type=str,
-        help="Path for output ONNX file (.onnx)"
-    )
+    parser.add_argument("output", type=str, help="Path for output ONNX file (.onnx)")
 
-    parser.add_argument(
-        "--opset",
-        type=int,
-        default=DEFAULT_OPSET_VERSION,
-        help="ONNX opset version"
-    )
+    parser.add_argument("--opset", type=int, default=DEFAULT_OPSET_VERSION, help="ONNX opset version")
 
-    parser.add_argument(
-        "--no-verify",
-        action="store_true",
-        help="Skip verification step"
-    )
+    parser.add_argument("--no-verify", action="store_true", help="Skip verification step")
 
-    parser.add_argument(
-        "--quiet", "-q",
-        action="store_true",
-        help="Reduce output verbosity"
-    )
+    parser.add_argument("--quiet", "-q", action="store_true", help="Reduce output verbosity")
 
     return parser.parse_args()
 
@@ -400,7 +362,7 @@ def main():
             output_path=args.output,
             opset_version=args.opset,
             verify=not args.no_verify,
-            verbose=not args.quiet
+            verbose=not args.quiet,
         )
 
         if success:

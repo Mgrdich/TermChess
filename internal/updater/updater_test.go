@@ -97,7 +97,7 @@ func TestCheckLatestVersion(t *testing.T) {
 				}
 
 				w.WriteHeader(tt.responseStatus)
-				w.Write([]byte(tt.responseBody))
+				_, _ = w.Write([]byte(tt.responseBody))
 			}))
 			defer server.Close()
 
@@ -120,7 +120,7 @@ func TestCheckLatestVersionTimeout(t *testing.T) {
 		// Simulate a slow response
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"tag_name": "v0.1.0"}`))
+		_, _ = w.Write([]byte(`{"tag_name": "v0.1.0"}`))
 	}))
 	defer server.Close()
 
@@ -140,7 +140,7 @@ func TestCheckLatestVersionCancellation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"tag_name": "v0.1.0"}`))
+		_, _ = w.Write([]byte(`{"tag_name": "v0.1.0"}`))
 	}))
 	defer server.Close()
 
@@ -757,7 +757,7 @@ func TestDownloadBinary(t *testing.T) {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write(expectedData)
+		_, _ = w.Write(expectedData)
 	}))
 	defer server.Close()
 
@@ -800,7 +800,7 @@ def789ghi012  termchess-v0.1.0-darwin-arm64`
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(checksumContent))
+		_, _ = w.Write([]byte(checksumContent))
 	}))
 	defer server.Close()
 
@@ -828,7 +828,7 @@ func TestReplaceBinary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a fake "current" binary
 	currentBinary := filepath.Join(tmpDir, "termchess")
@@ -862,7 +862,7 @@ func TestReplaceBinary(t *testing.T) {
 	}
 
 	// 4. Delete old
-	os.Remove(oldPath)
+	_ = os.Remove(oldPath)
 
 	// Verify the new binary is in place
 	data, err := os.ReadFile(currentBinary)
@@ -889,7 +889,7 @@ func TestUpgradeAlreadyUpToDate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Return v1.0.0 as latest
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"tag_name": "v1.0.0"}`))
+		_, _ = w.Write([]byte(`{"tag_name": "v1.0.0"}`))
 	}))
 	defer server.Close()
 
@@ -1035,7 +1035,7 @@ func TestUninstallLogic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a fake binary
 	binaryPath := filepath.Join(tmpDir, "termchess")
@@ -1111,7 +1111,7 @@ func TestUninstallEmptyConfigDir(t *testing.T) {
 	}
 
 	// Clean up
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 }
 
 func TestUninstallNestedConfigDir(t *testing.T) {
@@ -1120,7 +1120,7 @@ func TestUninstallNestedConfigDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	configDir := filepath.Join(tmpDir, ".termchess")
 	subDir := filepath.Join(configDir, "subdir")

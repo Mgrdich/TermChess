@@ -123,7 +123,7 @@ func (m *SessionManager) Start() error {
 		}
 		blackEngine, err := createEngine(m.blackDiff)
 		if err != nil {
-			whiteEngine.Close()
+			_ = whiteEngine.Close()
 			m.abortSessions()
 			return err
 		}

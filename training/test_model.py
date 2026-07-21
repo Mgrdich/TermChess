@@ -11,24 +11,22 @@ This module tests the neural network architecture to ensure:
 """
 
 import chess
-import numpy as np
 import pytest
 import torch
 import torch.nn.functional as F
 
+from board_encoder import (
+    NUM_CHANNELS,
+    encode_board_tensor,
+    get_device,
+)
 from model import (
-    ChessNet,
-    ResidualBlock,
-    create_model,
     DEFAULT_NUM_BLOCKS,
     DEFAULT_NUM_FILTERS,
     POLICY_OUTPUT_SIZE,
-    BOARD_SIZE,
-)
-from board_encoder import (
-    encode_board_tensor,
-    get_device,
-    NUM_CHANNELS,
+    ChessNet,
+    ResidualBlock,
+    create_model,
 )
 
 
@@ -42,9 +40,7 @@ class TestResidualBlock:
 
         output = block(x)
 
-        assert output.shape == x.shape, (
-            f"Expected shape {x.shape}, got {output.shape}"
-        )
+        assert output.shape == x.shape, f"Expected shape {x.shape}, got {output.shape}"
 
     def test_residual_block_different_filter_counts(self):
         """Test residual blocks with different filter counts."""
@@ -70,9 +66,7 @@ class TestResidualBlock:
 
         # With zero weights, conv outputs are zero, so output = ReLU(0 + x) = ReLU(x)
         expected = F.relu(x)
-        assert torch.allclose(output, expected), (
-            "With zero weights, residual block should output ReLU of input"
-        )
+        assert torch.allclose(output, expected), "With zero weights, residual block should output ReLU of input"
 
 
 class TestChessNetOutputShapes:
@@ -96,9 +90,7 @@ class TestChessNetOutputShapes:
 
         _, value = model(x)
 
-        assert value.shape == (1, 1), (
-            f"Expected shape (1, 1), got {value.shape}"
-        )
+        assert value.shape == (1, 1), f"Expected shape (1, 1), got {value.shape}"
 
     def test_output_shapes_batch(self):
         """Output shapes should scale correctly with batch size."""
@@ -111,9 +103,7 @@ class TestChessNetOutputShapes:
             assert policy_logits.shape == (batch_size, POLICY_OUTPUT_SIZE), (
                 f"Policy shape mismatch for batch_size={batch_size}"
             )
-            assert value.shape == (batch_size, 1), (
-                f"Value shape mismatch for batch_size={batch_size}"
-            )
+            assert value.shape == (batch_size, 1), f"Value shape mismatch for batch_size={batch_size}"
 
 
 class TestPolicyOutput:
@@ -144,9 +134,7 @@ class TestPolicyOutput:
         policy_logits, _ = model(x)
         policy_probs = F.softmax(policy_logits, dim=1)
 
-        assert (policy_probs >= 0).all(), (
-            "All policy probabilities should be non-negative"
-        )
+        assert (policy_probs >= 0).all(), "All policy probabilities should be non-negative"
 
     def test_policy_all_probabilities_at_most_one(self):
         """All policy probabilities should be at most 1 after softmax."""
@@ -156,9 +144,7 @@ class TestPolicyOutput:
         policy_logits, _ = model(x)
         policy_probs = F.softmax(policy_logits, dim=1)
 
-        assert (policy_probs <= 1).all(), (
-            "All policy probabilities should be at most 1"
-        )
+        assert (policy_probs <= 1).all(), "All policy probabilities should be at most 1"
 
     def test_policy_logits_are_finite(self):
         """Policy logits should not contain NaN or Inf."""
@@ -167,9 +153,7 @@ class TestPolicyOutput:
 
         policy_logits, _ = model(x)
 
-        assert torch.isfinite(policy_logits).all(), (
-            "Policy logits should be finite (no NaN or Inf)"
-        )
+        assert torch.isfinite(policy_logits).all(), "Policy logits should be finite (no NaN or Inf)"
 
 
 class TestValueOutput:
@@ -196,9 +180,7 @@ class TestValueOutput:
 
         _, value = model(x)
 
-        assert value.numel() == batch_size, (
-            f"Expected {batch_size} values, got {value.numel()}"
-        )
+        assert value.numel() == batch_size, f"Expected {batch_size} values, got {value.numel()}"
 
     def test_value_is_finite(self):
         """Value output should not contain NaN or Inf."""
@@ -207,9 +189,7 @@ class TestValueOutput:
 
         _, value = model(x)
 
-        assert torch.isfinite(value).all(), (
-            "Value output should be finite (no NaN or Inf)"
-        )
+        assert torch.isfinite(value).all(), "Value output should be finite (no NaN or Inf)"
 
 
 class TestForwardPassWithRandomInput:
@@ -340,9 +320,7 @@ class TestForwardPassWithEncodedBoard:
             policy2, value2 = model(x2)
 
         # Outputs should be different (not exactly equal)
-        assert not torch.equal(policy1, policy2), (
-            "Different positions should produce different policy outputs"
-        )
+        assert not torch.equal(policy1, policy2), "Different positions should produce different policy outputs"
 
 
 class TestParameterCount:
@@ -362,9 +340,7 @@ class TestParameterCount:
         lower_bound = 1_500_000  # 1.5M minimum
         upper_bound = 3_000_000  # 3M maximum
 
-        assert lower_bound <= param_count <= upper_bound, (
-            f"Expected 1.5M-3M parameters, got {param_count:,}"
-        )
+        assert lower_bound <= param_count <= upper_bound, f"Expected 1.5M-3M parameters, got {param_count:,}"
 
         # Print actual count for reference
         print(f"Model has {param_count:,} parameters")
@@ -446,10 +422,7 @@ class TestDeviceCompatibility:
 class TestMPSDevice:
     """Tests for MPS (Apple Silicon) device compatibility."""
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_model_runs_on_mps(self):
         """Model should run on MPS device (Mac ARM)."""
         device = torch.device("mps")
@@ -462,10 +435,7 @@ class TestMPSDevice:
         assert policy_logits.device.type == "mps"
         assert value.device.type == "mps"
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_mps_output_values_match_cpu(self):
         """MPS outputs should match CPU outputs (within floating point tolerance)."""
         model = ChessNet()
@@ -492,17 +462,10 @@ class TestMPSDevice:
         value_mps_cpu = value_mps.cpu()
 
         # Results should be close (allowing for floating point differences)
-        assert torch.allclose(policy_cpu, policy_mps_cpu, atol=1e-4), (
-            "MPS policy output should match CPU"
-        )
-        assert torch.allclose(value_cpu, value_mps_cpu, atol=1e-4), (
-            "MPS value output should match CPU"
-        )
+        assert torch.allclose(policy_cpu, policy_mps_cpu, atol=1e-4), "MPS policy output should match CPU"
+        assert torch.allclose(value_cpu, value_mps_cpu, atol=1e-4), "MPS value output should match CPU"
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_mps_with_encoded_board(self):
         """Model on MPS should work with encoded chess board."""
         device = torch.device("mps")
@@ -525,10 +488,7 @@ class TestMPSDevice:
         value_cpu = value.cpu()
         assert -1 <= value_cpu.item() <= 1
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_create_model_auto_detects_mps(self):
         """create_model should auto-detect and use MPS when available."""
         # When MPS is available, get_device() should return MPS
@@ -542,10 +502,7 @@ class TestMPSDevice:
         for param in model.parameters():
             assert param.device.type == "mps"
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_mps_batch_processing(self):
         """Model on MPS should handle batch processing correctly."""
         device = torch.device("mps")
@@ -562,10 +519,7 @@ class TestMPSDevice:
             assert policy_logits.shape == (batch_size, POLICY_OUTPUT_SIZE)
             assert value.shape == (batch_size, 1)
 
-    @pytest.mark.skipif(
-        not torch.backends.mps.is_available(),
-        reason="MPS not available on this system"
-    )
+    @pytest.mark.skipif(not torch.backends.mps.is_available(), reason="MPS not available on this system")
     def test_mps_training_mode(self):
         """Model should support training on MPS."""
         device = torch.device("mps")

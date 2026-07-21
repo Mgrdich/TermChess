@@ -6,17 +6,6 @@ import (
 	"github.com/Mgrdich/TermChess/internal/engine"
 )
 
-// parseSquareHelper converts algebraic notation (e.g., "e4") to a Square.
-// This is a test helper function.
-func parseSquareHelper(s string) engine.Square {
-	if len(s) != 2 {
-		panic("invalid square notation")
-	}
-	file := int(s[0] - 'a')
-	rank := int(s[1] - '1')
-	return engine.NewSquare(file, rank)
-}
-
 // TestParseSAN_SimplePawnMoves tests parsing of simple pawn moves like "e4", "d5".
 func TestParseSAN_SimplePawnMoves(t *testing.T) {
 	tests := []struct {
@@ -1523,4 +1512,3 @@ func TestParseSAN_GameWithDisambiguation(t *testing.T) {
 }
 
 // TestFormatSAN tests the FormatSAN function for converting moves to coordinate notation.
-

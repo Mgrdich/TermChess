@@ -32,8 +32,6 @@ produces the same tensor output.
 import chess
 import numpy as np
 import torch
-from typing import List, Optional
-
 
 # Number of previous positions to include in the encoding.
 # 4 is enough to detect threefold repetition patterns while keeping
@@ -50,8 +48,8 @@ NUM_CHANNELS = CURRENT_POSITION_CHANNELS + NUM_HISTORY_POSITIONS * PIECE_CHANNEL
 PIECE_TYPES = [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN, chess.KING]
 
 # Channel assignments for current position
-WHITE_PIECE_OFFSET = 0   # Channels 0-5 for white pieces
-BLACK_PIECE_OFFSET = 6   # Channels 6-11 for black pieces
+WHITE_PIECE_OFFSET = 0  # Channels 0-5 for white pieces
+BLACK_PIECE_OFFSET = 6  # Channels 6-11 for black pieces
 SIDE_TO_MOVE_CHANNEL = 12
 CASTLING_WK_CHANNEL = 13  # White kingside castling
 CASTLING_WQ_CHANNEL = 14  # White queenside castling
@@ -110,10 +108,7 @@ def _encode_pieces(board: chess.Board, encoding: np.ndarray, offset: int) -> Non
             encoding[channel, rank, file] = 1.0
 
 
-def encode_board(
-    board: chess.Board,
-    history: Optional[List[chess.Board]] = None
-) -> np.ndarray:
+def encode_board(board: chess.Board, history: list[chess.Board] | None = None) -> np.ndarray:
     """
     Encode a chess board position into a multi-channel numpy array.
 
@@ -171,9 +166,7 @@ def encode_board(
 
 
 def encode_board_tensor(
-    board: chess.Board,
-    device: torch.device,
-    history: Optional[List[chess.Board]] = None
+    board: chess.Board, device: torch.device, history: list[chess.Board] | None = None
 ) -> torch.Tensor:
     """
     Encode a chess board position into a PyTorch tensor on the specified device.

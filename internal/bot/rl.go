@@ -210,6 +210,8 @@ func (e *rlEngine) Close() error {
 // newOnnxSession creates an ONNX inference session from model bytes.
 // This is the bridge to the onnxruntime_go library.
 // Returns an error until ONNX Runtime is configured with embedded models.
+//
+//nolint:unused // scaffolding for spec 008 Slice 11; wired once onnxruntime_go is added to go.mod.
 func newOnnxSession(_ []byte) (rlInferenceSession, error) {
 	return nil, errors.New("ONNX Runtime not yet configured: run with embedded models")
 }

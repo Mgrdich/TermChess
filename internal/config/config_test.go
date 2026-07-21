@@ -24,7 +24,7 @@ func TestLoadConfig_WithMissingFile(t *testing.T) {
 		}
 		defer func() {
 			// Restore the original file
-			os.Rename(backupPath, configPath)
+			_ = os.Rename(backupPath, configPath)
 		}()
 	}
 

@@ -73,7 +73,7 @@ func (c *Client) CheckLatestVersion(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fetching latest release: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -239,7 +239,7 @@ func (c *Client) downloadFile(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("downloading: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -466,8 +466,8 @@ func ReplaceBinary(newBinaryData []byte) error {
 	// 2. Rename current to .old
 	oldPath := realPath + ".old"
 	if err := os.Rename(realPath, oldPath); err != nil {
-		// Clean up temp file
-		os.Remove(tmpPath)
+		// Clean up temp file (best effort)
+		_ = os.Remove(tmpPath)
 		if os.IsPermission(err) {
 			return ErrPermissionDenied
 		}
@@ -476,9 +476,9 @@ func ReplaceBinary(newBinaryData []byte) error {
 
 	// 3. Rename new to current
 	if err := os.Rename(tmpPath, realPath); err != nil {
-		// Try to restore old binary and clean up temp file
-		os.Rename(oldPath, realPath)
-		os.Remove(tmpPath) // Clean up temp file on rollback
+		// Try to restore old binary and clean up temp file (best effort)
+		_ = os.Rename(oldPath, realPath)
+		_ = os.Remove(tmpPath) // Clean up temp file on rollback
 		if os.IsPermission(err) {
 			return ErrPermissionDenied
 		}
@@ -486,7 +486,7 @@ func ReplaceBinary(newBinaryData []byte) error {
 	}
 
 	// 4. Delete old (best effort, don't fail if this doesn't work)
-	os.Remove(oldPath)
+	_ = os.Remove(oldPath)
 
 	return nil
 }

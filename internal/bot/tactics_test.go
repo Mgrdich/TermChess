@@ -43,7 +43,7 @@ func testTacticalPuzzle(t *testing.T, difficulty Difficulty, fen string, expecte
 	if err != nil {
 		t.Fatalf("failed to create bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -90,7 +90,7 @@ func testMateDelivery(t *testing.T, difficulty Difficulty, fen string, descripti
 	if err != nil {
 		t.Fatalf("failed to create bot: %v", err)
 	}
-	defer bot.Close()
+	defer func() { _ = bot.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -400,7 +400,7 @@ func TestTactical_DontHangQueen(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create bot: %v", err)
 			}
-			defer bot.Close()
+			defer func() { _ = bot.Close() }()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -448,7 +448,7 @@ func TestTactical_DontHangRook(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create bot: %v", err)
 			}
-			defer bot.Close()
+			defer func() { _ = bot.Close() }()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -491,7 +491,7 @@ func TestTactical_DontAllowBackRankMate(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create bot: %v", err)
 			}
-			defer bot.Close()
+			defer func() { _ = bot.Close() }()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()

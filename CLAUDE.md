@@ -4,14 +4,15 @@ Terminal chess TUI in Go with a Python RL training pipeline. Built via AWOS spec
 
 ## Build roots (polyglot monorepo)
 
-Two independent build roots. Switch toolchains based on what you're touching:
+Three independent build roots. Switch toolchains based on what you're touching:
 
 | Root | Use when | Commands |
 |------|----------|----------|
-| `go.mod` (root) | Editing Go code under `cmd/`, `internal/` | `make build`, `make test`, `make run` |
+| `go.mod` (root) | Editing Go code under `cmd/`, `internal/` | `make build-go`, `make test`, `make run-go` (`make build` aliases the Go build) |
+| `rust/Cargo.toml` | Editing the Rust port under `rust/crates/`, `rust/app/` | `make build-rust`, `make test-rust`, `make run-rust`; or `cd rust && cargo build/test/run -p termchess` |
 | `training/pyproject.toml` | Editing Python RL pipeline | `cd training && uv run pytest`, `cd training && uv run python -u train.py ...` |
 
-The Go CI job runs `make build` + `make test`. Python tests are **not** in CI today — run them locally before pushing changes to `training/`.
+The Go CI job runs `make build` + `make test`. Python and Rust tests are **not** in CI today — run them locally before pushing changes to `training/` or `rust/`. The Rust port lives entirely under `rust/`; see `docs/MIGRATION.md` for the crate ↔ Go-package map. **Never modify Go code from the Rust side** — the two trees are independent.
 
 ## Cross-language contract (ONNX)
 
@@ -21,8 +22,9 @@ Python trains a PyTorch model → exports ONNX (`training/export_onnx.py`) → G
 
 - `training/board_encoder.py` — Python encoder, produces `[batch, 18, 8, 8]` float32 tensor
 - `internal/bot/rl_encoder.go` — Go encoder, produces the same tensor layout
+- `rust/crates/bot/src/rl_encoder.rs` — Rust encoder, produces the same tensor layout
 
-Any change to channel layout, channel count, or encoding semantics must be applied in both files in the same commit, and both test suites (`training/test_board_encoder.py` + `internal/bot/rl_encoder_test.go`) must pass. The 66-channel / 18-channel debate is tracked in spec `008-custom-rl-agent`.
+The invariant is now **tri-language**: any change to channel layout, channel count, or encoding semantics must be applied in all three files in the same commit, and all three test suites (`training/test_board_encoder.py` + `internal/bot/rl_encoder_test.go` + `rust/crates/bot/src/tests/rl_encoder_tests.rs`) must pass. The 66-channel / 18-channel debate is tracked in spec `008-custom-rl-agent`.
 
 Go-side ONNX inference is wired (interface, session, selector, mock-session tests) but `newOnnxSession()` in `internal/bot/rl.go` currently returns `ErrModelNotLoaded` — the `onnxruntime_go` dependency is not yet in `go.mod`. Tracked as spec 008 Slice 11.
 
@@ -61,3 +63,4 @@ Significant features go through: `/awos:spec` → `/awos:tech` → `/awos:tasks`
 - **RL bot returns `ErrModelNotLoaded`:** The RL engine is scaffolded but the ONNX model is not yet consumed at runtime. The Go encoder, selector, and tests exist; only the runtime dep is missing.
 - **Training checkpoints are gitignored** (`training/checkpoints/*`). `training_log.csv` is written there during runs; the `/training-health` slash command analyzes it.
 - **Config path is OS-dependent:** `internal/config/paths.go` resolves `~/.termchess/` per platform.
+- **Go and Rust CLIs are kept in parity:** the Rust binary (`rust/app/src/main.rs`) mirrors `cmd/termchess/main.go` flag-for-flag (`--version`/`-v`, `--help`/`-h`, `--upgrade`, `--uninstall`). Any CLI, screen, or on-disk-format change must be applied to both. The board-encoder invariant is now tri-language (Python + Go + Rust) — see the ONNX section above.

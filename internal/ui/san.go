@@ -56,7 +56,7 @@ func ParseSAN(b *engine.Board, san string) (engine.Move, error) {
 // - "exd8=Q" - pawn capture with promotion
 func parsePawnMove(b *engine.Board, san string) (engine.Move, error) {
 	// Parse promotion suffix first (=Q, =R, =B, =N)
-	var promotion engine.PieceType = engine.Empty
+	var promotion = engine.Empty
 	var moveStr = san
 
 	if strings.Contains(san, "=") {
@@ -75,7 +75,7 @@ func parsePawnMove(b *engine.Board, san string) (engine.Move, error) {
 
 	// Parse capture indicator (x)
 	isCapture := strings.Contains(moveStr, "x")
-	var sourceFile int = -1
+	var sourceFile = -1
 	var destSquare engine.Square
 
 	if isCapture {
@@ -405,9 +405,10 @@ func FormatSAN(board *engine.Board, move engine.Move) string {
 	// Check for castling notation
 	if piece.Type() == engine.King {
 		fileDiff := move.To.File() - move.From.File()
-		if fileDiff == 2 {
+		switch fileDiff {
+		case 2:
 			return "O-O" // Kingside castling
-		} else if fileDiff == -2 {
+		case -2:
 			return "O-O-O" // Queenside castling
 		}
 	}
@@ -452,9 +453,10 @@ func FormatSAN(board *engine.Board, move engine.Move) string {
 		result.WriteRune(pieceTypeToRune(move.Promotion))
 	}
 
-	// Check for check or checkmate by making the move on a copy
+	// Check for check or checkmate by making the move on a copy.
+	// move is a validated legal move, so MakeMove cannot fail here.
 	boardCopy := board.Copy()
-	boardCopy.MakeMove(move)
+	_ = boardCopy.MakeMove(move)
 
 	if boardCopy.InCheck() {
 		// Check if it's checkmate
@@ -562,11 +564,11 @@ func FormatMoveHistory(moves []engine.Move) string {
 		moveNum := (i / 2) + 1
 
 		// White's move (always exists for this iteration)
-		result.WriteString(fmt.Sprintf("%d. %s", moveNum, moves[i].String()))
+		fmt.Fprintf(&result, "%d. %s", moveNum, moves[i].String())
 
 		// Black's move (if exists)
 		if i+1 < len(moves) {
-			result.WriteString(fmt.Sprintf(" %s ", moves[i+1].String()))
+			fmt.Fprintf(&result, " %s ", moves[i+1].String())
 		}
 	}
 

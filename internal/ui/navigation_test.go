@@ -927,22 +927,17 @@ func TestNKeyDoesNotWorkInTextInputMode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := NewModel(DefaultConfig())
 			tc.setup(&m)
-			originalScreen := m.screen
 
 			// Press 'n' key
 			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
 			result, _ := m.handleKeyPress(msg)
 			m = result.(Model)
 
-			// Screen should NOT change to GameTypeSelect
+			// Screen should NOT change to GameTypeSelect. Screens that handle 'n'
+			// differently (like GamePlay) may transition elsewhere; that is fine as
+			// long as they do not navigate to GameTypeSelect.
 			if m.screen == ScreenGameTypeSelect {
 				t.Errorf("Expected 'n' key NOT to navigate to GameTypeSelect in %s", tc.name)
-			}
-
-			// For screens that handle 'n' differently (like GamePlay), just verify it didn't go to GameTypeSelect
-			// For screens that don't handle 'n', verify screen stayed the same
-			if m.screen != ScreenGameTypeSelect && m.screen != originalScreen {
-				// This is fine - the screen handler may have processed 'n' differently
 			}
 		})
 	}
@@ -1104,10 +1099,10 @@ func TestGlobalShortcutsWorkFromVariousScreens(t *testing.T) {
 		ScreenBotSelect,
 		ScreenColorSelect,
 		ScreenBvBBotSelect,
-		ScreenBvBGameMode,    // when not in count input mode
-		ScreenBvBGridConfig,  // when not in grid input mode
-		ScreenSavePrompt,     // though user should probably cancel first
-		ScreenDrawPrompt,     // though user should probably respond first
+		ScreenBvBGameMode,   // when not in count input mode
+		ScreenBvBGridConfig, // when not in grid input mode
+		ScreenSavePrompt,    // though user should probably cancel first
+		ScreenDrawPrompt,    // though user should probably respond first
 	}
 
 	for _, screen := range nKeyScreens {

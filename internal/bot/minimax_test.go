@@ -10,9 +10,9 @@ import (
 )
 
 // Helper functions for creating pointers to primitive types (for MinimaxConfig)
-func intPtr(v int) *int                         { return &v }
+func intPtr(v int) *int                          { return &v }
 func durationPtr(v time.Duration) *time.Duration { return &v }
-func float64Ptr(v float64) *float64             { return &v }
+func float64Ptr(v float64) *float64              { return &v }
 
 func TestMinimaxEngine_Name(t *testing.T) {
 	tests := []struct {
@@ -163,7 +163,7 @@ func TestMinimaxEngine_ForcedMove(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewMinimaxEngine() error = %v", err)
 		}
-		defer eng.Close()
+		defer func() { _ = eng.Close() }()
 
 		start := time.Now()
 		move, err := eng.SelectMove(context.Background(), board)
@@ -185,7 +185,7 @@ func TestMinimaxEngine_ForcedMove(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewMinimaxEngine() error = %v", err)
 		}
-		defer eng.Close()
+		defer func() { _ = eng.Close() }()
 
 		move, err := eng.SelectMove(context.Background(), board)
 		if err != nil {
@@ -231,7 +231,7 @@ func TestMinimaxEngine_FindsMateInOne(t *testing.T) {
 			if err != nil {
 				t.Fatalf("NewMinimaxEngine() error = %v", err)
 			}
-			defer eng.Close()
+			defer func() { _ = eng.Close() }()
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -269,7 +269,7 @@ func TestMinimaxEngine_AvoidBlunder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -311,7 +311,7 @@ func TestMinimaxEngine_CapturePriority(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -337,7 +337,7 @@ func TestMinimaxEngine_Timeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	ctx := context.Background()
 
@@ -378,7 +378,7 @@ func TestMinimaxEngine_NoLegalMoves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Shouldn't be able to select a move in checkmate position
 	_, err = eng.SelectMove(context.Background(), board)
@@ -404,7 +404,7 @@ func TestMinimaxEngine_Depth2Search(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -434,7 +434,7 @@ func TestMinimaxEngine_AlphaBetaPruning(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -519,7 +519,7 @@ func TestMinimaxEngine_MoveOrdering(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	me := eng.(*minimaxEngine)
 
@@ -548,7 +548,7 @@ func TestMinimaxEngine_IterativeDeepening_Timeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Start from complex middlegame position
 	board, err := engine.ParseFEN("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1")
@@ -578,7 +578,7 @@ func TestMinimaxEngine_IterativeDeepening_MultipleDepths(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Simple position where depth 4 is achievable
 	board, err := engine.ParseFEN("8/8/8/4k3/8/8/4K3/4R3 w - - 0 1")
@@ -607,7 +607,7 @@ func TestMinimaxEngine_ReturnsLastCompletedDepth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMinimaxEngine() error = %v", err)
 	}
-	defer eng.Close()
+	defer func() { _ = eng.Close() }()
 
 	// Complex position
 	board, err := engine.ParseFEN("r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1")
