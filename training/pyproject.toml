@@ -5,19 +5,19 @@ description = "TermChess RL Training Pipeline"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "numpy>=2.4.2",
-    "onnx>=1.20.1",
+    "numpy>=2.4.4",
+    "onnx>=1.21.0",
     "onnxruntime>=1.24.1",
-    "onnxscript>=0.6.2",
+    "onnxscript>=0.7.0",
     "python-chess>=1.999",
     "torch>=2.10.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.2",
+    "pytest>=9.0.3",
     "ruff>=0.7.0",
-    "mypy>=1.11.0",
+    "mypy>=1.20.2",
 ]
 
 [tool.ruff]
