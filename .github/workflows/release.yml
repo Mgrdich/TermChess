@@ -58,7 +58,7 @@ jobs:
           git tag -a ${{ steps.version.outputs.VERSION }} -m "Release ${{ steps.version.outputs.VERSION }}"
           git push origin ${{ steps.version.outputs.VERSION }}
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         if: steps.check_tag.outputs.exists == 'false'
         with:
           go-version: '1.24'
