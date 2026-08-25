@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/muesli/termenv v0.16.0
-	golang.design/x/clipboard v0.8.0
+	golang.design/x/clipboard v0.9.0
 )
 
 require (
